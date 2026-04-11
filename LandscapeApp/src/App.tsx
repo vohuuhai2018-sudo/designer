@@ -11,23 +11,20 @@ import {
   Trash2, 
   ChevronRight,
   ChevronLeft,
-  LayoutDashboard,
-  MessageCircle,
   Camera,
   Layers,
   Palette,
   X,
   ShieldCheck,
   Phone,
-  Calendar,
   FolderOpen,
   Folder,
-  ArrowLeft,
   Copy,
   ExternalLink,
   Bot,
   Monitor,
-  Info
+  Info,
+  HelpCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -210,13 +207,12 @@ const SYSTEM_REFERENCE_LIBRARY: DesignerLibraryItem[] = [
 ];
 
 const ANNOTATION_COLOR_RULES = [
-  { color: 'Đỏ', hex: '#ef4444', meaning: 'Vị trí thác nước hoặc cụm đá thác chính', instruction: 'Bố trí đúng vào vùng đỏ, ưu tiên làm điểm nhấn đứng hoặc cụm thác chính.' },
-  { color: 'Xanh dương', hex: '#3b82f6', meaning: 'Hồ cá hoặc mặt nước chính', instruction: 'Tạo hồ hoặc mặt nước ở đúng vùng xanh dương, kết nối hợp lý với thác nếu vùng đỏ nằm kề cận.' },
-  { color: 'Tím', hex: '#a855f7', meaning: 'Kè đá, bo hồ hoặc viền kết cấu đá', instruction: 'Dùng làm mép bo, viền kè hoặc tường đá bám theo đúng đường nét vùng tím.' },
-  { color: 'Xanh lá', hex: '#22c55e', meaning: 'Cảnh quan cây xanh, cỏ, bụi, bonsai', instruction: 'Bố trí mảng xanh đúng vùng xanh lá, cân đối với tổng thể và không che chắn cửa, bậc thềm.' },
-  { color: 'Vàng', hex: '#eab308', meaning: 'Hầm lọc hoặc nắp kỹ thuật', instruction: 'Ẩn hầm lọc gọn gàng trong vùng vàng, kín đáo nhưng vẫn khả thi để bảo trì.' },
-  { color: 'Trắng', hex: '#ffffff', meaning: 'Vùng sỏi hoặc nền trang trí phụ', instruction: 'Xử lý nền sỏi, vật liệu sáng hoặc khoảng chuyển tiếp ở vùng trắng.' },
-  { color: 'Nâu', hex: '#78350f', meaning: 'Đá bước dạo hoặc lối đi nhấn', instruction: 'Bố trí đá bước, lối dạo hoặc điểm chuyển bước theo đúng vùng nâu.' }
+  { color: 'Đỏ', hex: '#ef4444', meaning: 'Vùng thác nước', instruction: 'Vị trí điểm nhấn thác nước chính.' },
+  { color: 'Xanh dương', hex: '#3b82f6', meaning: 'Vùng hồ nước', instruction: 'Vùng nước chính của công trình.' },
+  { color: 'Hầm lọc', hex: '#eab308', meaning: 'Vùng hầm lọc', instruction: 'Khu vực hệ thống xử lý nước.' },
+  { color: 'Tím', hex: '#a855f7', meaning: 'Vùng kè đá', instruction: 'Dùng để bo viền hồ hoặc xây kè tường.' },
+  { color: 'Xanh lá', hex: '#22c55e', meaning: 'Vùng cảnh quan', instruction: 'Bố trí tùng, bụi và thảm cỏ.' },
+  { color: 'Trắng', hex: '#ffffff', meaning: 'Vùng sỏi', instruction: 'Rải sỏi và vật liệu trang trí sáng màu.' }
 ] as const;
 
 // --- MAIN APP ---
@@ -296,7 +292,7 @@ export default function App() {
   };
 
   return (
-    <div className="app">
+    <div className="container">
       <AnimatePresence mode="wait">
         {view === 'welcome' && (
           <WelcomeView onStart={() => setView('upload')} onAdmin={() => setView('admin')} />
@@ -307,8 +303,9 @@ export default function App() {
         {view === 'editor' && (
           <EditorView
             rawImage={rawImage}
-            annotatedImage={annotatedImage}
             onAnnotatedChange={setAnnotatedImage}
+            note={note}
+            onNoteChange={setNote}
             onBack={() => setView('upload')}
             onNext={() => setView('service')}
           />
@@ -317,11 +314,19 @@ export default function App() {
           <ServiceView
             selections={selections}
             onSelectionsChange={setSelections}
-            service={service}
-            onServiceChange={setService}
             note={note}
             onNoteChange={setNote}
+            extraAssets={extraAssets}
+            onExtraAssetsChange={setExtraAssets}
             onBack={() => setView('editor')}
+            onNext={() => setView('plan')}
+          />
+        )}
+        {view === 'plan' && (
+          <PlanSelectionView
+            service={service}
+            onServiceChange={setService}
+            onBack={() => setView('service')}
             onNext={() => setView('submit')}
           />
         )}
@@ -357,16 +362,6 @@ export default function App() {
               if (!response.ok) throw new Error(payload?.error || 'Không thể cập nhật dữ liệu dự án.');
               setProjects(prev => prev.map(p => p.id === id ? { ...p, ...payload } : p));
               return payload as Project;
-            }}
-            onGenerateAiPrompt={async (id, payload) => {
-              const response = await fetch(`http://localhost:5000/api/projects/${id}/ai-prompt`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-              });
-              const result = await response.json().catch(() => null);
-              if (!response.ok) throw new Error(result?.error || 'Không thể sinh prompt bằng AI.');
-              return result.prompt as string;
             }}
             onGenerateAiImage={async (id, payload) => {
               const response = await fetch(`http://localhost:5000/api/projects/${id}/chatgpt-generate`, {
@@ -421,7 +416,7 @@ function UploadView({ onBack, onUpload }: { onBack: () => void, onUpload: (img: 
     const reader = new FileReader();
     reader.onload = ev => {
       const result = ev.target?.result as string;
-      setPreview(result);
+      onUpload(result); // Go straight to markings
     };
     reader.readAsDataURL(file);
   };
@@ -429,36 +424,54 @@ function UploadView({ onBack, onUpload }: { onBack: () => void, onUpload: (img: 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view upload-view">
       <button onClick={onBack} className="btn-back-universal"><ChevronLeft size={18} /> Quay lại</button>
-      <div className="upload-content">
-        <h2>Tải ảnh hiện trạng</h2>
-        <p>Chọn một bức ảnh chụp vị trí mà bạn muốn thiết kế cảnh quan.</p>
-        <div className="upload-zone" onClick={() => fileRef.current?.click()}>
-          {preview ? (
-            <img src={preview} alt="Preview" className="upload-preview" />
-          ) : (
-            <div className="upload-placeholder">
-              <Upload size={48} />
-              <span>Nhấn để chọn ảnh</span>
-            </div>
-          )}
-        </div>
-        <input type="file" accept="image/*" ref={fileRef} onChange={handleFile} hidden />
-        {preview && (
-          <button className="btn-primary" onClick={() => onUpload(preview)}>
-            Tiếp tục <ArrowRight size={18} />
-          </button>
+      <h2>Tải ảnh hiện trạng</h2>
+      <p className="hint">Chọn một bức ảnh chụp vị trí mà bạn muốn thiết kế cảnh quan.</p>
+      <div className="upload-area" onClick={() => fileRef.current?.click()}>
+        {preview ? (
+          <img src={preview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '28px' }} />
+        ) : (
+          <>
+            <div className="upload-circle"><Upload size={40} /></div>
+            <span className="hint">Nhấn để chọn ảnh</span>
+          </>
         )}
       </div>
+      <input type="file" accept="image/*" ref={fileRef} onChange={handleFile} hidden />
+      
+      {!preview && (
+        <div className="tips glass-panel">
+          <h3>Mẹo chụp ảnh hiện trạng</h3>
+          <ul>
+            <li>Chụp bao quát toàn bộ không gian cần thiết kế.</li>
+            <li>Đứng ở góc chính diện, tránh chụp quá nghiêng.</li>
+            <li>Đảm bảo ảnh rõ nét, không bị rung hay mờ.</li>
+            <li>Ưu tiên ánh sáng ban ngày để màu sắc chuẩn nhất.</li>
+          </ul>
+          <div className="sample-photo-container">
+            <p className="sample-label">Góc chụp minh họa chuẩn:</p>
+            <div className="sample-photo">
+              <img src="/assets/sample_angle.jpg" alt="Minh họa góc chụp chuẩn" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {preview && (
+        <button className="btn-primary main-cta" onClick={() => onUpload(preview)} style={{ marginTop: '20px' }}>
+          Dùng ảnh này để thiết kế <ArrowRight size={20} />
+        </button>
+      )}
     </motion.div>
   );
 }
 
 function EditorView({
-  rawImage, annotatedImage, onAnnotatedChange, onBack, onNext
+  rawImage, onAnnotatedChange, note, onNoteChange, onBack, onNext
 }: {
   rawImage: string;
-  annotatedImage: string;
   onAnnotatedChange: (img: string) => void;
+  note: string;
+  onNoteChange: (n: string) => void;
   onBack: () => void;
   onNext: () => void;
 }) {
@@ -467,6 +480,8 @@ function EditorView({
   const [color, setColor] = useState('#ef4444');
   const [brushSize, setBrushSize] = useState(20);
   const [history, setHistory] = useState<ImageData[]>([]);
+  const [showSample, setShowSample] = useState(false);
+  const [hasSeenSample, setHasSeenSample] = useState(false);
 
   const colors = ANNOTATION_COLOR_RULES.map(r => ({ hex: r.hex, label: r.color, meaning: r.meaning }));
 
@@ -555,55 +570,104 @@ function EditorView({
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view editor-view">
-      <div className="editor-toolbar">
-        <button onClick={onBack} className="btn-back-universal"><ChevronLeft size={18} /> Quay lại</button>
-        <div className="toolbar-center">
-          <div className="color-palette">
-            {colors.map(c => (
-              <button key={c.hex} className={`color-dot ${color === c.hex ? 'active' : ''}`} style={{ background: c.hex }} onClick={() => setColor(c.hex)} title={`${c.label}: ${c.meaning}`} />
-            ))}
+      <div className="editor-top">
+        <button onClick={onBack} className="btn-back-editor"><ChevronLeft size={18} /> Quay lại</button>
+        <button onClick={saveAndNext} className="btn-done">Xong ✓</button>
+      </div>
+      <div className="workspace">
+        <canvas ref={canvasRef} onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+          onTouchStart={e => { e.preventDefault(); const t = e.touches[0]; const mouseEvent = new MouseEvent('mousedown', { clientX: t.clientX, clientY: t.clientY }); canvasRef.current?.dispatchEvent(mouseEvent); }}
+          onTouchMove={e => { e.preventDefault(); const t = e.touches[0]; const mouseEvent = new MouseEvent('mousemove', { clientX: t.clientX, clientY: t.clientY }); canvasRef.current?.dispatchEvent(mouseEvent); }}
+          onTouchEnd={e => { e.preventDefault(); canvasRef.current?.dispatchEvent(new MouseEvent('mouseup')); }}
+        />
+      </div>
+      <div className="brush-controls-container">
+        <div className="editor-header-row">
+          <div className="editor-title">Khoanh vùng công năng</div>
+          <button 
+            className={`btn-help-modal ${!hasSeenSample ? 'pulse-btn' : ''}`} 
+            onClick={() => { setShowSample(true); setHasSeenSample(true); }}
+          >
+            <HelpCircle size={20} /> Cách khoanh vùng mẫu
+          </button>
+        </div>
+        <div className="colors">
+          {colors.map(c => (
+            <button 
+              key={c.hex} 
+              className={`color-item ${color === c.hex ? 'active' : ''}`} 
+              onClick={() => setColor(c.hex)}
+            >
+              <span className="color-dot" style={{ backgroundColor: c.hex }} />
+              <span className="color-label">{c.meaning}</span>
+            </button>
+          ))}
+        </div>
+        <div className="brush-info">
+          <div className="brush-tools">
+            <button onClick={undo} className="btn-tool" disabled={history.length <= 1}><Undo2 size={18} /> Hoàn tác</button>
+            <button onClick={clearAll} className="btn-tool"><Trash2 size={18} /> Xóa hết</button>
           </div>
-          <div className="brush-size-control">
-            <Paintbrush size={16} />
-            <input type="range" min="5" max="60" value={brushSize} onChange={e => setBrushSize(Number(e.target.value))} />
+          <div className="customer-request-area">
+            <label>Mô tả chi tiết (Nếu có)</label>
+            <textarea 
+              placeholder="Anh chị hãy mô tả thêm chi tiết khác nếu có ví dụ như thác cao bao nhiêu kích thước công trình..."
+              value={note}
+              onChange={e => onNoteChange(e.target.value)}
+            />
           </div>
         </div>
-        <div className="toolbar-actions">
-          <button onClick={undo} className="btn-tool" title="Hoàn tác"><Undo2 size={18} /></button>
-          <button onClick={clearAll} className="btn-tool" title="Xóa tất cả"><Trash2 size={18} /></button>
-        </div>
       </div>
-      <div className="editor-canvas-wrapper">
-        <canvas ref={canvasRef} className="editor-canvas" onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw} />
-      </div>
-      <div className="editor-color-legend">
-        {colors.map(c => (
-          <div key={c.hex} className="legend-item">
-            <span className="legend-dot" style={{ background: c.hex }} />
-            <span>{c.label}: {c.meaning}</span>
-          </div>
-        ))}
-      </div>
-      <button className="btn-primary editor-next" onClick={saveAndNext}>
-        Tiếp tục chọn mẫu <ArrowRight size={18} />
-      </button>
+
+      <AnimatePresence>
+        {showSample && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="sample-marking-modal-overlay"
+            onClick={() => setShowSample(false)}
+          >
+            <div className="sample-marking-minimal-container" onClick={e => e.stopPropagation()}>
+              <button className="btn-close-modal-large" onClick={() => setShowSample(false)}>
+                <X size={40} />
+              </button>
+              <div className="modal-header-premium">Hướng dẫn khoanh vùng chuẩn</div>
+              <img src="/assets/sample_marking.jpg" alt="Hướng dẫn khoanh vùng" className="sample-img-full" />
+              <div className="modal-legend-mini-premium">
+                <div className="legend-row">
+                  <div className="legend-item"><span className="dot" style={{ background: '#ef4444' }}/> Thác nước (Đỏ)</div>
+                  <div className="legend-item"><span className="dot" style={{ background: '#3b82f6' }}/> Hồ cá (Xanh dương)</div>
+                </div>
+                <div className="legend-row">
+                  <div className="legend-item"><span className="dot" style={{ background: '#a855f7' }}/> Kè đá (Tím)</div>
+                  <div className="legend-item"><span className="dot" style={{ background: '#22c55e' }}/> Cây xanh (Xanh lá)</div>
+                </div>
+                <div className="legend-row">
+                  <div className="legend-item"><span className="dot" style={{ background: '#eab308' }}/> Hầm lọc (Vàng)</div>
+                  <div className="legend-item"><span className="dot" style={{ background: '#ffffff' }}/> Vùng sỏi (Trắng)</div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
 
 function ServiceView({
-  selections, onSelectionsChange, service, onServiceChange, note, onNoteChange, onBack, onNext
+  selections, onSelectionsChange, note, onNoteChange, extraAssets, onExtraAssetsChange, onBack, onNext
 }: {
   selections: Selection;
   onSelectionsChange: (s: Selection) => void;
-  service: string;
-  onServiceChange: (s: string) => void;
   note: string;
   onNoteChange: (n: string) => void;
+  extraAssets: string[];
+  onExtraAssetsChange: (assets: string[]) => void;
   onBack: () => void;
   onNext: () => void;
 }) {
-  const [expandedThac, setExpandedThac] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const mediaRef = useRef<HTMLInputElement>(null);
 
   const handleThacSelect = (variantId: string) => {
     onSelectionsChange({ ...selections, thac: variantId });
@@ -621,88 +685,199 @@ function ServiceView({
     onSelectionsChange({ ...selections, canh: updated });
   };
 
-  const services = [
-    { id: 'basic', name: 'Tạo bản vẽ cơ bản', desc: 'Phác thảo nhanh' },
-    { id: 'pro', name: 'Tạo bản vẽ Pro', desc: 'Bản vẽ chi tiết chuyên nghiệp' },
-    { id: 'premium', name: 'Tạo bản vẽ Premium', desc: 'Bản vẽ kèm video 3D' }
-  ];
+  const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        onExtraAssetsChange([...extraAssets, ev.target?.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view service-view">
-      <button onClick={onBack} className="btn-back-universal"><ChevronLeft size={18} /> Quay lại</button>
-      <div className="service-scroll-content">
-        <h2>Chọn Mẫu & Dịch Vụ</h2>
+      <header className="service-header-main">
+        <button onClick={onBack} className="btn-back-universal"><ChevronLeft size={20} /> Quay lại</button>
+        <div className="title-group">
+          <h2>Chọn Mẫu Thiết Kế</h2>
+          <p>Tùy chỉnh phong cách đá và các hạng mục trang trí cho công trình của bạn.</p>
+        </div>
+      </header>
 
-        <section className="selection-section">
-          <h3>Thác nước</h3>
-          <div className="thac-grid">
-            {ASSETS.THAC.map(thac => (
-              <div key={thac.id} className="thac-group">
-                <button className={`thac-parent-btn ${expandedThac === thac.id ? 'expanded' : ''}`} onClick={() => setExpandedThac(expandedThac === thac.id ? null : thac.id)}>
-                  <img src={thac.url} alt={thac.name} />
-                  <span>{thac.name}</span>
-                </button>
-                {expandedThac === thac.id && thac.variants && (
-                  <div className="variant-grid">
-                    {thac.variants.map(v => (
-                      <button key={v.id} className={`variant-card ${selections.thac === v.id ? 'selected' : ''}`} onClick={() => handleThacSelect(v.id)}>
-                        <img src={v.url} alt={v.name} />
-                        <span>{v.name}</span>
-                        {selections.thac === v.id && <CheckCircle2 size={18} className="check-icon" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+      <div className="selection-panel">
+        <section className="asset-group">
+          <div className="asset-group-header">
+            <h4>1. Chọn Kiểu Thác Nước</h4>
           </div>
-        </section>
-
-        <section className="selection-section">
-          <h3>Kè đá</h3>
-          <div className="checkbox-group">
-            {ASSETS.KE.map(item => (
-              <label key={item.id} className={`checkbox-item ${(selections.ke || []).includes(item.id) ? 'checked' : ''}`}>
-                <input type="checkbox" checked={(selections.ke || []).includes(item.id)} onChange={() => toggleKe(item.id)} />
-                <span>{item.name}</span>
-              </label>
-            ))}
-          </div>
-        </section>
-
-        <section className="selection-section">
-          <h3>Cảnh quan</h3>
-          <div className="checkbox-group">
-            {ASSETS.CANH.map(item => (
-              <label key={item.id} className={`checkbox-item ${(selections.canh || []).includes(item.id) ? 'checked' : ''}`}>
-                <input type="checkbox" checked={(selections.canh || []).includes(item.id)} onChange={() => toggleCanh(item.id)} />
-                <span>{item.name}</span>
-              </label>
-            ))}
-          </div>
-        </section>
-
-        <section className="selection-section">
-          <h3>Gói dịch vụ</h3>
-          <div className="service-cards">
-            {services.map(s => (
-              <button key={s.id} className={`service-card ${service === s.name ? 'active' : ''}`} onClick={() => onServiceChange(s.name)}>
-                <strong>{s.name}</strong>
-                <span>{s.desc}</span>
+          <div className="category-grid">
+            {ASSETS.THAC.map(cat => (
+              <button 
+                key={cat.id} 
+                className={`category-card ${activeCategory === cat.id ? 'active' : ''}`}
+                onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
+              >
+                <div className="cat-img"><img src={cat.url} alt={cat.name} /></div>
+                <span>{cat.name}</span>
               </button>
             ))}
           </div>
+
+          <AnimatePresence>
+            {activeCategory && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }} 
+                animate={{ height: 'auto', opacity: 1 }} 
+                exit={{ height: 0, opacity: 0 }}
+                className="variant-reveal"
+              >
+                <div className="variant-grid">
+                  {ASSETS.THAC.find(c => c.id === activeCategory)?.variants?.map(v => (
+                    <button 
+                      key={v.id} 
+                      className={`variant-card-mini ${selections.thac === v.id ? 'selected' : ''}`}
+                      onClick={() => handleThacSelect(v.id)}
+                    >
+                      <img src={v.url} alt={v.name} />
+                      <div className="variant-label">{v.name}</div>
+                      {selections.thac === v.id && <div className="check-mark"><CheckCircle2 size={16} /></div>}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </section>
 
-        <section className="selection-section">
-          <h3>Ghi chú cho đội ngũ</h3>
-          <textarea className="note-textarea" placeholder="Ví dụ: thêm cho tôi một viên đá để ngồi câu cá, thác không được cao quá cửa sổ..." value={note} onChange={e => onNoteChange(e.target.value)} rows={4} />
+        <section className="asset-group">
+          <div className="asset-group-header">
+            <h4>Mẫu Kè Đá</h4>
+          </div>
+          <div className="checkbox-list">
+            {ASSETS.KE.map(item => (
+              <label key={item.id} className={`checkbox-item ${(selections.ke || []).includes(item.id) ? 'active' : ''}`}>
+                <div className="check-box" onClick={() => toggleKe(item.id)}>
+                  {(selections.ke || []).includes(item.id) && <CheckCircle2 size={16} />}
+                </div>
+                <span onClick={() => toggleKe(item.id)}>{item.name}</span>
+              </label>
+            ))}
+          </div>
         </section>
 
-        <button className="btn-primary" onClick={onNext} disabled={!service}>
-          Tiếp tục gửi <ArrowRight size={18} />
-        </button>
+        <section className="asset-group">
+          <div className="asset-group-header">
+            <h4>Tiểu Cảnh & Cây Xanh</h4>
+          </div>
+          <div className="checkbox-list">
+            {ASSETS.CANH.map(item => (
+              <label key={item.id} className={`checkbox-item ${(selections.canh || []).includes(item.id) ? 'active' : ''}`}>
+                <div className="check-box" onClick={() => toggleCanh(item.id)}>
+                  {(selections.canh || []).includes(item.id) && <CheckCircle2 size={16} />}
+                </div>
+                <span onClick={() => toggleCanh(item.id)}>{item.name}</span>
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <section className="asset-group" style={{ marginTop: '20px' }}>
+          <div className="asset-group-header">
+            <h4>2. Yêu cầu chi tiết khác (Nếu có)</h4>
+          </div>
+          <div className="customer-request-area-v2">
+            <textarea 
+              placeholder="Ví dụ: Tôi muốn thác cao 1.5m, đá bo viền dày, thêm nhiều tùng bonsai..."
+              value={note}
+              onChange={e => onNoteChange(e.target.value)}
+            />
+          </div>
+        </section>
+
+        <section className="asset-group">
+          <div className="asset-group-header">
+            <h4>3. Gửi hình ảnh/video hiện trạng liên quan</h4>
+            <p style={{ fontSize: '0.85rem', color: '#888', marginTop: '4px' }}>Giúp chúng tôi hiểu rõ hơn về không gian dự án của bạn.</p>
+          </div>
+          <div className="media-upload-center" onClick={() => mediaRef.current?.click()}>
+            <input type="file" multiple accept="image/*,video/*" ref={mediaRef} onChange={handleMediaUpload} hidden />
+            <div className="upload-box-mini">
+              <Camera size={24} />
+              <span>Bấm để tải lên ảnh hoặc video</span>
+            </div>
+          </div>
+          {extraAssets.length > 0 && (
+            <div className="media-preview-row">
+              {extraAssets.map((asset, idx) => (
+                <div key={idx} className="media-preview-item">
+                  <img src={asset} alt="extra" />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
+
+      <button className="btn-primary main-cta" onClick={onNext} style={{ marginTop: '20px' }}>
+        Tiếp tục chọn gói dịch vụ <ArrowRight size={20} />
+      </button>
+    </motion.div>
+  );
+}
+
+function PlanSelectionView({ service, onServiceChange, onBack, onNext }: {
+  service: string;
+  onServiceChange: (s: string) => void;
+  onBack: () => void;
+  onNext: () => void;
+}) {
+  const services = [
+    { id: 'basic', name: 'Gói Cơ Bản', desc: 'Phác thảo nhanh ý tưởng cơ bản', price: 'Miễn phí', icon: <ImageIcon size={32} />, color: '#94a3b8' },
+    { id: 'pro', name: 'Gói Chuyên Nghiệp', desc: 'Bản vẽ chi tiết, đầy đủ vật liệu', price: '290.000đ', icon: <Palette size={32} />, color: '#e2b170' },
+    { id: 'premium', name: 'Gói Premium', desc: 'Bản vẽ Pro kèm Video 3D mô phỏng', price: '590.000đ', icon: <Camera size={32} />, color: '#a855f7' }
+  ];
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view plan-view">
+      <header className="service-header-main">
+        <button onClick={onBack} className="btn-back-universal"><ChevronLeft size={20} /> Quay lại</button>
+        <div className="title-group">
+          <h2>Chọn Gói Giải Pháp</h2>
+          <p>Lựa chọn gói thiết kế phù hợp để hiện thực hóa ý tưởng của bạn.</p>
+        </div>
+      </header>
+
+      <div className="service-list-premium">
+        {services.map(s => (
+          <button
+            key={s.id}
+            className={`service-card-premium ${service === s.name ? 'active' : ''}`}
+            onClick={() => onServiceChange(s.name)}
+            style={{ border: service === s.name ? `2.5px solid ${s.color}` : '1px solid rgba(255,255,255,0.1)' }}
+          >
+            <div className="card-inner-premium">
+              <div className="service-icon-box-premium" style={{ background: s.color }}>{s.icon}</div>
+              <div className="service-content-premium">
+                <div className="service-title-row-premium">
+                  <h3>{s.name}</h3>
+                  {s.id === 'pro' && <div className="service-badge-premium" style={{ color: s.color }}>Phổ biến</div>}
+                </div>
+                <p className="service-description-premium">{s.desc}</p>
+                <div className="service-footer-row-premium">
+                  <div className="price-label-premium">Giá chỉ từ: <span className="highlight-price-premium">{s.price}</span></div>
+                  <div className="arrow-icon-premium"><ChevronRight size={24} /></div>
+                </div>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <button className="btn-primary main-cta" onClick={onNext} disabled={!service} style={{ marginTop: '30px' }}>
+        Xác nhận thông tin <ArrowRight size={20} />
+      </button>
     </motion.div>
   );
 }
@@ -734,43 +909,54 @@ function SubmitView({
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view submit-view">
-      <button onClick={onBack} className="btn-back-universal"><ChevronLeft size={18} /> Quay lại</button>
-      <div className="submit-content">
-        <h2>Xác nhận & Gửi</h2>
+      <header className="service-header-main">
+        <button onClick={onBack} className="btn-back-universal"><ChevronLeft size={20} /> Quay lại</button>
+        <div className="title-group">
+          <h2>Xác Nhận<br/>& Gửi Thông Tin</h2>
+          <p>Dữ liệu phác thảo sẽ được chuyển đến đội ngũ chuyên gia Sơn Hải để báo giá chính xác.</p>
+        </div>
+      </header>
 
-        <div className="submit-form">
-          <div className="form-group">
-            <label><User size={16} /> Họ và tên</label>
-            <input type="text" value={customerName} onChange={e => onNameChange(e.target.value)} placeholder="Nhập tên khách hàng" />
+      <div className="form">
+        <div className="input-group">
+          <label><User size={16} /> Họ và tên khách hàng</label>
+          <input type="text" value={customerName} onChange={e => onNameChange(e.target.value)} placeholder="Nhập tên của bạn..." />
+        </div>
+        <div className="input-group">
+          <label><Phone size={16} /> Số điện thoại / Zalo</label>
+          <input type="tel" value={customerPhone} onChange={e => onPhoneChange(e.target.value)} placeholder="Chúng tôi sẽ gửi bản vẽ qua số này..." />
+        </div>
+
+        <div className="preview-row" style={{ marginTop: '20px' }}>
+          <div className="preview-card">
+            <label>Hiện trạng gốc</label>
+            <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--glass-border)', height: '140px' }}>
+              <img src={rawImage} alt="Raw" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
           </div>
-          <div className="form-group">
-            <label><Phone size={16} /> Số điện thoại / Zalo</label>
-            <input type="tel" value={customerPhone} onChange={e => onPhoneChange(e.target.value)} placeholder="0xxx xxx xxx" />
+          <div className="preview-card">
+            <label>Vùng phác thảo</label>
+            <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--accent)', height: '140px' }}>
+              <img src={annotatedImage} alt="Annotated" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
           </div>
         </div>
 
-        <div className="preview-row">
-          <div className="preview-card">
-            <label>Ảnh gốc</label>
-            <img src={rawImage} alt="Raw" />
+        <div className="extra-assets-area">
+          <h4>Ảnh & Video hiện trạng khác</h4>
+          <p className="sub-hint">Giúp kỹ sư hiểu rõ hơn về góc nhìn xung quanh (không bắt buộc).</p>
+          <div className="assets-uploader" onClick={() => extraRef.current?.click()}>
+            <Upload size={32} color="var(--accent)" />
+            <span>Tải thêm ảnh/video</span>
           </div>
-          <div className="preview-card">
-            <label>Ảnh khoanh vùng</label>
-            <img src={annotatedImage} alt="Annotated" />
-          </div>
-        </div>
-
-        <div className="extra-assets-section">
-          <button className="btn-secondary" onClick={() => extraRef.current?.click()}>
-            <Upload size={16} /> Thêm ảnh / video tham khảo
-          </button>
           <input type="file" accept="image/*,video/*" multiple ref={extraRef} onChange={handleExtraFiles} hidden />
+          
           {extraAssets.length > 0 && (
-            <div className="extra-preview-grid">
+            <div className="assets-preview-grid">
               {extraAssets.map((asset, i) => (
-                <div key={i} className="extra-thumb">
+                <div key={i} className="asset-preview-item">
                   <img src={asset} alt={`Extra ${i}`} />
-                  <button className="remove-extra" onClick={() => onExtraAssetsChange(extraAssets.filter((_, idx) => idx !== i))}>
+                  <button className="btn-remove-asset" onClick={(e) => { e.stopPropagation(); onExtraAssetsChange(extraAssets.filter((_, idx) => idx !== i)); }}>
                     <X size={14} />
                   </button>
                 </div>
@@ -778,11 +964,11 @@ function SubmitView({
             </div>
           )}
         </div>
-
-        <button className="btn-primary submit-btn" onClick={onSubmit} disabled={!customerName || !customerPhone || isSubmitting}>
-          <Send size={18} /> {isSubmitting ? 'Đang gửi...' : 'Gửi yêu cầu'}
-        </button>
       </div>
+
+      <button className="btn-primary main-cta" onClick={onSubmit} disabled={!customerName || !customerPhone || isSubmitting}>
+        {isSubmitting ? 'Đang gửi thông tin...' : 'Gửi yêu cầu phác thảo'} <Send size={20} style={{ marginLeft: '12px' }} />
+      </button>
     </motion.div>
   );
 }
@@ -790,24 +976,25 @@ function SubmitView({
 function SuccessView({ onReset }: { onReset: () => void }) {
   return (
     <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="view success-view">
-      <div className="success-content">
-        <CheckCircle2 size={80} className="success-icon" />
-        <h2>Gửi thành công!</h2>
-        <p>Dữ liệu đã được chuyển đến đội ngũ thiết kế. Chúng tôi sẽ xử lý bản vẽ và phản hồi sớm nhất qua Zalo.</p>
-        <button className="btn-primary" onClick={onReset}>Quay về trang chủ</button>
-      </div>
+      <div className="success-icon"><CheckCircle2 size={100} /></div>
+      <h2 style={{ fontSize: '2.5rem', fontWeight: 950 }}>Gửi Thành Công!</h2>
+      <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', lineHeight: '1.6', maxWidth: '90%' }}>
+        Cảm ơn bạn đã tin tưởng Sơn Hải. Đội ngũ thiết kế sẽ xử lý phác thảo và liên hệ lại với bạn trong thời gian sớm nhất.
+      </p>
+      <button className="btn-primary main-cta" onClick={onReset} style={{ marginTop: '20px' }}>
+        Quay lại Trang Chủ
+      </button>
     </motion.div>
   );
 }
 
 // --- ADMIN VIEW ---
 function AdminView({
-  projects, onBack, onUpdateProject, onGenerateAiPrompt, onGenerateAiImage
+  projects, onBack, onUpdateProject, onGenerateAiImage
 }: {
   projects: Project[];
   onBack: () => void;
   onUpdateProject: (id: string, updates: ProjectUpdate) => Promise<Project>;
-  onGenerateAiPrompt: (id: string, payload: any) => Promise<string>;
   onGenerateAiImage: (id: string, payload: any) => Promise<Project>;
 }) {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -834,7 +1021,7 @@ function AdminView({
   const getAssetInfo = (id: string, category: 'THAC' | 'KE' | 'CANH'): { name: string, url: string } | null => {
     const list = ASSETS[category];
     for (const item of list) {
-      if (item.id === id) return { name: item.name, url: item.url };
+      if (item.id === id) return { name: item.name, url: 'url' in item ? item.url : '' };
       if ('variants' in item && item.variants) {
         const variant = item.variants.find(v => v.id === id);
         if (variant) return { name: variant.name, url: variant.url };
@@ -916,7 +1103,7 @@ function AdminView({
     }
   };
 
-  const pushAssetToDesigner = async (item: DesignerLibraryItem, position?: any) => {
+  const pushAssetToDesigner = async (item: DesignerLibraryItem) => {
     try {
       setDesignerStatus(`Đang nạp ${item.label}...`);
       const frame = designerFrameRef.current;
@@ -929,7 +1116,7 @@ function AdminView({
     }
   };
 
-  const handleDesignerAssetDragStart = (event: React.DragEvent, item: DesignerLibraryItem) => {
+  const handleDesignerAssetDragStart = (_event: React.DragEvent, item: DesignerLibraryItem) => {
     setDraggedItem(item);
     setIsDraggingToDesigner(true);
   };
@@ -1048,14 +1235,6 @@ function AdminView({
     ].join('\n');
   };
 
-  const buildChatGptPackage = (project: Project, options?: { absoluteUrls?: boolean }) => {
-    const links = getAiUploadAssets(project).map((asset, i) => {
-      const url = options?.absoluteUrls ? toAbsoluteAssetUrl(asset.url) : asset.url;
-      return `${i + 1}. ${asset.label}: ${url}`;
-    }).join('\n');
-    return `${buildChatGptPrompt(project)}\n\nĐường dẫn tài nguyên\n${links}`;
-  };
-
   const buildChatGptPackageFromPrompt = (project: Project, prompt: string, options?: { absoluteUrls?: boolean }) => {
     const links = getAiUploadAssets(project).map((asset, i) => {
       const url = options?.absoluteUrls ? toAbsoluteAssetUrl(asset.url) : asset.url;
@@ -1152,8 +1331,6 @@ function AdminView({
     { id: 'chatgpt_image' as WorkflowBranch, title: 'ChatGPT tạo ảnh', description: 'Dùng ảnh gốc, ảnh khoanh vùng và dữ liệu khách để tạo phương án mới bằng ChatGPT.', icon: <Bot size={22} /> }
   ];
 
-  const activeResources = selectedProject ? getAiUploadAssets(selectedProject).map(a => ({ label: a.label, url: toAbsoluteAssetUrl(a.url) })) : [];
-
   // --- EFFECTS ---
   useEffect(() => {
     if (!showDesigner) return;
@@ -1194,42 +1371,68 @@ function AdminView({
   // --- RENDER: AI STUDIO ---
   if (showAIStudio && selectedProject) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="view ai-studio-view">
-        <header className="ai-studio-header">
-          <button onClick={() => setShowAIStudio(false)} className="btn-close-designer"><X size={20} /> Thoát Trạm AI</button>
-          <h2>Gói Tài Nguyên AI (AI Asset Package)</h2>
-          <p>Hệ thống sẽ tổng hợp file, mở ChatGPT, upload tài nguyên, diễn prompt và tải kết quả về đây.</p>
-        </header>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="studio-container-premium">
+        <aside className="studio-sidebar-premium">
+          <button onClick={() => setShowAIStudio(false)} className="btn-exit-studio"><ChevronLeft size={20} /> Thoát Trạm AI</button>
+          
+          <div className="studio-req-section">
+            <h4 className="section-title">THÔNG TIN DỰ ÁN</h4>
+            <div className="req-summary-card">
+              <div className="summary-info"><label>Khách hàng:</label><span>{selectedProject.customerName}</span></div>
+              <div className="summary-info"><label>Dịch vụ:</label><span className="service-highlight">{selectedProject.service}</span></div>
+              <div className="tech-tags">
+                <div className="tech-tag-item">AI Render</div>
+                <div className="tech-tag-item">4K Upscale</div>
+              </div>
+            </div>
+          </div>
 
-        <aside className="ai-studio-sidebar">
-          <div className="ai-sidebar-project-info">
-            <div className="info-row"><label>Khách hàng:</label><span><strong>{selectedProject.customerName}</strong></span></div>
-            <div className="info-row"><label>Dịch vụ:</label><span>{selectedProject.service}</span></div>
+          <div className="studio-req-section">
+            <h4 className="section-title">LỰA CHỌN MẪU</h4>
+            <div className="req-summary-card">
+              <div className="summary-info">
+                 <label>Danh sách mẫu đã chọn:</label>
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                    {buildSelectionLines(selectedProject).map((line, i) => (
+                      <div key={i} style={{ fontSize: '0.9rem', color: '#bababa' }}>{line}</div>
+                    ))}
+                 </div>
+              </div>
+            </div>
           </div>
-          <div className="ai-sidebar-selections">
-            <label>Lựa chọn vật liệu:</label>
-            {buildSelectionLines(selectedProject).map((line, i) => <div key={i} className="req-tag-mini">{line.replace('- ', '')}</div>)}
+
+          <div className="studio-req-section">
+            <h4 className="section-title">YÊU CẦU RIÊNG</h4>
+            <div className="note-summary-box">{selectedProject.note || 'Khách hàng không có ghi chú thêm.'}</div>
           </div>
-          <div className="ai-sidebar-note">
-            <label>Ghi chú khách:</label>
-            <p>{selectedProject.note || 'Không có ghi chú.'}</p>
-          </div>
-          <div className="ai-sidebar-actions">
-            <button className="btn-primary" onClick={handleRunChatGptAutomation} disabled={isGeneratingAi}>
-              <Bot size={18} /> {isGeneratingAi ? 'Đang xử lý...' : 'Mở ChatGPT'}
-            </button>
-            <div className="ai-studio-status">{aiStudioStatus}</div>
+
+          <div className="studio-automation-box">
+             <button className="btn-open-chatgpt" onClick={handleRunChatGptAutomation} disabled={isGeneratingAi}>
+               <Bot size={22} /> {isGeneratingAi ? 'Đang gửi Prompt...' : 'Khởi chạy ChatGPT'}
+             </button>
+             {aiStudioStatus && <div className="studio-status-inline">{aiStudioStatus}</div>}
           </div>
         </aside>
 
-        <main className="ai-studio-main">
+        <main className="studio-main-premium">
           <div className="studio-visual-grid">
             {aiUploadAssets.map((asset, index) => (
               <div key={`${asset.label}-${index}`} className="visual-asset-card">
-                <div className="asset-media"><img src={asset.url} alt={asset.label} /></div>
+                <div className="asset-media">
+                  {isVideoAsset(asset.url) ? (
+                    <video src={asset.url} controls />
+                  ) : (
+                    <img src={asset.url} alt={asset.label} />
+                  )}
+                </div>
                 <div className="asset-meta">
-                  <div><div className="asset-label">{asset.label}</div><div className="asset-role">{asset.role}</div></div>
-                  <button className="btn-copy-asset" onClick={() => copyText(toAbsoluteAssetUrl(asset.url), `Đã copy link ${asset.label}`)}><Copy size={16} /> Sao chép Link</button>
+                  <div>
+                    <div className="asset-label">{asset.label}</div>
+                    <div className="asset-role">{asset.role}</div>
+                  </div>
+                  <button className="btn-copy-asset" onClick={() => copyText(toAbsoluteAssetUrl(asset.url), `Đã copy link: ${asset.label}`)}>
+                    <Copy size={14} /> Link
+                  </button>
                 </div>
               </div>
             ))}
@@ -1237,26 +1440,35 @@ function AdminView({
 
           <section className="studio-prompt-center">
             <div className="prompt-header-row">
-              <div className="prompt-title"><Bot size={20} /> <h3>MASTER PROMPT - CÂU LỆNH TỔNG QUAN</h3></div>
-              <button className="btn-copy-all" onClick={() => copyText(buildChatGptPackageFromPrompt(selectedProject, chatGptPrompt, { absoluteUrls: true }), 'Đã sao chép tất cả prompt và link tài nguyên.')}><Copy size={18} /> SAO CHÉP TOÀN BỘ GÓI AI</button>
+              <div className="prompt-title"><Bot size={24} /> <h3>MASTER GENERATIVE PROMPT</h3></div>
+              <button className="btn-copy-all" onClick={() => {
+                const fullText = buildChatGptPackageFromPrompt(selectedProject, chatGptPrompt, { absoluteUrls: true });
+                copyText(fullText, 'Đã sao chép Master Prompt và toàn bộ link tài nguyên.');
+              }}>
+                <Copy size={18} /> SAO CHÉP TOÀN BỘ GÓI
+              </button>
             </div>
-            <div className="prompt-content-view"><pre>{chatGptPrompt}</pre></div>
+            <div className="prompt-content-view">
+              <pre>{chatGptPrompt || 'Đang tổng hợp Prompt...'}</pre>
+            </div>
           </section>
 
           <section className="studio-result-center">
             <div className="prompt-header-row">
-              <div className="prompt-title"><ImageIcon size={20} /> <h3>KẾT QUẢ ẢNH AI ĐÃ TẢI VỀ</h3></div>
+              <div className="prompt-title"><ImageIcon size={24} /> <h3>KẾT QUẢ AI DESIGN (DALL-E 3)</h3></div>
             </div>
             {aiResultImages.length === 0 ? (
-              <div className="ai-result-empty">Ảnh tạo xong từ ChatGPT sẽ tự động xuất hiện ở đây.</div>
+              <div className="ai-result-empty">
+                Chưa có ảnh kết quả. Sau khi ChatGPT tạo xong, hãy tải ảnh lên nhánh "AI Results" của dự án để hiển thị ở đây.
+              </div>
             ) : (
               <div className="ai-result-grid">
                 {aiResultImages.slice().reverse().map((imageUrl, index) => (
                   <div key={`${imageUrl}-${index}`} className="ai-result-card">
-                    <img src={imageUrl} alt={`Kết quả AI ${index + 1}`} />
+                    <img src={imageUrl} alt={`AI Generation ${index + 1}`} />
                     <div className="ai-result-actions">
-                      <button type="button" className="btn-link-inline" onClick={() => window.open(imageUrl, '_blank', 'noopener,noreferrer')}><ExternalLink size={16} /> Mở ảnh</button>
-                      <button type="button" className="btn-link-inline" onClick={() => copyText(imageUrl, 'Đã sao chép link ảnh AI.')}><Copy size={16} /> Copy link</button>
+                      <button className="btn-link-inline" onClick={() => window.open(imageUrl, '_blank')}><ExternalLink size={16} /> Xem ảnh</button>
+                      <button className="btn-link-inline" onClick={() => copyText(imageUrl, 'Đã copy link ảnh AI.')}><Copy size={16} /> Link</button>
                     </div>
                   </div>
                 ))}
@@ -1382,134 +1594,159 @@ function AdminView({
   // --- RENDER: DEFAULT ADMIN ---
   return (
     <motion.div className="view admin-view">
-      <header className="admin-header-premium">
-        <div className="admin-nav-row">
-          <button onClick={onBack} className="btn-back-universal"><ChevronLeft size={18} /> Về trang chủ</button>
-        </div>
-        <div className="admin-title-section">
-          <h1>Hệ Thống Quản Lý Dự Án</h1>
-          <div className="stats-pill-bar"><span className="count-badge">{projects.length}</span><span>Tệp khách hàng hiện có</span></div>
-        </div>
-      </header>
-
-      {selectedProject ? (
-        <div className="project-detail-premium">
-          <div className="detail-header-row">
-            <button onClick={() => setSelectedProject(null)} className="btn-back-universal"><ChevronLeft size={18} /> Danh sách dự án</button>
+      <div className="admin-content">
+        <header className="admin-header-premium">
+          <div className="admin-nav-row">
+            <button onClick={onBack} className="btn-back-universal"><ChevronLeft size={18} /> Về trang chủ</button>
           </div>
+          <div className="admin-title-section">
+            <h1>Hệ Thống Quản Lý Dự Án</h1>
+            <div className="stats-pill-bar"><span className="count-badge">{projects.length}</span><span>Tệp khách hàng hiện có</span></div>
+          </div>
+        </header>
 
-          <div className="detail-grid">
-            <div className="detail-left">
-              <div className="section-card glass-panel">
-                <div className="section-header"><User size={18} /> <h3>Thông tin khách hàng</h3></div>
-                <div className="info-row"><label>Họ và tên:</label><span className="highlight">{selectedProject.customerName}</span></div>
-                <div className="info-row"><label>SĐT / Zalo:</label><span>{selectedProject.customerPhone}</span></div>
-                <div className="info-row"><label>Gói dịch vụ:</label><span>{selectedProject.service}</span></div>
-              </div>
+        {selectedProject ? (
+          <div className="project-detail-premium">
+            <div className="detail-header-row">
+              <button onClick={() => setSelectedProject(null)} className="btn-back-universal"><ChevronLeft size={18} /> Danh sách dự án</button>
+            </div>
 
-              <div className="section-card glass-panel image-gallery-card">
-                <div className="section-header"><ImageIcon size={18} /> <h3>Ảnh dự án</h3></div>
-                <div className="image-gallery-grid">
-                  <div className="gallery-item"><label>Ảnh gốc</label><img src={selectedProject.rawImage} alt="Ảnh gốc" /></div>
-                  <div className="gallery-item"><label>Ảnh khoanh vùng</label><img src={selectedProject.annotatedImage} alt="Ảnh khoanh vùng" /></div>
-                  {(selectedProject.extraAssets || []).filter(a => !isVideoAsset(a)).map((asset, i) => (
-                    <div key={i} className="gallery-item"><label>Tham khảo {i + 1}</label><img src={asset} alt={`Extra ${i}`} /></div>
-                  ))}
+            <div className="detail-grid">
+              <div className="detail-left">
+                <div className="section-card glass-panel">
+                  <div className="section-header"><User size={18} /> <h3>Thông tin khách hàng</h3></div>
+                  <div className="info-row"><label>Họ và tên:</label><span className="highlight">{selectedProject.customerName}</span></div>
+                  <div className="info-row"><label>SĐT / Zalo:</label><span>{selectedProject.customerPhone}</span></div>
+                  <div className="info-row"><label>Gói dịch vụ:</label><span>{selectedProject.service}</span></div>
                 </div>
-                {designerVideoReferences.length > 0 && (
-                  <div className="video-refs-bar">
-                    {designerVideoReferences.map((video, i) => (
-                      <button key={i} className="btn-link-inline" onClick={() => window.open(video, '_blank', 'noopener,noreferrer')}><ExternalLink size={14} /> Video {i + 1}</button>
+
+                <div className="section-card glass-panel image-gallery-card">
+                  <div className="section-header"><ImageIcon size={18} /> <h3>Ảnh dự án</h3></div>
+                  <div className="media-comparison">
+                    <div className="image-item"><label>Ảnh gốc</label><img src={selectedProject.rawImage} alt="Ảnh gốc" /></div>
+                    <div className="image-item"><label>Ảnh khoanh vùng</label><img src={selectedProject.annotatedImage} alt="Ảnh khoanh vùng" /></div>
+                    {(selectedProject.extraAssets || []).filter(a => !isVideoAsset(a)).map((asset, i) => (
+                      <div key={i} className="image-item"><label>Tham khảo {i + 1}</label><img src={asset} alt={`Extra ${i}`} /></div>
                     ))}
                   </div>
-                )}
-                {selectedProject.finalImage && (
-                  <div className="final-preview-panel"><label>Bản vẽ hoàn thiện</label><img className="final-preview-image" src={selectedProject.finalImage} alt="Bản vẽ hoàn thiện" /></div>
-                )}
-              </div>
-            </div>
-
-            <div className="requirement-section">
-              <div className="section-card glass-panel">
-                <div className="section-header"><CheckCircle2 size={18} /> <h3>Phân tích yêu cầu & Mẫu chọn</h3></div>
-                <div className="requirement-checklist">
-                  <div className="check-item"><label>Gói dịch vụ:</label><span className="val-tag service">{selectedProject.service}</span></div>
-                  <div className="check-item"><label>Nhánh xử lý:</label><span className="val-tag workflow">{getWorkflowLabel(selectedProject.workflowBranch)}</span></div>
-                  {selectedProject.selections.thac && (<div className="check-item"><label>Thác nước:</label><span className="val-tag">{getAssetName(selectedProject.selections.thac, 'THAC')}</span></div>)}
-                  {selectedProject.selections.ke && selectedProject.selections.ke.length > 0 && (<div className="check-item"><label>Kè đá:</label><div className="tags-list">{selectedProject.selections.ke.map(id => (<span key={id} className="val-tag">{getAssetName(id, 'KE')}</span>))}</div></div>)}
-                  {selectedProject.selections.canh && selectedProject.selections.canh.length > 0 && (<div className="check-item"><label>Cảnh quan:</label><div className="tags-list">{selectedProject.selections.canh.map(id => (<span key={id} className="val-tag">{getAssetName(id, 'CANH')}</span>))}</div></div>)}
-                </div>
-                <div className="note-display"><label>Mô tả ý tưởng khách hàng:</label><div className="note-text">{selectedProject.note || 'Không có mô tả chi tiết.'}</div></div>
-              </div>
-
-              <div className="section-card glass-panel workflow-section">
-                <div className="section-header"><Bot size={18} /> <h3>Nhánh tác vụ xử lý</h3></div>
-                <div className="workflow-grid">
-                  {workflowOptions.map(option => (
-                    <button key={option.id} type="button" className={`workflow-card ${selectedProject.workflowBranch === option.id ? 'active' : ''}`} onClick={() => handleWorkflowSelect(option.id)}>
-                      <div className="workflow-card-icon">{option.icon}</div>
-                      <div className="workflow-card-content"><strong>{option.title}</strong><span>{option.description}</span></div>
-                    </button>
-                  ))}
-                </div>
-
-                {selectedProject.workflowBranch === 'chatgpt_image' && (
-                  <div className="chatgpt-helper-panel" style={{ padding: '1rem', textAlign: 'center', background: 'var(--card-bg)', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.2)', marginTop: '1rem' }}>
-                    <p style={{ marginBottom: '1rem', color: '#64748b' }}>Tiến trình xử lý bằng AI được thực hiện độc lập tại <strong>Trạm AI (AI Studio)</strong>.</p>
-                    <button className="btn-primary" onClick={() => setShowAIStudio(true)} style={{ margin: '0 auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Bot size={18} /> Mở Trạm AI (để xem Master Prompt)
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="section-card glass-panel actions-panel">
-                <div className="section-header"><Send size={18} /> <h3>Xử lý & Phản hồi</h3></div>
-                <div className="action-buttons">
-                  <button className="btn-secondary" onClick={() => handleWorkflowSelect('manual_design')}>Mở trình thiết kế</button>
-                  <button className="btn-primary-admin" onClick={() => fileRef.current?.click()}>{selectedProject.status === 'done' ? 'Cập nhật bản vẽ' : 'Tải lên Design Hoàn thiện'}</button>
-                  <input type="file" accept="image/*" ref={fileRef} onChange={handleUploadResult} hidden />
-                  {selectedProject.status === 'done' && (
-                    <button className="btn-zalo-admin" onClick={() => window.open(`https://zalo.me/${selectedProject.customerPhone.replace(/\D/g, '')}`, '_blank', 'noopener,noreferrer')}>Gửi Zalo cho khách hàng</button>
+                  {designerVideoReferences.length > 0 && (
+                    <div className="video-refs-bar">
+                      {designerVideoReferences.map((video, i) => (
+                        <button key={i} className="btn-link-inline" onClick={() => window.open(video, '_blank', 'noopener,noreferrer')}><ExternalLink size={14} /> Video {i + 1}</button>
+                      ))}
+                    </div>
+                  )}
+                  {selectedProject.finalImage && (
+                    <div className="final-preview-panel"><label>Bản vẽ hoàn thiện</label><img className="final-preview-image" src={selectedProject.finalImage} alt="Bản vẽ hoàn thiện" /></div>
                   )}
                 </div>
-                {actionFeedback && <div className="action-feedback">{actionFeedback}</div>}
+              </div>
+
+              <div className="requirement-section">
+                <div className="section-card glass-panel">
+                  <div className="section-header"><CheckCircle2 size={18} /> <h3>Phân tích yêu cầu & Mẫu chọn</h3></div>
+                  <div className="requirement-checklist">
+                    <div className="check-item"><label>Gói dịch vụ:</label><span className="val-tag service">{selectedProject.service}</span></div>
+                    <div className="check-item"><label>Nhánh xử lý:</label><span className="val-tag workflow">{getWorkflowLabel(selectedProject.workflowBranch)}</span></div>
+                    <div className="check-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px', marginTop: '10px' }}>
+                      <label>Mẫu thiết kế đã chọn:</label>
+                      <div className="req-tags-visual">
+                        {selectedProject.selections.thac && (
+                           <div className="req-asset-preview">
+                              <div className="req-asset-thumb"><img src={getAssetInfo(selectedProject.selections.thac, 'THAC')?.url} alt="" /></div>
+                              <div className="req-asset-info"><div className="req-asset-name">{getAssetName(selectedProject.selections.thac, 'THAC')}</div></div>
+                           </div>
+                        )}
+                        {(selectedProject.selections.ke || []).map(id => (
+                          <div key={id} className="req-asset-preview">
+                            <div className="req-asset-thumb"><img src={getAssetInfo(id, 'KE')?.url} alt="" /></div>
+                            <div className="req-asset-info"><div className="req-asset-name">{getAssetName(id, 'KE')}</div></div>
+                          </div>
+                        ))}
+                        {(selectedProject.selections.canh || []).map(id => (
+                          <div key={id} className="req-asset-preview">
+                            <div className="req-asset-thumb"><img src={getAssetInfo(id, 'CANH')?.url} alt="" /></div>
+                            <div className="req-asset-info"><div className="req-asset-name">{getAssetName(id, 'CANH')}</div></div>
+                          </div>
+                        ))}
+                        {!selectedProject.selections.thac && (!selectedProject.selections.ke?.length) && (!selectedProject.selections.canh?.length) && (
+                          <span className="val-tag">Chưa chọn mẫu</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="note-display"><label>Mô tả ý tưởng khách hàng:</label><div className="note-text">{selectedProject.note || 'Không có mô tả chi tiết.'}</div></div>
+                </div>
+
+                <div className="section-card glass-panel workflow-section">
+                  <div className="section-header"><Bot size={18} /> <h3>Nhánh tác vụ xử lý</h3></div>
+                  <div className="workflow-grid">
+                    {workflowOptions.map(option => (
+                      <button key={option.id} type="button" className={`workflow-card ${selectedProject.workflowBranch === option.id ? 'active' : ''}`} onClick={() => handleWorkflowSelect(option.id)}>
+                        <div className="workflow-card-icon">{option.icon}</div>
+                        <div className="workflow-card-content"><strong>{option.title}</strong><span>{option.description}</span></div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {selectedProject.workflowBranch === 'chatgpt_image' && (
+                    <div className="chatgpt-helper-panel" style={{ padding: '1rem', textAlign: 'center', background: 'var(--card-bg)', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.2)', marginTop: '1rem' }}>
+                      <p style={{ marginBottom: '1rem', color: '#64748b' }}>Tiến trình xử lý bằng AI được thực hiện độc lập tại <strong>Trạm AI (AI Studio)</strong>.</p>
+                      <button className="btn-primary" onClick={() => setShowAIStudio(true)} style={{ margin: '0 auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Bot size={18} /> Mở Trạm AI (để xem Master Prompt)
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="section-card glass-panel actions-panel">
+                  <div className="section-header"><Send size={18} /> <h3>Xử lý & Phản hồi</h3></div>
+                  <div className="action-buttons">
+                    <button className="btn-secondary" onClick={() => handleWorkflowSelect('manual_design')}>Mở trình thiết kế</button>
+                    <button className="btn-primary-admin" onClick={() => fileRef.current?.click()}>{selectedProject.status === 'done' ? 'Cập nhật bản vẽ' : 'Tải lên Design Hoàn thiện'}</button>
+                    <input type="file" accept="image/*" ref={fileRef} onChange={handleUploadResult} hidden />
+                    {selectedProject.status === 'done' && (
+                      <button className="btn-zalo-admin" onClick={() => window.open(`https://zalo.me/${selectedProject.customerPhone.replace(/\D/g, '')}`, '_blank', 'noopener,noreferrer')}>Gửi Zalo cho khách hàng</button>
+                    )}
+                  </div>
+                  {actionFeedback && <div className="action-feedback">{actionFeedback}</div>}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="project-list-premium">
-          {Object.keys(grouped).length === 0 ? (
-            <div className="empty-state glass-panel"><FolderOpen size={64} /><p>Chưa có dữ liệu nào được gửi về hệ thống.</p></div>
-          ) : (
-            Object.keys(grouped).map(dateGroup => (
-              <div key={dateGroup} className="folder-date-section">
-                <div className="date-badge"><Folder size={16} /> {dateGroup}</div>
-                <div className="customer-cards-grid">
-                  {grouped[dateGroup].map(project => (
-                    <button key={project.id} type="button" className={`management-card ${project.status}`} onClick={() => setSelectedProject(project)}>
-                      <div className="card-header">
-                        <span className="time">{new Date(project.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
-                        <div className={`status-indicator ${project.status}`}></div>
-                      </div>
-                      <div className="card-main">
-                        <div className="customer-name">{project.customerName}</div>
-                        <div className="customer-phone">{project.customerPhone}</div>
-                      </div>
-                      <div className="card-meta-row">
-                        <div className="service-name">{project.service}</div>
-                        <div className={`workflow-mini-tag ${project.workflowBranch || 'empty'}`}>{getWorkflowShortLabel(project.workflowBranch)}</div>
-                      </div>
-                      <div className="card-footer"><span>{getStatusLabel(project.status)}</span><ChevronRight size={18} /></div>
-                    </button>
-                  ))}
+        ) : (
+          <div className="project-list-premium">
+            {Object.keys(grouped).length === 0 ? (
+              <div className="empty-state glass-panel"><FolderOpen size={64} /><p>Chưa có dữ liệu nào được gửi về hệ thống.</p></div>
+            ) : (
+              Object.keys(grouped).map(dateGroup => (
+                <div key={dateGroup} className="folder-date-section">
+                  <div className="date-badge"><Folder size={16} /> {dateGroup}</div>
+                  <div className="customer-cards-grid">
+                    {grouped[dateGroup].map(project => (
+                      <button key={project.id} type="button" className={`management-card ${project.status}`} onClick={() => setSelectedProject(project)}>
+                        <div className="card-header">
+                          <span className="time">{new Date(project.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                          <div className={`status-indicator ${project.status}`}></div>
+                        </div>
+                        <div className="card-main">
+                          <div className="customer-name">{project.customerName}</div>
+                          <div className="customer-phone">{project.customerPhone}</div>
+                        </div>
+                        <div className="card-meta-row">
+                          <div className="service-name">{project.service}</div>
+                          <div className={`workflow-mini-tag ${project.workflowBranch || 'empty'}`}>{getWorkflowShortLabel(project.workflowBranch)}</div>
+                        </div>
+                        <div className="card-footer"><span>{getStatusLabel(project.status)}</span><ChevronRight size={18} /></div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
+              ))
+            )}
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 }
