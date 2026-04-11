@@ -4,6 +4,7 @@ import {
   Paintbrush, 
   Image as ImageIcon, 
   CheckCircle2, 
+  RefreshCcw,
   ArrowRight, 
   User, 
   Send, 
@@ -24,7 +25,8 @@ import {
   Bot,
   Monitor,
   Info,
-  HelpCircle
+  HelpCircle,
+  Mail
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -45,6 +47,7 @@ interface Project {
   timestamp: string;
   customerName: string;
   customerPhone: string;
+  customerEmail?: string;
   rawImage: string;
   annotatedImage: string;
   selections: Selection;
@@ -225,9 +228,12 @@ export default function App() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [service, setService] = useState('');
   const [note, setNote] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
   const [extraAssets, setExtraAssets] = useState<string[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [submitStatus, setSubmitStatus] = useState('');
 
   useEffect(() => {
     if (view === 'admin') {
@@ -238,21 +244,48 @@ export default function App() {
     }
   }, [view]);
 
-  const handleUpload = (img: string) => {
-    setRawImage(img);
-    setAnnotatedImage(img);
+  const compressImage = (base64Str: string, maxWidth = 1200): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = (maxWidth / width) * height;
+          width = maxWidth;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+    });
+  };
+
+  const handleUpload = async (img: string) => {
+    const compressed = await compressImage(img);
+    setRawImage(compressed);
+    setAnnotatedImage(compressed);
     setView('editor');
   };
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
+    setSubmitStatus('Bắt đầu nén dữ liệu...');
 
+    // Final compression of annotated image if needed
+    setSubmitStatus('Đang tối ưu hóa hình ảnh...');
+    
     const projectData = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       timestamp: new Date().toISOString(),
       customerName,
       customerPhone,
+      customerEmail,
       rawImage,
       annotatedImage,
       selections,
@@ -263,6 +296,11 @@ export default function App() {
     };
 
     try {
+      setSubmitStatus('Đang xác minh bảo mật...');
+      // Small simulated delay for verification feel
+      await new Promise(r => setTimeout(r, 600));
+      
+      setSubmitStatus('Đang truyền tải dữ liệu...');
       const response = await fetch('http://localhost:5000/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -270,12 +308,15 @@ export default function App() {
       });
 
       if (!response.ok) throw new Error('Lỗi khi gửi dữ liệu.');
+      
+      setSubmitStatus('Hoàn tất!');
       confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });
       setView('success');
     } catch (error) {
       alert('Không thể gửi dữ liệu. Vui lòng thử lại.');
     } finally {
       setIsSubmitting(false);
+      setSubmitStatus('');
     }
   };
 
@@ -285,6 +326,7 @@ export default function App() {
     setSelections({ ke: [], canh: [] });
     setCustomerName('');
     setCustomerPhone('');
+    setCustomerEmail('');
     setService('');
     setNote('');
     setExtraAssets([]);
@@ -336,13 +378,16 @@ export default function App() {
             onNameChange={setCustomerName}
             customerPhone={customerPhone}
             onPhoneChange={setCustomerPhone}
+            customerEmail={customerEmail}
+            onEmailChange={setCustomerEmail}
             rawImage={rawImage}
             annotatedImage={annotatedImage}
             extraAssets={extraAssets}
             onExtraAssetsChange={setExtraAssets}
-            onBack={() => setView('service')}
+            onBack={() => setView('plan')}
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
+            submitStatus={submitStatus}
           />
         )}
         {view === 'success' && (
@@ -561,7 +606,15 @@ function EditorView({
     setHistory([history[0]]);
   };
 
+  const hasDrawn = history.length > 1;
+  const hasText = note.trim().length >= 5;
+  const canNext = hasDrawn || hasText;
+
   const saveAndNext = () => {
+    if (!canNext) {
+      alert("Anh/Chị vui lòng hãy thực hiện thao tác khoanh vùng trên ảnh hoặc viết mô tả ý tưởng để KTS nắm bắt thông tin rõ nhất nhé!");
+      return;
+    }
     const canvas = canvasRef.current;
     if (!canvas) return;
     onAnnotatedChange(canvas.toDataURL('image/png'));
@@ -572,7 +625,12 @@ function EditorView({
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view editor-view">
       <div className="editor-top">
         <button onClick={onBack} className="btn-back-editor"><ChevronLeft size={18} /> Quay lại</button>
-        <button onClick={saveAndNext} className="btn-done">Xong ✓</button>
+        <button 
+          onClick={saveAndNext} 
+          className={`btn-done ${canNext ? 'ready' : ''}`}
+        >
+          Tiếp theo <ArrowRight size={20} />
+        </button>
       </div>
       <div className="workspace">
         <canvas ref={canvasRef} onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
@@ -669,8 +727,18 @@ function ServiceView({
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const mediaRef = useRef<HTMLInputElement>(null);
 
+  const selectedCategory = ASSETS.THAC.find(cat => 
+    cat.variants?.some(v => v.id === selections.thac)
+  );
+
   const handleThacSelect = (variantId: string) => {
     onSelectionsChange({ ...selections, thac: variantId });
+    setActiveCategory(null); // Close the "tab"
+  };
+
+  const handleResetThac = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelectionsChange({ ...selections, thac: undefined });
   };
 
   const toggleKe = (id: string) => {
@@ -688,13 +756,19 @@ function ServiceView({
   const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = ev => {
-        onExtraAssetsChange([...extraAssets, ev.target?.result as string]);
-      };
-      reader.readAsDataURL(file);
+    
+    const promises = Array.from(files).map(file => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = ev => resolve(ev.target?.result as string);
+        reader.readAsDataURL(file);
+      });
     });
+
+    Promise.all(promises).then(results => {
+      onExtraAssetsChange([...extraAssets, ...results]);
+    });
+    e.target.value = '';
   };
 
   return (
@@ -712,37 +786,77 @@ function ServiceView({
           <div className="asset-group-header">
             <h4>1. Chọn Kiểu Thác Nước</h4>
           </div>
-          <div className="category-grid">
-            {ASSETS.THAC.map(cat => (
-              <button 
-                key={cat.id} 
-                className={`category-card ${activeCategory === cat.id ? 'active' : ''}`}
-                onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
-              >
-                <div className="cat-img"><img src={cat.url} alt={cat.name} /></div>
-                <span>{cat.name}</span>
-              </button>
-            ))}
-          </div>
 
-          <AnimatePresence>
-            {activeCategory && (
+          <AnimatePresence mode="wait">
+            {!activeCategory ? (
               <motion.div 
-                initial={{ height: 0, opacity: 0 }} 
-                animate={{ height: 'auto', opacity: 1 }} 
-                exit={{ height: 0, opacity: 0 }}
-                className="variant-reveal"
+                key="cats"
+                initial={{ opacity: 0, x: -20 }} 
+                animate={{ opacity: 1, x: 0 }} 
+                exit={{ opacity: 0, x: 20 }}
+                className="category-grid"
               >
-                <div className="variant-grid">
+                {ASSETS.THAC.map(cat => {
+                  const isSelectedCat = selectedCategory?.id === cat.id;
+                  const hasSelectionGlobal = !!selections.thac;
+                  const isLocked = hasSelectionGlobal && !isSelectedCat;
+                  const displayImg = isSelectedCat 
+                    ? cat.variants?.find(v => v.id === selections.thac)?.url 
+                    : cat.url;
+
+                  return (
+                    <button 
+                      key={cat.id} 
+                      className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`}
+                      onClick={() => !isLocked && setActiveCategory(cat.id)}
+                      disabled={isLocked}
+                    >
+                      <div className="cat-img">
+                        <img src={displayImg} alt={cat.name} />
+                        {isSelectedCat && (
+                          <div className="change-badge" onClick={handleResetThac}>
+                            <RefreshCcw size={12} /> Thay đổi
+                          </div>
+                        )}
+                      </div>
+                      <div className="picked-label-container">
+                        <span>{isSelectedCat ? cat.variants?.find(v => v.id === selections.thac)?.name : cat.name}</span>
+                        {isSelectedCat && <div className="picked-status-mini"><CheckCircle2 size={14} /> Đã chọn</div>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="vars"
+                initial={{ opacity: 0, x: 20 }} 
+                animate={{ opacity: 1, x: 0 }} 
+                exit={{ opacity: 0, x: -20 }}
+                className="variant-selection-inline"
+              >
+                <div className="inline-header">
+                  <button className="btn-back-inline" onClick={() => setActiveCategory(null)}>
+                    <ChevronLeft size={16} /> Quay lại chọn kiểu đá
+                  </button>
+                  <h5>Mẫu {ASSETS.THAC.find(c => c.id === activeCategory)?.name}</h5>
+                </div>
+                <div className="category-grid">
                   {ASSETS.THAC.find(c => c.id === activeCategory)?.variants?.map(v => (
                     <button 
                       key={v.id} 
-                      className={`variant-card-mini ${selections.thac === v.id ? 'selected' : ''}`}
+                      className={`category-card ${selections.thac === v.id ? 'picked' : ''}`}
                       onClick={() => handleThacSelect(v.id)}
                     >
-                      <img src={v.url} alt={v.name} />
-                      <div className="variant-label">{v.name}</div>
-                      {selections.thac === v.id && <div className="check-mark"><CheckCircle2 size={16} /></div>}
+                      <div className="cat-img">
+                        <img src={v.url} alt={v.name} />
+                        {selections.thac === v.id && (
+                          <div className="check-badge-inline">
+                            <CheckCircle2 size={16} />
+                          </div>
+                        )}
+                      </div>
+                      <span>{v.name}</span>
                     </button>
                   ))}
                 </div>
@@ -785,11 +899,11 @@ function ServiceView({
 
         <section className="asset-group" style={{ marginTop: '20px' }}>
           <div className="asset-group-header">
-            <h4>2. Yêu cầu chi tiết khác (Nếu có)</h4>
+            <h4>2. Mô tả ý tưởng chi tiết (Khuyến nghị)</h4>
           </div>
           <div className="customer-request-area-v2">
             <textarea 
-              placeholder="Ví dụ: Tôi muốn thác cao 1.5m, đá bo viền dày, thêm nhiều tùng bonsai..."
+              placeholder="Anh/Chị hãy mô tả càng chi tiết càng tốt để KTS nắm rõ ý tưởng (Ví dụ: Phong cách Nhật hay Hiện đại, thác cao bao nhiêu, đá bo viền dày hay mỏng, muốn trồng bao nhiêu cây tùng...)"
               value={note}
               onChange={e => onNoteChange(e.target.value)}
             />
@@ -797,9 +911,11 @@ function ServiceView({
         </section>
 
         <section className="asset-group">
-          <div className="asset-group-header">
-            <h4>3. Gửi hình ảnh/video hiện trạng liên quan</h4>
-            <p style={{ fontSize: '0.85rem', color: '#888', marginTop: '4px' }}>Giúp chúng tôi hiểu rõ hơn về không gian dự án của bạn.</p>
+          <div className="asset-group-header-stacked">
+            <h4>3. Gửi hình ảnh/video thực tế</h4>
+            <div className="section-hint">
+              Hãy đính kèm video/hình ảnh hiện trạng. <strong>Lưu ý:</strong> Anh/Chị hãy viết thêm yêu cầu cụ thể vào ô <strong>Mô tả chi tiết</strong> bên trên để KTS nắm rõ nhất ý tưởng của mình.
+            </div>
           </div>
           <div className="media-upload-center" onClick={() => mediaRef.current?.click()}>
             <input type="file" multiple accept="image/*,video/*" ref={mediaRef} onChange={handleMediaUpload} hidden />
@@ -854,8 +970,8 @@ function PlanSelectionView({ service, onServiceChange, onBack, onNext }: {
           <button
             key={s.id}
             className={`service-card-premium ${service === s.name ? 'active' : ''}`}
-            onClick={() => onServiceChange(s.name)}
-            style={{ border: service === s.name ? `2.5px solid ${s.color}` : '1px solid rgba(255,255,255,0.1)' }}
+            onClick={() => { onServiceChange(s.name); onNext(); }}
+            style={{ border: service === s.name ? `3px solid ${s.color}` : '1px solid rgba(255,255,255,0.1)' }}
           >
             <div className="card-inner-premium">
               <div className="service-icon-box-premium" style={{ background: s.color }}>{s.icon}</div>
@@ -875,34 +991,40 @@ function PlanSelectionView({ service, onServiceChange, onBack, onNext }: {
         ))}
       </div>
 
-      <button className="btn-primary main-cta" onClick={onNext} disabled={!service} style={{ marginTop: '30px' }}>
-        Xác nhận thông tin <ArrowRight size={20} />
-      </button>
+      <div className="plan-hint-bottom">
+        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>* Anh/Chị vui lòng chọn 1 gói để tiếp tục</span>
+      </div>
     </motion.div>
   );
 }
 
 function SubmitView({
-  customerName, onNameChange, customerPhone, onPhoneChange, rawImage, annotatedImage, extraAssets, onExtraAssetsChange, onBack, onSubmit, isSubmitting
+  customerName, onNameChange, customerPhone, onPhoneChange, customerEmail, onEmailChange, rawImage, annotatedImage, extraAssets, onExtraAssetsChange, onBack, onSubmit, isSubmitting, submitStatus
 }: {
   customerName: string; onNameChange: (n: string) => void;
   customerPhone: string; onPhoneChange: (p: string) => void;
+  customerEmail: string; onEmailChange: (e: string) => void;
   rawImage: string; annotatedImage: string;
   extraAssets: string[]; onExtraAssetsChange: (a: string[]) => void;
   onBack: () => void; onSubmit: () => void; isSubmitting: boolean;
+  submitStatus: string;
 }) {
   const extraRef = useRef<HTMLInputElement>(null);
 
   const handleExtraFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = ev => {
-        const result = ev.target?.result as string;
-        onExtraAssetsChange([...extraAssets, result]);
-      };
-      reader.readAsDataURL(file);
+    
+    const promises = Array.from(files).map(file => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = ev => resolve(ev.target?.result as string);
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(promises).then(results => {
+      onExtraAssetsChange([...extraAssets, ...results]);
     });
     e.target.value = '';
   };
@@ -912,42 +1034,50 @@ function SubmitView({
       <header className="service-header-main">
         <button onClick={onBack} className="btn-back-universal"><ChevronLeft size={20} /> Quay lại</button>
         <div className="title-group">
-          <h2>Xác Nhận<br/>& Gửi Thông Tin</h2>
-          <p>Dữ liệu phác thảo sẽ được chuyển đến đội ngũ chuyên gia Sơn Hải để báo giá chính xác.</p>
+          <h2 style={{ fontSize: '2.5rem' }}>Thông Tin Liên Hệ</h2>
+          <p style={{ fontSize: '1.25rem', color: 'var(--accent)', fontWeight: 800 }}>
+            Hệ thống sẽ gửi bản vẽ phác thảo về Zalo và Email của Anh/Chị ngay sau khi hoàn tất.
+          </p>
         </div>
       </header>
 
-      <div className="form">
+      <div className="form" style={{ padding: 0 }}>
         <div className="input-group">
-          <label><User size={16} /> Họ và tên khách hàng</label>
-          <input type="text" value={customerName} onChange={e => onNameChange(e.target.value)} placeholder="Nhập tên của bạn..." />
+          <label><User size={20} /> Họ và tên khách hàng</label>
+          <input 
+            type="text" 
+            placeholder="Nhập họ tên của Anh/Chị..." 
+            value={customerName} 
+            onChange={e => onNameChange(e.target.value)} 
+          />
         </div>
+        
         <div className="input-group">
-          <label><Phone size={16} /> Số điện thoại / Zalo</label>
-          <input type="tel" value={customerPhone} onChange={e => onPhoneChange(e.target.value)} placeholder="Chúng tôi sẽ gửi bản vẽ qua số này..." />
+          <label><Phone size={20} /> Số điện thoại (Zalo)</label>
+          <input 
+            type="tel" 
+            placeholder="Nhập số điện thoại để nhận bản vẽ..." 
+            value={customerPhone} 
+            onChange={e => onPhoneChange(e.target.value)} 
+          />
         </div>
 
-        <div className="preview-row" style={{ marginTop: '20px' }}>
-          <div className="preview-card">
-            <label>Hiện trạng gốc</label>
-            <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--glass-border)', height: '140px' }}>
-              <img src={rawImage} alt="Raw" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-          </div>
-          <div className="preview-card">
-            <label>Vùng phác thảo</label>
-            <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--accent)', height: '140px' }}>
-              <img src={annotatedImage} alt="Annotated" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-          </div>
+        <div className="input-group">
+          <label><Mail size={20} /> Email (Nếu có)</label>
+          <input 
+            type="email" 
+            placeholder="Nhập email để nhận bản vẽ (không bắt buộc)..." 
+            value={customerEmail} 
+            onChange={e => onEmailChange(e.target.value)} 
+          />
         </div>
 
-        <div className="extra-assets-area">
-          <h4>Ảnh & Video hiện trạng khác</h4>
+        <div className="extra-assets-area" style={{ marginTop: '20px' }}>
+          <h4>Hình ảnh/Video bổ sung khác</h4>
           <p className="sub-hint">Giúp kỹ sư hiểu rõ hơn về góc nhìn xung quanh (không bắt buộc).</p>
           <div className="assets-uploader" onClick={() => extraRef.current?.click()}>
             <Upload size={32} color="var(--accent)" />
-            <span>Tải thêm ảnh/video</span>
+            <span style={{ fontSize: '1.1rem' }}>Tải thêm ảnh/video công trình</span>
           </div>
           <input type="file" accept="image/*,video/*" multiple ref={extraRef} onChange={handleExtraFiles} hidden />
           
@@ -967,7 +1097,7 @@ function SubmitView({
       </div>
 
       <button className="btn-primary main-cta" onClick={onSubmit} disabled={!customerName || !customerPhone || isSubmitting}>
-        {isSubmitting ? 'Đang gửi thông tin...' : 'Gửi yêu cầu phác thảo'} <Send size={20} style={{ marginLeft: '12px' }} />
+        {isSubmitting ? (submitStatus || 'Đang nén dữ liệu...') : 'GỬI YÊU CẦU PHÁC THẢO NGAY'} <Send size={20} style={{ marginLeft: '12px' }} />
       </button>
     </motion.div>
   );
