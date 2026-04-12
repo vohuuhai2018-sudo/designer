@@ -107,64 +107,68 @@ button {
   right: 0;
   height: 70px;
   z-index: 1000;
-  background: rgba(2, 6, 23, 0.85);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(2, 6, 23, 0.9);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   justify-content: center;
-  pointer-events: none; /* Let clicks pass through outside the button container */
 }
 
 .nav-inner-luxe {
   width: 100%;
   max-width: 500px;
   height: 100%;
-  padding: 0 16px;
+  padding: 8px 12px;
   display: flex;
+  gap: 12px; /* Khoảng cách nhỏ giữa 2 thanh */
   align-items: center;
-  justify-content: space-between;
-  pointer-events: auto;
 }
 
 .btn-nav-glass {
+  flex: 1; /* Chia đều 50/50 */
+  height: 52px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
-  border-radius: 999px;
-  font-size: 1rem;
-  font-weight: 700;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 14px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
 .btn-nav-glass:active {
-  transform: scale(0.92);
-  background: rgba(255, 255, 255, 0.1);
+  transform: scale(0.96);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .next-accent {
-  background: rgba(226, 177, 112, 0.1);
-  border-color: rgba(226, 177, 112, 0.3);
+  background: rgba(226, 177, 112, 0.15);
+  border-color: rgba(226, 177, 112, 0.4);
   color: var(--accent);
 }
 
 .next-accent.ready {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent) 0%, #b48a4d 100%);
   color: var(--primary);
-  box-shadow: 0 4px 15px rgba(226, 177, 112, 0.2);
+  border: none;
+  box-shadow: 0 8px 20px rgba(226, 177, 112, 0.25);
 }
 
 .next-accent.locked {
-  opacity: 0.5;
+  opacity: 0.4;
   filter: grayscale(1);
 }
 
 .nav-offset {
-  padding-top: 80px !important;
+  padding-top: 85px !important;
 }
 
 .notification-overlay {
