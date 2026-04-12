@@ -85,42 +85,42 @@ async function findPromptInput(page) {
 }
 
 async function enableImageMode(page) {
-  console.log("-> Đang kích hoạt chế độ Tạo Hình Ảnh qua menu /...");
+  console.log("-> Đang kích hoạt chế độ Tạo Hình Ảnh...");
   try {
     const input = await findPromptInput(page);
     await input.focus();
+
+    // KIỂM TRA: Nếu đã ở chế độ Tạo Hình Ảnh (placeholder chứa chữ "hình ảnh"), thì bỏ qua luôn
+    const currentPlaceholder = await input.getAttribute('placeholder') || '';
+    if (currentPlaceholder.toLowerCase().includes('hình ảnh')) {
+      console.log("✅ Đã ở chế độ Tạo Hình Ảnh từ trước.");
+      return;
+    }
     
-    // Gõ phím / để hiện menu
+    // Thực hiện chọn qua phím tắt /
     await page.keyboard.type('/');
-    await delay(1000);
+    await delay(1200);
 
-    // Tìm chính xác mục "Tạo hình ảnh" trong danh sách và CLICK
-    // Thử nhiều loại selector để chắc chắn trúng mục menu
-    const menuSelectors = [
-      'div[role="menuitem"]',
-      'button[role="menuitem"]',
-      'div.flex.items-center.gap-2.p-2',
-      '[data-testid*="item"]'
-    ];
-    
-    let clicked = false;
-    for (const selector of menuSelectors) {
-      const item = page.locator(selector).filter({ hasText: /^Tạo hình ảnh$/ }).first();
-      if (await item.isVisible()) {
-        await item.click();
-        clicked = true;
-        console.log(`✅ Đã click chọn 'Tạo hình ảnh' qua selector: ${selector}`);
-        break;
+    const item = page.locator('div[role="menuitem"], [data-testid*="item"]').filter({ hasText: /^Tạo hình ảnh$/ }).first();
+    if (await item.isVisible()) {
+      await item.click();
+      console.log("-> Đã click chọn 'Tạo hình ảnh'. Đang chờ xác nhận...");
+      
+      // XÁC NHẬN: Đợi cho đến khi placeholder thay đổi sang đặc trưng của DALL-E
+      try {
+        await page.waitForFunction(() => {
+          const el = document.querySelector('#prompt-textarea') || document.querySelector('[contenteditable="true"]');
+          return el && (el.getAttribute('placeholder') || '').toLowerCase().includes('hình ảnh');
+        }, { timeout: 5000 });
+        console.log("✅ XÁC NHẬN: Hệ thống đã chuyển sang chế độ Tạo Hình Ảnh thành công.");
+      } catch (e) {
+        console.warn("⚠️ Cảnh báo: Đã click nhưng placeholder chưa đổi. Sẽ thử lại bước up ảnh.");
       }
-    }
-
-    if (!clicked) {
-       // Fallback cuối cùng: nhấn Enter nếu gõ xong mà menu đã lọc đúng
+    } else {
+       // Thử Enter nếu ko thấy click được
        await page.keyboard.press('Enter');
-       console.log("⚠️ Không click được menu, đã nhấn Enter dự phòng.");
+       await delay(1000);
     }
-    
-    await delay(1000);
   } catch (error) {
     console.error('Lỗi khi kích hoạt chế độ hình ảnh:', error.message);
   }
