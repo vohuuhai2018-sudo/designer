@@ -598,7 +598,7 @@ function EditorView({
     img.src = rawImage;
   }, [rawImage]);
 
-  const getPos = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const getPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
     return {
@@ -607,7 +607,7 @@ function EditorView({
     };
   };
 
-  const startDraw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const startDraw = (e: React.PointerEvent<HTMLCanvasElement>) => {
     setDrawing(true);
     const ctx = canvasRef.current?.getContext('2d');
     if (!ctx) return;
@@ -616,7 +616,7 @@ function EditorView({
     ctx.moveTo(x, y);
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!drawing) return;
     const ctx = canvasRef.current?.getContext('2d');
     if (!ctx) return;
@@ -686,10 +686,14 @@ function EditorView({
         </button>
       </div>
       <div className="workspace">
-        <canvas ref={canvasRef} onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-          onTouchStart={e => { e.preventDefault(); const t = e.touches[0]; const mouseEvent = new MouseEvent('mousedown', { clientX: t.clientX, clientY: t.clientY }); canvasRef.current?.dispatchEvent(mouseEvent); }}
-          onTouchMove={e => { e.preventDefault(); const t = e.touches[0]; const mouseEvent = new MouseEvent('mousemove', { clientX: t.clientX, clientY: t.clientY }); canvasRef.current?.dispatchEvent(mouseEvent); }}
-          onTouchEnd={e => { e.preventDefault(); canvasRef.current?.dispatchEvent(new MouseEvent('mouseup')); }}
+        <canvas 
+          ref={canvasRef} 
+          onPointerDown={startDraw} 
+          onPointerMove={draw} 
+          onPointerUp={endDraw} 
+          onPointerLeave={endDraw}
+          onPointerCancel={endDraw}
+          style={{ touchAction: 'none' }}
         />
       </div>
       <div className="brush-controls-container">
