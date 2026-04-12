@@ -232,7 +232,8 @@ export default function App() {
   const [note, setNote] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [extraAssets, setExtraAssets] = useState<string[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
+   const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [submitStatus, setSubmitStatus] = useState('');
@@ -240,10 +241,17 @@ export default function App() {
   // Load projects when entering admin view
   useEffect(() => {
     if (view === 'admin') {
+      setIsLoadingProjects(true);
       fetch('http://localhost:5000/api/projects')
         .then(res => res.json())
-        .then(data => setProjects(data))
-        .catch(err => console.error('Failed to load projects:', err));
+        .then(data => {
+          setProjects(data);
+          setIsLoadingProjects(false);
+        })
+        .catch(err => {
+          console.error('Failed to load projects:', err);
+          setIsLoadingProjects(false);
+        });
     }
   }, [view]);
 
@@ -419,6 +427,7 @@ export default function App() {
         {view === 'admin' && (
           <AdminView
             projects={projects}
+            isLoading={isLoadingProjects}
             onBack={resetAll}
             onUpdateProject={async (id, updates) => {
               const response = await fetch(`http://localhost:5000/api/projects/${id}`, {
@@ -1167,9 +1176,10 @@ function SuccessView({ onReset }: { onReset: () => void }) {
 
 // --- ADMIN VIEW ---
 function AdminView({
-  projects, onBack, onUpdateProject, onGenerateAiImage
+  projects, isLoading, onBack, onUpdateProject, onGenerateAiImage
 }: {
   projects: Project[];
+  isLoading: boolean;
   onBack: () => void;
   onUpdateProject: (id: string, updates: ProjectUpdate) => Promise<Project>;
   onGenerateAiImage: (id: string, payload: any) => Promise<Project>;
@@ -1986,7 +1996,12 @@ function AdminView({
           </div>
         ) : (
           <div className="project-list-premium">
-            {Object.keys(grouped).length === 0 ? (
+            {isLoading ? (
+              <div className="empty-state glass-panel">
+                <div className="generating-spinner" style={{ width: 40, height: 40 }} />
+                <p>Đang tải danh sách dự án...</p>
+              </div>
+            ) : Object.keys(grouped).length === 0 ? (
               <div className="empty-state glass-panel"><FolderOpen size={64} /><p>Chưa có dữ liệu nào được gửi về hệ thống.</p></div>
             ) : (
               Object.keys(grouped).map(dateGroup => (

@@ -86,9 +86,12 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
 // MongoDB Connection + Startup Recovery
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URI, {
+  serverSelectionTimeoutMS: 15000, // Đợi tối đa 15s để kết nối lỗi thì báo ngay
+  connectTimeoutMS: 15000
+})
   .then(async () => {
-    console.log('Connected to MongoDB Atlas');
+    console.log('✅ [DATABASE] Đã kết nối MongoDB Atlas');
     // Khôi phục các project bị bỏ dở sau khi restart server
     setTimeout(resumePendingProjects, 5000);
   })
@@ -107,14 +110,15 @@ async function resumePendingProjects() {
     }).lean();
 
     if (stuck.length === 0) {
-      console.log('[STARTUP] Không có dự án nào cần xử lý lại.');
+      console.log('✅ [STARTUP] Không có dự án nào cần xử lý lại.');
       return;
     }
 
-    console.log(`[STARTUP] Phát hiện ${stuck.length} dự án Gói Cơ Bản chưa hoàn thành. Đang kích hoạt lại...`);
+    console.log(`⚠️ [STARTUP] Phát hiện ${stuck.length} dự án chưa hoàn thiện. Chỉ tự động kích hoạt lại dự án mới nhất để tránh treo máy...`);
 
-    for (const project of stuck) {
-      setImmediate(async () => {
+    // Chỉ tự động xử lý lại 1 dự án gần nhất để tránh mở quá nhiều trình duyệt cùng lúc
+    const project = stuck[0]; 
+    setImmediate(async () => {
         try {
           const assets = [
             { label: 'Ảnh hiện trạng gốc', url: project.rawImage, role: 'Ảnh nền chính, phải giữ nguyên kiến trúc, góc chụp và phối cảnh.' },
@@ -150,7 +154,6 @@ async function resumePendingProjects() {
           await Project.findOneAndUpdate({ id: project.id }, { status: 'pending' }).catch(() => null);
         }
       });
-    }
   } catch (e) {
     console.error('[STARTUP] Lỗi startup recovery:', e.message);
   }
@@ -198,10 +201,20 @@ const uploadToCloudinary = async (fileStr) => {
 
 // API Routes
 app.get('/api/projects', async (req, res) => {
+  console.log(`GET /api/projects - Đang truy vấn dữ liệu... Mongoose state: ${mongoose.connection.readyState}`);
+  const startTime = Date.now();
   try {
-    const projects = await Project.find().sort({ timestamp: -1 });
+    // Thêm select để loại trừ rawImage/annotatedImage nếu nó là base64 khổng lồ, nhưng FrontEnd cần nó để hiển thị.
+    // Tạm thời lấy tất cả nhưng đính kèm timeout.
+    const projects = await Project.find()
+      .sort({ timestamp: -1 })
+      .limit(50)
+      .maxTimeMS(8000)
+      .lean();
+    console.log(`GET /api/projects - Thành công: tìm thấy ${projects.length} dự án (Tốn ${Date.now() - startTime}ms).`);
     res.json(projects);
   } catch (err) {
+    console.error(`GET /api/projects - Lỗi truy vấn sau ${Date.now() - startTime}ms:`, err.message);
     res.status(500).json({ error: err.message });
   }
 });
