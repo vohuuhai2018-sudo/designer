@@ -85,51 +85,62 @@ async function findPromptInput(page) {
 }
 
 async function enableImageMode(page) {
-  console.log("-> Thiết lập chế độ Tạo Hình Ảnh qua menu...");
+  console.log("-> Đang kích hoạt chế độ Tạo Hình Ảnh...");
   try {
+    // Thử click nút + gỡ rối
     await page.evaluate(() => {
-      const textarea = document.querySelector('#prompt-textarea');
-      if (textarea) {
-        const container = textarea.parentElement.parentElement;
-        if (container) {
-          const btn = container.querySelector('button');
-          if (btn) btn.click();
+       const tx = document.querySelector('#prompt-textarea');
+       if (tx) tx.value = ''; 
+    }).catch(() => null);
+
+    const plusBtn = page.locator('button[aria-label*="attachment"], button[aria-label*="đính kèm"], .flex.items-center.gap-2 button').first();
+    if (await plusBtn.isVisible()) {
+      await plusBtn.click();
+      await delay(800);
+      
+      const menuLabels = [/Tạo hình ảnh/i, /Create image/i, /DALL-E/i];
+      for (const label of menuLabels) {
+        const option = page.getByText(label).first();
+        if (await option.isVisible()) {
+          await option.click();
+          await delay(1000);
+          console.log("✅ Đã chọn 'Tạo hình ảnh' qua menu.");
+          return;
         }
       }
-    });
-    
-    await delay(400);
-    
-    const menuLabels = [/Tạo hình ảnh/i, /Create image/i, /Image generation/i];
-    for (const label of menuLabels) {
-      const option = page.getByText(label);
-      if (await option.count()) {
-        await option.first().click({ force: true });
-        await delay(200);
-        return;
-      }
     }
     
-    // Fallback
-    const promptInput = await findPromptInput(page);
-    await promptInput.click();
-    await delay(300);
-    await page.keyboard.insertText('/');
-    await delay(400);
-
-    for (const label of menuLabels) {
-      const option = page.getByText(label);
-      if (await option.count()) {
-        await option.first().click({ force: true });
-        await delay(200);
-        return;
-      }
+    // Cách 2: Gõ lệnh /
+    await page.keyboard.press('Escape'); // Đóng menu nếu đang mở
+    const input = await findPromptInput(page);
+    await input.focus();
+    await page.keyboard.type('/');
+    await delay(800);
+    const dallE = page.getByText(/Tạo hình ảnh/i).first();
+    if (await dallE.isVisible()) {
+      await dallE.click();
+      await delay(800);
+      console.log("✅ Đã chọn 'Tạo hình ảnh' qua phím tắt /.");
+    } else {
+      await page.keyboard.press('Backspace');
     }
-    await page.keyboard.press('Backspace');
   } catch (error) {
-    console.error('Menu fallback:', error);
+    console.error('Lỗi khi kích hoạt chế độ hình ảnh:', error.message);
   }
 }
+
+async function clearTextarea(page) {
+  try {
+    const input = await findPromptInput(page);
+    await input.focus();
+    await page.keyboard.down('Control');
+    await page.keyboard.press('a');
+    await page.keyboard.up('Control');
+    await page.keyboard.press('Backspace');
+    await delay(200);
+  } catch (e) {}
+}
+
 
 async function uploadFiles(page, filePaths) {
   const fileInputs = [
@@ -367,10 +378,14 @@ async function dismissRateLimitDialog(page) {
 
 async function runSingleVariant(page, prompt, filePaths, tempDir, variantNumber, onImageReady) {
   try {
-    await page.goto('https://chatgpt.com', { waitUntil: 'domcontentloaded' });
+    // Luôn mở một phiên chat mới với model GPT-4o để đảm bảo quyền hạn up ảnh
+    await page.goto('https://chatgpt.com/?model=gpt-4o', { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('#prompt-textarea, [contenteditable="true"]', { timeout: 30000 });
 
-    // Chọn công cụ "Tạo hình ảnh" từ menu để kích hoạt DALL-E chuẩn cho mọi tài khoản
+    // Xóa sạch nội dung cũ nếu tab bị dùng lại
+    await clearTextarea(page);
+
+    // Chọn công cụ "Tạo hình ảnh" từ menu để kích hoạt DALL-E
     await enableImageMode(page);
 
     await uploadFiles(page, filePaths);
