@@ -12,6 +12,8 @@ const CHROME_CANDIDATES = [
 ];
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+const IMAGE_MODE_PLACEHOLDER_KEYWORDS = ['hình ảnh', 'image'];
+const IMAGE_MODE_MENU_PATTERNS = [/^Tạo hình ảnh$/i, /^Tạo ảnh$/i, /^Create image$/i, /^Image$/i];
 
 function resolveBrowserExecutable() {
   const executablePath = CHROME_CANDIDATES.find(candidate => require('fs').existsSync(candidate));
@@ -84,46 +86,103 @@ async function findPromptInput(page) {
   throw new Error('Không tìm thấy ô nhập prompt của ChatGPT. Hãy kiểm tra trạng thái đăng nhập.');
 }
 
+async function isImageModeActive(page) {
+  try {
+    return await page.evaluate(keywords => {
+      const input = document.querySelector('#prompt-textarea') || document.querySelector('[contenteditable="true"]');
+      const placeholder = (input?.getAttribute('placeholder') || '').toLowerCase();
+      if (keywords.some(keyword => placeholder.includes(keyword))) {
+        return true;
+      }
+
+      const composer = input?.closest('form') || input?.parentElement;
+      if (!composer) {
+        return false;
+      }
+
+      const labels = Array.from(composer.querySelectorAll('button, [role="button"], span, a'))
+        .map(node => (node.textContent || '').trim().toLowerCase())
+        .filter(Boolean);
+
+      return labels.includes('ảnh') || labels.includes('image');
+    }, IMAGE_MODE_PLACEHOLDER_KEYWORDS);
+  } catch (_) {
+    return false;
+  }
+}
+
+async function waitForImageMode(page, timeout = 8000) {
+  await page.waitForFunction(keywords => {
+    const input = document.querySelector('#prompt-textarea') || document.querySelector('[contenteditable="true"]');
+    const placeholder = (input?.getAttribute('placeholder') || '').toLowerCase();
+    if (keywords.some(keyword => placeholder.includes(keyword))) {
+      return true;
+    }
+
+    const composer = input?.closest('form') || input?.parentElement;
+    if (!composer) {
+      return false;
+    }
+
+    return Array.from(composer.querySelectorAll('button, [role="button"], span, a'))
+      .some(node => ['ảnh', 'image'].includes((node.textContent || '').trim().toLowerCase()));
+  }, IMAGE_MODE_PLACEHOLDER_KEYWORDS, { timeout });
+}
+
+async function clickImageModeMenuItem(page) {
+  const menuSelector = 'div[role="menuitem"], button[role="menuitem"], [data-testid*="item"]';
+
+  for (const pattern of IMAGE_MODE_MENU_PATTERNS) {
+    const item = page.locator(menuSelector).filter({ hasText: pattern }).first();
+    if (!await item.count()) {
+      continue;
+    }
+
+    try {
+      await item.waitFor({ state: 'visible', timeout: 1500 });
+      await item.click();
+      return true;
+    } catch (_) {
+      // Thử matcher tiếp theo nếu item vừa biến mất hoặc chưa click được.
+    }
+  }
+
+  return false;
+}
+
 async function enableImageMode(page) {
   console.log("-> Đang kích hoạt chế độ Tạo Hình Ảnh...");
-  try {
-    const input = await findPromptInput(page);
-    await input.focus();
-
-    // KIỂM TRA: Nếu đã ở chế độ Tạo Hình Ảnh (placeholder chứa chữ "hình ảnh"), thì bỏ qua luôn
-    const currentPlaceholder = await input.getAttribute('placeholder') || '';
-    if (currentPlaceholder.toLowerCase().includes('hình ảnh')) {
-      console.log("✅ Đã ở chế độ Tạo Hình Ảnh từ trước.");
-      return;
-    }
-    
-    // Thực hiện chọn qua phím tắt /
-    await page.keyboard.type('/');
-    await delay(1200);
-
-    const item = page.locator('div[role="menuitem"], [data-testid*="item"]').filter({ hasText: /^Tạo hình ảnh$/ }).first();
-    if (await item.isVisible()) {
-      await item.click();
-      console.log("-> Đã click chọn 'Tạo hình ảnh'. Đang chờ xác nhận...");
-      
-      // XÁC NHẬN: Đợi cho đến khi placeholder thay đổi sang đặc trưng của DALL-E
-      try {
-        await page.waitForFunction(() => {
-          const el = document.querySelector('#prompt-textarea') || document.querySelector('[contenteditable="true"]');
-          return el && (el.getAttribute('placeholder') || '').toLowerCase().includes('hình ảnh');
-        }, { timeout: 5000 });
-        console.log("✅ XÁC NHẬN: Hệ thống đã chuyển sang chế độ Tạo Hình Ảnh thành công.");
-      } catch (e) {
-        console.warn("⚠️ Cảnh báo: Đã click nhưng placeholder chưa đổi. Sẽ thử lại bước up ảnh.");
-      }
-    } else {
-       // Thử Enter nếu ko thấy click được
-       await page.keyboard.press('Enter');
-       await delay(1000);
-    }
-  } catch (error) {
-    console.error('Lỗi khi kích hoạt chế độ hình ảnh:', error.message);
+  if (await isImageModeActive(page)) {
+    console.log('✅ Đã ở chế độ Tạo Hình Ảnh từ trước.');
+    return;
   }
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const input = await findPromptInput(page);
+      await input.click();
+      await delay(150);
+      await clearTextarea(page);
+
+      await page.keyboard.insertText('/');
+      await delay(900);
+
+      const clicked = await clickImageModeMenuItem(page);
+      if (!clicked) {
+        await page.keyboard.press('Enter');
+      }
+
+      await waitForImageMode(page);
+      console.log('✅ XÁC NHẬN: Hệ thống đã chuyển sang chế độ Tạo Hình Ảnh thành công.');
+      return;
+    } catch (error) {
+      console.warn(`⚠️ Lần ${attempt}/3 chưa kích hoạt được chế độ hình ảnh: ${error.message}`);
+      await clearTextarea(page);
+      await delay(1000);
+    }
+  }
+
+  throw new Error('Không thể chuyển ChatGPT sang chế độ Tạo Hình Ảnh.');
 }
 
 async function clearTextarea(page) {
@@ -139,7 +198,38 @@ async function clearTextarea(page) {
 }
 
 
-async function uploadFiles(page, filePaths) {
+async function waitForUploadPreviews(page, expectedCount) {
+  try {
+    await page.waitForFunction(expected => {
+      const input = document.querySelector('#prompt-textarea') || document.querySelector('[contenteditable="true"]');
+      const composer = input?.closest('form') || input?.parentElement;
+      if (!composer) {
+        return false;
+      }
+
+      const selectors = [
+        '[data-testid*="attachment"] img',
+        '[data-testid*="preview"] img',
+        'img[src^="blob:"]',
+        'img[src^="data:"]',
+        'button[aria-label*="Remove"]',
+        'button[aria-label*="Xóa"]'
+      ];
+
+      const maxCount = selectors.reduce((count, selector) => {
+        return Math.max(count, composer.querySelectorAll(selector).length);
+      }, 0);
+
+      return maxCount >= expected;
+    }, expectedCount, { timeout: 15000 });
+  } catch (_) {
+    await delay(1500);
+  }
+}
+
+
+async function uploadFiles(page, filePaths, attempt = 0) {
+  const targetFiles = filePaths.slice(0, 3);
   const fileInputs = [
     page.locator('#upload-photos'),
     page.locator('input[type="file"]')
@@ -147,7 +237,8 @@ async function uploadFiles(page, filePaths) {
 
   for (const locator of fileInputs) {
     if (await locator.count()) {
-      await locator.first().setInputFiles(filePaths);
+      await locator.first().setInputFiles(targetFiles);
+      await waitForUploadPreviews(page, targetFiles.length);
       await delay(1000); // Đợi để ChatGPT phản hồi
 
       // Kiểm tra xem có hiện lỗi Đỏ (VD: Tối đa 0 lần tải lên) không
@@ -159,10 +250,15 @@ async function uploadFiles(page, filePaths) {
       });
 
       if (errorVisible) {
+        if (attempt >= 1) {
+          throw new Error('ChatGPT từ chối upload file sau khi đã thử lại.');
+        }
         console.warn('⚠️ Phát hiện lỗi Upload của ChatGPT (0 lần tải lên). Đang thử Refresh trang...');
         await page.reload();
+        await page.waitForSelector('#prompt-textarea, [contenteditable="true"]', { timeout: 30000 });
         await delay(3000);
-        return await uploadFiles(page, filePaths); // Thử lại 1 lần
+        await enableImageMode(page);
+        return uploadFiles(page, targetFiles, attempt + 1);
       }
       return;
     }
@@ -172,6 +268,7 @@ async function uploadFiles(page, filePaths) {
 }
 
 async function fillPrompt(page, prompt) {
+  await clearTextarea(page);
   const promptInput = await findPromptInput(page);
   await promptInput.click();
   await delay(100);
@@ -493,7 +590,7 @@ async function runChatGptAutomation({ prompt, assets, onImageReady }) {
       args: ['--disable-blink-features=AutomationControlled']
     });
 
-    const outputPaths = [];
+    let outputPaths = [];
     const filePaths = inputFiles.map(file => file.filePath);
     const defaultPage = browser.pages()[0];
 
@@ -522,14 +619,21 @@ async function runChatGptAutomation({ prompt, assets, onImageReady }) {
       const missing = 2 - outputPaths.length;
       console.log(`[RETRY] Cần tạo thêm ${missing} ảnh (lần ${retryAttempt + 1})...`);
       await delay(5000); // Chờ để tránh rate limit
-      const retryPromises = [];
       for (let i = 0; i < missing; i++) {
         await delay(2000);
         const retryPage = await browser.newPage();
-        retryPromises.push(runSingleVariant(retryPage, prompt, filePaths, tempDir, outputPaths.length + i + 1));
+        const retryResult = await runSingleVariant(
+          retryPage,
+          prompt,
+          filePaths,
+          tempDir,
+          outputPaths.length + 1,
+          onImageReady
+        );
+        if (retryResult) {
+          outputPaths.push(retryResult);
+        }
       }
-      const retryResults = await Promise.all(retryPromises);
-      outputPaths = [...outputPaths, ...retryResults.filter(Boolean)];
       retryAttempt++;
     }
 

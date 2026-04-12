@@ -248,6 +248,8 @@ export default function App() {
   const [note, setNote] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [extraAssets, setExtraAssets] = useState<string[]>([]);
+  const [historySize, setHistorySize] = useState(0);
+  const [viewNotification, setViewNotification] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -391,14 +393,77 @@ export default function App() {
     setView('welcome');
   };
 
+  const canGoNext = () => {
+    switch (view) {
+      case 'upload': return !!rawImage;
+      case 'editor': return historySize > 1 || note.trim().length > 0;
+      case 'service': return !!selections.thac;
+      case 'plan': return !!service;
+      case 'submit': return !!customerName && !!customerPhone;
+      default: return true;
+    }
+  };
+
+  const handleGlobalNext = () => {
+    if (!canGoNext()) {
+      if (view === 'editor') setViewNotification("Anh/Chị vui lòng hãy thực hiện thao tác khoanh vùng trên ảnh hoặc viết mô tả ý tưởng chi tiết nhé!");
+      if (view === 'service') setViewNotification("Anh/Chị vui lòng hãy chọn một mẫu thiết kế mà mình ưng ý nhất nhé!");
+      return;
+    }
+    if (view === 'upload') setView('editor');
+    else if (view === 'editor') setView('service');
+    else if (view === 'service') setView('plan');
+    else if (view === 'plan') setView('submit');
+    else if (view === 'submit') handleSubmit();
+  };
+
+  const handleGlobalBack = () => {
+    if (view === 'upload') setView('welcome');
+    else if (view === 'editor') setView('upload');
+    else if (view === 'service') setView('editor');
+    else if (view === 'plan') setView('service');
+    else if (view === 'submit') setView('plan');
+  };
+
+  const showGlobalNav = ['upload', 'editor', 'service', 'plan', 'submit'].includes(view);
+
   return (
     <div className="container">
+      {showGlobalNav && (
+        <div className="global-nav-premium">
+          <div className="nav-inner-luxe">
+            <button onClick={handleGlobalBack} className="btn-nav-glass">
+              <ChevronLeft size={20} /> Quay lại
+            </button>
+            <button 
+              onClick={handleGlobalNext} 
+              className={`btn-nav-glass next-accent ${canGoNext() ? 'ready' : 'locked'}`}
+            >
+              Tiếp theo <ArrowRight size={20} />
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {viewNotification && (
+        <div className="notification-overlay" onClick={() => setViewNotification(null)}>
+           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="notification-modal">
+             <AlertTriangle size={48} color="var(--accent)" />
+             <p>{viewNotification}</p>
+             <button onClick={() => setViewNotification(null)}>Đã hiểu</button>
+           </motion.div>
+        </div>
+      )}
+
       <AnimatePresence mode="wait">
         {view === 'welcome' && (
           <WelcomeView onStart={() => setView('upload')} onAdmin={() => setView('admin')} />
         )}
         {view === 'upload' && (
-          <UploadView onBack={() => setView('welcome')} onUpload={handleUpload} />
+          <UploadView 
+            rawImage={rawImage}
+            onUpload={handleUpload} 
+          />
         )}
         {view === 'editor' && (
           <EditorView
@@ -407,8 +472,7 @@ export default function App() {
             onAnnotatedChange={setAnnotatedImage}
             note={note}
             onNoteChange={setNote}
-            onBack={() => setView('upload')}
-            onNext={() => setView('service')}
+            setHistorySize={setHistorySize}
           />
         )}
         {view === 'service' && (
@@ -419,16 +483,12 @@ export default function App() {
             onNoteChange={setNote}
             extraAssets={extraAssets}
             onExtraAssetsChange={setExtraAssets}
-            onBack={() => setView('editor')}
-            onNext={() => setView('plan')}
           />
         )}
         {view === 'plan' && (
           <PlanSelectionView
             service={service}
             onServiceChange={setService}
-            onBack={() => setView('service')}
-            onNext={() => setView('submit')}
           />
         )}
         {view === 'submit' && (
@@ -443,7 +503,6 @@ export default function App() {
             annotatedImage={annotatedImage}
             extraAssets={extraAssets}
             onExtraAssetsChange={setExtraAssets}
-            onBack={() => setView('plan')}
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
             submitStatus={submitStatus}
@@ -511,9 +570,8 @@ function WelcomeView({ onStart, onAdmin }: { onStart: () => void, onAdmin: () =>
   );
 }
 
-function UploadView({ onBack, onUpload }: { onBack: () => void, onUpload: (img: string) => void }) {
+function UploadView({ onUpload }: { onUpload: (img: string) => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [preview] = useState<string>('');
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -521,26 +579,20 @@ function UploadView({ onBack, onUpload }: { onBack: () => void, onUpload: (img: 
     const reader = new FileReader();
     reader.onload = ev => {
       const result = ev.target?.result as string;
-      onUpload(result); // Go straight to markings
+      onUpload(result);
     };
     reader.readAsDataURL(file);
   };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view upload-view">
-      <button onClick={onBack} className="btn-back-premium"><ChevronLeft size={18} /> Quay lại</button>
-      <h2>Tải ảnh hiện trạng</h2>
+      <h2 style={{marginTop: '2rem'}}>Tải ảnh hiện trạng</h2>
       <p className="hint">Chọn một bức ảnh chụp vị trí mà bạn muốn thiết kế cảnh quan.</p>
       <div className="upload-area" onClick={() => fileRef.current?.click()}>
-        {preview ? (
-          <img src={preview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '28px' }} />
-        ) : (
-          <>
-            <div className="upload-circle"><Camera size={60} /></div>
-            <span className="upload-prompt">NHẤN ĐỂ CHỌN ẢNH</span>
-          </>
-        )}
+        <div className="upload-circle"><Camera size={60} /></div>
+        <span className="upload-prompt">NHẤN ĐỂ CHỌN ẢNH</span>
       </div>
+
       <input type="file" accept="image/*" ref={fileRef} onChange={handleFile} hidden />
       
       {!preview && (
@@ -571,15 +623,14 @@ function UploadView({ onBack, onUpload }: { onBack: () => void, onUpload: (img: 
 }
 
 function EditorView({
-  rawImage, annotatedImage, onAnnotatedChange, note, onNoteChange, onBack, onNext
+  rawImage, annotatedImage, onAnnotatedChange, note, onNoteChange, setHistorySize
 }: {
   rawImage: string;
   annotatedImage: string;
   onAnnotatedChange: (img: string) => void;
   note: string;
   onNoteChange: (n: string) => void;
-  onBack: () => void;
-  onNext: () => void;
+  setHistorySize: (n: number) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [drawing, setDrawing] = useState(false);
@@ -652,17 +703,22 @@ function EditorView({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.globalAlpha = 1.0;
-    setHistory(prev => [...prev, ctx.getImageData(0, 0, canvas.width, canvas.height)]);
+    const newHistory = [...history, ctx.getImageData(0, 0, canvas.width, canvas.height)];
+    setHistory(newHistory);
+    setHistorySize(newHistory.length);
     setIsDrawn(true);
+    onAnnotatedChange(canvas.toDataURL('image/png'));
   };
 
   const undo = () => {
     if (history.length <= 1) return;
     const newHistory = history.slice(0, -1);
     setHistory(newHistory);
+    setHistorySize(newHistory.length);
     const ctx = canvasRef.current?.getContext('2d');
     if (ctx && newHistory.length > 0) {
       ctx.putImageData(newHistory[newHistory.length - 1], 0, 0);
+      onAnnotatedChange(canvasRef.current!.toDataURL('image/png'));
     }
   };
 
@@ -673,7 +729,9 @@ function EditorView({
     if (!ctx || history.length === 0) return;
     ctx.putImageData(history[0], 0, 0);
     setHistory([history[0]]);
+    setHistorySize(1);
     setIsDrawn(false);
+    onAnnotatedChange(canvas.toDataURL('image/png'));
   };
 
   const canNext = history.length > 1 || note.trim().length > 0;
@@ -690,16 +748,7 @@ function EditorView({
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view editor-view">
-      <div className="editor-top">
-        <button onClick={onBack} className="btn-back-premium"><ChevronLeft size={18} /> Quay lại</button>
-        <button 
-          onClick={saveAndNext} 
-          className={`nav-next-locked ${canNext ? 'is-ready' : ''}`}
-        >
-          Tiếp theo <ArrowRight size={20} />
-        </button>
-      </div>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view editor-view nav-offset">
       <div className="workspace">
         <canvas 
           ref={canvasRef} 
@@ -811,7 +860,7 @@ function EditorView({
 }
 
 function ServiceView({
-  selections, onSelectionsChange, note, onNoteChange, extraAssets, onExtraAssetsChange, onBack, onNext
+  selections, onSelectionsChange, note, onNoteChange, extraAssets, onExtraAssetsChange
 }: {
   selections: Selection;
   onSelectionsChange: (s: Selection) => void;
@@ -819,8 +868,6 @@ function ServiceView({
   onNoteChange: (n: string) => void;
   extraAssets: string[];
   onExtraAssetsChange: (assets: string[]) => void;
-  onBack: () => void;
-  onNext: () => void;
 }) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const mediaRef = useRef<HTMLInputElement>(null);
@@ -870,14 +917,11 @@ function ServiceView({
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view service-view">
-      <header className="service-header-main">
-        <button onClick={onBack} className="btn-back-premium"><ChevronLeft size={20} /> Quay lại</button>
-        <div className="title-group">
-          <h2>Chọn Mẫu Thiết Kế</h2>
-          <p>Tùy chỉnh phong cách đá và các hạng mục trang trí cho công trình của bạn.</p>
-        </div>
-      </header>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view service-view nav-offset">
+      <div className="title-group" style={{textAlign: 'center', marginBottom: '1.5rem'}}>
+        <h2>Chọn Mẫu Thiết Kế</h2>
+        <p>Tùy chỉnh phong cách đá và các hạng mục trang trí cho công trình.</p>
+      </div>
 
       <div className="selection-panel">
         <section className="asset-group">
@@ -1034,18 +1078,13 @@ function ServiceView({
         </section>
       </div>
 
-      <button className="btn-primary main-cta" onClick={onNext} style={{ marginTop: '20px' }}>
-        Tiếp tục chọn gói dịch vụ <ArrowRight size={20} />
-      </button>
     </motion.div>
   );
 }
 
-function PlanSelectionView({ service, onServiceChange, onBack, onNext }: {
+function PlanSelectionView({ service, onServiceChange }: {
   service: string;
   onServiceChange: (s: string) => void;
-  onBack: () => void;
-  onNext: () => void;
 }) {
   const services = [
     { id: 'basic', name: 'Gói Cơ Bản', desc: 'Phác thảo nhanh ý tưởng cơ bản', price: 'Miễn phí', icon: <ImageIcon size={32} />, color: '#94a3b8' },
@@ -1054,21 +1093,16 @@ function PlanSelectionView({ service, onServiceChange, onBack, onNext }: {
   ];
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view plan-view">
-      <header className="service-header-main">
-        <button onClick={onBack} className="btn-back-premium"><ChevronLeft size={20} /> Quay lại</button>
-        <div className="title-group">
-          <h2>Chọn Gói Giải Pháp</h2>
-          <p>Lựa chọn gói thiết kế phù hợp để hiện thực hóa ý tưởng của bạn.</p>
-        </div>
-      </header>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view plan-view nav-offset">
+      <h2 style={{textAlign: 'center', marginBottom: '1.5rem'}}>Chọn Gói Giải Pháp</h2>
+      <p style={{textAlign: 'center', color: 'rgba(255,255,255,0.6)', marginBottom: '2rem'}}>Lựa chọn gói thiết kế phù hợp để hiện thực hóa ý tưởng của bạn.</p>
 
       <div className="service-list-premium">
         {services.map(s => (
           <button
             key={s.id}
             className={`service-card-premium ${service === s.name ? 'active' : ''}`}
-            onClick={() => { onServiceChange(s.name); onNext(); }}
+            onClick={() => onServiceChange(s.name)}
             style={{ border: service === s.name ? `3px solid ${s.color}` : '1px solid rgba(255,255,255,0.1)' }}
           >
             <div className="card-inner-premium">
@@ -1128,16 +1162,13 @@ function SubmitView({
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view submit-view">
-      <header className="service-header-main">
-        <button onClick={onBack} className="btn-back-premium"><ChevronLeft size={20} /> Quay lại</button>
-        <div className="title-group">
-          <h2 style={{ fontSize: '2.5rem' }}>Thông Tin Liên Hệ</h2>
-          <p style={{ fontSize: '1.25rem', color: 'var(--accent)', fontWeight: 800 }}>
-            Hệ thống sẽ gửi bản vẽ phác thảo về Zalo và Email của Anh/Chị ngay sau khi hoàn tất.
-          </p>
-        </div>
-      </header>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view submit-view nav-offset">
+      <div className="title-group" style={{textAlign: 'center', marginBottom: '2rem'}}>
+        <h2 style={{ fontSize: '2.5rem' }}>Thông Tin Liên Hệ</h2>
+        <p style={{ fontSize: '1.1rem', color: 'var(--accent)', fontWeight: 600, maxWidth: '600px', margin: '0.5rem auto' }}>
+          Hệ thống sẽ gửi bản vẽ phác thảo về Zalo và Email của Anh/Chị ngay sau khi hoàn tất.
+        </p>
+      </div>
 
       <div className="form" style={{ padding: 0 }}>
         <div className="input-group">
@@ -1195,9 +1226,10 @@ function SubmitView({
         </div>
       </div>
 
-      <button className="btn-primary main-cta" onClick={onSubmit} disabled={!customerName || !customerPhone || isSubmitting}>
-        {isSubmitting ? (submitStatus || 'Đang nén dữ liệu...') : 'GỬI YÊU CẦU PHÁC THẢO NGAY'} <Send size={20} style={{ marginLeft: '12px' }} />
-      </button>
+      <div className="submit-guidance-card">
+         <div className="guidance-icon"><Zap size={32} /></div>
+         <p>Vui lòng nhấn nút <strong>Tiếp theo</strong> ở phía trên cùng để gửi yêu cầu phác thảo của Anh/Chị về hệ thống.</p>
+      </div>
     </motion.div>
   );
 }
