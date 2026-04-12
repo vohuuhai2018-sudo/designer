@@ -1238,7 +1238,7 @@ function SuccessView({ projectId, service, onReset }: { projectId: string; servi
              </div>
              <h2 style={{ fontSize: '2rem', fontWeight: 800 }}>Hệ thống đang thiết kế...</h2>
              <p className="hint">Máy chủ Sơn Hải đang tự động vẽ các phương án dựa trên ý tưởng của Anh/Chị. Quá trình này có thể mất vài phút. Vui lòng không đóng trang.</p>
-             {images.length > 0 && <p style={{color: 'var(--accent)', fontWeight: 'bold', fontSize: '1.2rem'}}>Đã hoàn thiện {images.length}/4 phương án...</p>}
+             {images.length > 0 && <p style={{color: 'var(--accent)', fontWeight: 'bold', fontSize: '1.2rem'}}>Đã hoàn thiện {images.length}/2 phương án...</p>}
            </>
          ) : (
            <>
@@ -2138,7 +2138,7 @@ function AdminView({
                         {project.status === 'processing' && (
                           <div className="card-ai-generating">
                             <span className="generating-spinner" />
-                            <span>Đang tạo ảnh AI... {project.aiResults?.length ? `(${project.aiResults.length}/4 ảnh)` : ''}</span>
+                            <span>Đã hoàn thiện {project.aiResults?.length || 0}/2 phương án...</span>
                           </div>
                         )}
                         {project.aiResults && project.aiResults.length > 0 && (

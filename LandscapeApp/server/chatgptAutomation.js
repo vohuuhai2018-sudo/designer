@@ -85,40 +85,18 @@ async function findPromptInput(page) {
 }
 
 async function enableImageMode(page) {
-  console.log("-> Đang kích hoạt chế độ Tạo Hình Ảnh qua phím tắt /...");
+  console.log("-> Đang kích hoạt chế độ Tạo Hình Ảnh nhanh qua /...");
   try {
     const input = await findPromptInput(page);
     await input.focus();
-    // Đảm bảo ô nhập liệu trống
-    await page.keyboard.down('Control');
-    await page.keyboard.press('a');
-    await page.keyboard.up('Control');
-    await page.keyboard.press('Backspace');
-    await delay(300);
-
-    // Gõ phím / để hiện menu nhanh
-    await page.keyboard.type('/');
-    await delay(800);
-
-    // Tìm và click vào mục "Tạo hình ảnh" trong menu hiện lên
-    const dallE = page.locator('div[role="menuitem"], div[role="option"]').filter({ hasText: /^Tạo hình ảnh$/ }).first();
     
-    if (await dallE.isVisible()) {
-      await dallE.click();
-      await delay(1000);
-      console.log("✅ Đã chọn 'Tạo hình ảnh' qua phím tắt / thành công.");
-    } else {
-      console.log("⚠️ Không thấy mục 'Tạo hình ảnh' qua /, thử cách click dấu +...");
-      // Fallback sang click dấu + nếu gõ / không ra
-      const plusBtn = page.locator('button[aria-label*="attachment"], button[aria-label*="đính kèm"], .flex.items-center.gap-2 button').first();
-      await plusBtn.click();
-      await delay(800);
-      const option = page.getByText(/^Tạo hình ảnh$/).first();
-      if (await option.isVisible()) {
-        await option.click();
-        await delay(1000);
-      }
-    }
+    // Gõ lệnh trực tiếp để menu lọc ngay mục cần chọn
+    await page.keyboard.type('/Tạo hình ảnh');
+    await delay(300);
+    await page.keyboard.press('Enter');
+    await delay(600);
+    
+    console.log("✅ Đã kích hoạt lệnh 'Tạo hình ảnh'.");
   } catch (error) {
     console.error('Lỗi khi kích hoạt chế độ hình ảnh:', error.message);
   }
