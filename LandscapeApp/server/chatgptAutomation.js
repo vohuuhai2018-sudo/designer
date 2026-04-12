@@ -151,7 +151,22 @@ async function uploadFiles(page, filePaths) {
   for (const locator of fileInputs) {
     if (await locator.count()) {
       await locator.first().setInputFiles(filePaths);
-      await delay(400);
+      await delay(1000); // Đợi để ChatGPT phản hồi
+
+      // Kiểm tra xem có hiện lỗi Đỏ (VD: Tối đa 0 lần tải lên) không
+      const errorVisible = await page.evaluate(() => {
+        const errors = Array.from(document.querySelectorAll('div, span')).filter(n => 
+           n.textContent.includes('Không thể tải lên') || n.textContent.includes('Tối đa 0')
+        );
+        return errors.length > 0;
+      });
+
+      if (errorVisible) {
+        console.warn('⚠️ Phát hiện lỗi Upload của ChatGPT (0 lần tải lên). Đang thử Refresh trang...');
+        await page.reload();
+        await delay(3000);
+        return await uploadFiles(page, filePaths); // Thử lại 1 lần
+      }
       return;
     }
   }
@@ -472,6 +487,7 @@ async function runChatGptAutomation({ prompt, assets, onImageReady }) {
     for (let variant = 1; variant <= 4; variant++) {
       const targetPage = variant === 1 && defaultPage ? defaultPage : await browser.newPage();
       promises.push(runSingleVariant(targetPage, prompt, filePaths, tempDir, variant, onImageReady));
+      await delay(2000); // Đội hình 2s giữa các tab để tránh bị ChatGPT chặn truy cập đồng thời
     }
 
     const settledResults = await Promise.allSettled(promises);
