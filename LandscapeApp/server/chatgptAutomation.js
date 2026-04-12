@@ -393,19 +393,31 @@ async function dismissRateLimitDialog(page) {
 
 async function runSingleVariant(page, prompt, filePaths, tempDir, variantNumber, onImageReady) {
   try {
-    // Ép buộc mở một phiên chat hoàn toàn mới (New Chat)
+    // 1. Truy cập trang chủ
     await page.goto('https://chatgpt.com/', { waitUntil: 'domcontentloaded' });
-    // Nếu URL có chứa mã định danh (nghĩa là đang ở chat cũ), ta ép về trang chủ lần nữa
-    if (page.url().includes('chatgpt.com/c/')) {
-        await page.goto('https://chatgpt.com/');
+    await delay(2500); // Chờ để ChatGPT quyết định có redirect về Chat cũ hay không
+
+    // 2. Kiểm tra nếu bị văng vào chat cũ (URL có /c/)
+    if (page.url().includes('/c/')) {
+        console.log(`[Tab ${variantNumber}] Bị chuyển vào Chat cũ, đang ép tạo Chat mới...`);
+        // Thử click nút "Đoạn chat mới" ở Sidebar hoặc dùng phím tắt
+        const newChatBtn = page.locator('[data-testid="sidebar-new-chat-button"], a[href="/"], button:has-text("Đoạn chat mới"), button:has-text("New chat")').first();
+        if (await newChatBtn.isVisible()) {
+            await newChatBtn.click();
+            await delay(1500);
+        } else {
+            // Nếu không thấy nút, ta dùng URL sạch bậc cao nhất
+            await page.goto('https://chatgpt.com/?oai-dm=1');
+            await delay(2000);
+        }
     }
     
     await page.waitForSelector('#prompt-textarea, [contenteditable="true"]', { timeout: 30000 });
 
-    // Đảm bảo ô nhập liệu trống không
+    // 3. Xóa sạch rác (nếu có) trước khi bắt đầu
     await clearTextarea(page);
 
-    // Kích hoạt chế độ Tạo hình ảnh
+    // 4. Kích hoạt chế độ hình ảnh và bắt đầu tiến trình
     await enableImageMode(page);
 
     await uploadFiles(page, filePaths);
