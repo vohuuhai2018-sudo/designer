@@ -26,7 +26,9 @@ import {
   Monitor,
   Info,
   HelpCircle,
-  Mail
+  Mail,
+  AlertTriangle,
+  MessageCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -468,7 +470,7 @@ function UploadView({ onBack, onUpload }: { onBack: () => void, onUpload: (img: 
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view upload-view">
-      <button onClick={onBack} className="btn-back-universal"><ChevronLeft size={18} /> Quay lại</button>
+      <button onClick={onBack} className="btn-back-premium"><ChevronLeft size={18} /> Quay lại</button>
       <h2>Tải ảnh hiện trạng</h2>
       <p className="hint">Chọn một bức ảnh chụp vị trí mà bạn muốn thiết kế cảnh quan.</p>
       <div className="upload-area" onClick={() => fileRef.current?.click()}>
@@ -476,8 +478,8 @@ function UploadView({ onBack, onUpload }: { onBack: () => void, onUpload: (img: 
           <img src={preview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '28px' }} />
         ) : (
           <>
-            <div className="upload-circle"><Upload size={40} /></div>
-            <span className="hint">Nhấn để chọn ảnh</span>
+            <div className="upload-circle"><Camera size={60} /></div>
+            <span className="upload-prompt">NHẤN ĐỂ CHỌN ẢNH</span>
           </>
         )}
       </div>
@@ -527,6 +529,8 @@ function EditorView({
   const [history, setHistory] = useState<ImageData[]>([]);
   const [showSample, setShowSample] = useState(false);
   const [hasSeenSample, setHasSeenSample] = useState(false);
+  const [isDrawn, setIsDrawn] = useState(false);
+  const [showNotification, setShowNotification] = useState<string | null>(null);
 
   const colors = ANNOTATION_COLOR_RULES.map(r => ({ hex: r.hex, label: r.color, meaning: r.meaning }));
 
@@ -585,6 +589,7 @@ function EditorView({
     if (!ctx) return;
     ctx.globalAlpha = 1.0;
     setHistory(prev => [...prev, ctx.getImageData(0, 0, canvas.width, canvas.height)]);
+    setIsDrawn(true);
   };
 
   const undo = () => {
@@ -604,15 +609,14 @@ function EditorView({
     if (!ctx || history.length === 0) return;
     ctx.putImageData(history[0], 0, 0);
     setHistory([history[0]]);
+    setIsDrawn(false);
   };
 
-  const hasDrawn = history.length > 1;
-  const hasText = note.trim().length >= 5;
-  const canNext = hasDrawn || hasText;
+  const canNext = history.length > 1 || note.trim().length > 0;
 
   const saveAndNext = () => {
     if (!canNext) {
-      alert("Anh/Chị vui lòng hãy thực hiện thao tác khoanh vùng trên ảnh hoặc viết mô tả ý tưởng để KTS nắm bắt thông tin rõ nhất nhé!");
+      setShowNotification("Anh/Chị vui lòng hãy thực hiện thao tác khoanh vùng trên ảnh hoặc viết mô tả ý tưởng chi tiết để KTS nắm bắt thông tin rõ nhất nhé!");
       return;
     }
     const canvas = canvasRef.current;
@@ -624,10 +628,10 @@ function EditorView({
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view editor-view">
       <div className="editor-top">
-        <button onClick={onBack} className="btn-back-editor"><ChevronLeft size={18} /> Quay lại</button>
+        <button onClick={onBack} className="btn-back-premium"><ChevronLeft size={18} /> Quay lại</button>
         <button 
           onClick={saveAndNext} 
-          className={`btn-done ${canNext ? 'ready' : ''}`}
+          className={`nav-next-locked ${canNext ? 'is-ready' : ''}`}
         >
           Tiếp theo <ArrowRight size={20} />
         </button>
@@ -707,6 +711,27 @@ function EditorView({
             </div>
           </motion.div>
         )}
+
+        {showNotification && (
+          <div className="notification-overlay" onClick={() => setShowNotification(null)}>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8, y: 20 }} 
+              animate={{ opacity: 1, scale: 1, y: 0 }} 
+              exit={{ opacity: 0, scale: 0.8, y: 20 }}
+              className="notification-modal"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="notif-header">
+                <div className="notif-alert-orb"><AlertTriangle size={60} color="var(--accent)" /></div>
+                <h3>YÊU CẦU TƯƠNG TÁC</h3>
+              </div>
+              <p className="notif-body">{showNotification}</p>
+              <button className="btn-primary notif-btn" onClick={() => setShowNotification(null)}>
+                XÁC NHẬN & QUAY LẠI VẼ
+              </button>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
     </motion.div>
   );
@@ -774,7 +799,7 @@ function ServiceView({
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view service-view">
       <header className="service-header-main">
-        <button onClick={onBack} className="btn-back-universal"><ChevronLeft size={20} /> Quay lại</button>
+        <button onClick={onBack} className="btn-back-premium"><ChevronLeft size={20} /> Quay lại</button>
         <div className="title-group">
           <h2>Chọn Mẫu Thiết Kế</h2>
           <p>Tùy chỉnh phong cách đá và các hạng mục trang trí cho công trình của bạn.</p>
@@ -836,7 +861,7 @@ function ServiceView({
                 className="variant-selection-inline"
               >
                 <div className="inline-header">
-                  <button className="btn-back-inline" onClick={() => setActiveCategory(null)}>
+                  <button className="btn-back-premium" onClick={() => setActiveCategory(null)}>
                     <ChevronLeft size={16} /> Quay lại chọn kiểu đá
                   </button>
                   <h5>Mẫu {ASSETS.THAC.find(c => c.id === activeCategory)?.name}</h5>
@@ -958,7 +983,7 @@ function PlanSelectionView({ service, onServiceChange, onBack, onNext }: {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view plan-view">
       <header className="service-header-main">
-        <button onClick={onBack} className="btn-back-universal"><ChevronLeft size={20} /> Quay lại</button>
+        <button onClick={onBack} className="btn-back-premium"><ChevronLeft size={20} /> Quay lại</button>
         <div className="title-group">
           <h2>Chọn Gói Giải Pháp</h2>
           <p>Lựa chọn gói thiết kế phù hợp để hiện thực hóa ý tưởng của bạn.</p>
@@ -1032,7 +1057,7 @@ function SubmitView({
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view submit-view">
       <header className="service-header-main">
-        <button onClick={onBack} className="btn-back-universal"><ChevronLeft size={20} /> Quay lại</button>
+        <button onClick={onBack} className="btn-back-premium"><ChevronLeft size={20} /> Quay lại</button>
         <div className="title-group">
           <h2 style={{ fontSize: '2.5rem' }}>Thông Tin Liên Hệ</h2>
           <p style={{ fontSize: '1.25rem', color: 'var(--accent)', fontWeight: 800 }}>
@@ -1075,9 +1100,10 @@ function SubmitView({
         <div className="extra-assets-area" style={{ marginTop: '20px' }}>
           <h4>Hình ảnh/Video bổ sung khác</h4>
           <p className="sub-hint">Giúp kỹ sư hiểu rõ hơn về góc nhìn xung quanh (không bắt buộc).</p>
-          <div className="assets-uploader" onClick={() => extraRef.current?.click()}>
-            <Upload size={32} color="var(--accent)" />
-            <span style={{ fontSize: '1.1rem' }}>Tải thêm ảnh/video công trình</span>
+          <div className="upload-area" onClick={() => extraRef.current?.click()}>
+            <Upload size={48} color="var(--accent)" />
+            <span className="upload-prompt">Tải thêm ảnh/video công trình</span>
+            <span className="hint">Kéo thả hoặc bấm để chọn tệp từ thiết bị</span>
           </div>
           <input type="file" accept="image/*,video/*" multiple ref={extraRef} onChange={handleExtraFiles} hidden />
           
@@ -1108,7 +1134,7 @@ function SuccessView({ onReset }: { onReset: () => void }) {
     <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="view success-view">
       <div className="success-icon"><CheckCircle2 size={100} /></div>
       <h2 style={{ fontSize: '2.5rem', fontWeight: 950 }}>Gửi Thành Công!</h2>
-      <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', lineHeight: '1.6', maxWidth: '90%' }}>
+      <p className="hint" style={{ lineHeight: '1.6', maxWidth: '90%' }}>
         Cảm ơn bạn đã tin tưởng Sơn Hải. Đội ngũ thiết kế sẽ xử lý phác thảo và liên hệ lại với bạn trong thời gian sớm nhất.
       </p>
       <button className="btn-primary main-cta" onClick={onReset} style={{ marginTop: '20px' }}>
@@ -1727,7 +1753,7 @@ function AdminView({
       <div className="admin-content">
         <header className="admin-header-premium">
           <div className="admin-nav-row">
-            <button onClick={onBack} className="btn-back-universal"><ChevronLeft size={18} /> Về trang chủ</button>
+            <button onClick={onBack} className="btn-back-premium"><ChevronLeft size={18} /> Về trang chủ</button>
           </div>
           <div className="admin-title-section">
             <h1>Hệ Thống Quản Lý Dự Án</h1>
@@ -1738,108 +1764,140 @@ function AdminView({
         {selectedProject ? (
           <div className="project-detail-premium">
             <div className="detail-header-row">
-              <button onClick={() => setSelectedProject(null)} className="btn-back-universal"><ChevronLeft size={18} /> Danh sách dự án</button>
+              <button onClick={() => setSelectedProject(null)} className="btn-back-premium"><ChevronLeft size={18} /> Danh sách dự án</button>
             </div>
 
-            <div className="detail-grid">
-              <div className="detail-left">
-                <div className="section-card glass-panel">
-                  <div className="section-header"><User size={18} /> <h3>Thông tin khách hàng</h3></div>
-                  <div className="info-row"><label>Họ và tên:</label><span className="highlight">{selectedProject.customerName}</span></div>
-                  <div className="info-row"><label>SĐT / Zalo:</label><span>{selectedProject.customerPhone}</span></div>
-                  <div className="info-row"><label>Gói dịch vụ:</label><span>{selectedProject.service}</span></div>
-                </div>
-
-                <div className="section-card glass-panel image-gallery-card">
-                  <div className="section-header"><ImageIcon size={18} /> <h3>Ảnh dự án</h3></div>
-                  <div className="media-comparison">
-                    <div className="image-item"><label>Ảnh gốc</label><img src={selectedProject.rawImage} alt="Ảnh gốc" /></div>
-                    <div className="image-item"><label>Ảnh khoanh vùng</label><img src={selectedProject.annotatedImage} alt="Ảnh khoanh vùng" /></div>
-                    {(selectedProject.extraAssets || []).filter(a => !isVideoAsset(a)).map((asset, i) => (
-                      <div key={i} className="image-item"><label>Tham khảo {i + 1}</label><img src={asset} alt={`Extra ${i}`} /></div>
-                    ))}
+            <div className="dossier-layout">
+              {/* SECTION: CUSTOMER IDENTITY */}
+              <div className="section-card glass-panel profile-section">
+                <div className="section-header luxe"><User size={24} color="var(--accent)" /> <h3>Hồ sơ khách hàng</h3></div>
+                <div className="profile-identity">
+                  <div className="id-group">
+                    <label>Họ và tên khách hàng</label>
+                    <div className="id-value">{selectedProject.customerName}</div>
                   </div>
-                  {designerVideoReferences.length > 0 && (
-                    <div className="video-refs-bar">
-                      {designerVideoReferences.map((video, i) => (
-                        <button key={i} className="btn-link-inline" onClick={() => window.open(video, '_blank', 'noopener,noreferrer')}><ExternalLink size={14} /> Video {i + 1}</button>
-                      ))}
+                  <div className="id-group">
+                    <label>Số điện thoại / Zalo</label>
+                    <div className="id-value">{selectedProject.customerPhone}</div>
+                  </div>
+                  {selectedProject.customerEmail && (
+                    <div className="id-group">
+                      <label>Email liên hệ</label>
+                      <div className="id-value">{selectedProject.customerEmail}</div>
                     </div>
                   )}
-                  {selectedProject.finalImage && (
-                    <div className="final-preview-panel"><label>Bản vẽ hoàn thiện</label><img className="final-preview-image" src={selectedProject.finalImage} alt="Bản vẽ hoàn thiện" /></div>
+                  <div className="id-group">
+                    <label>Gói dịch vụ đã đăng ký</label>
+                    <div className="val-tag service-hero">{selectedProject.service}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION: PROJECT MEDIA */}
+              <div className="section-card glass-panel media-section">
+                <div className="section-header luxe"><ImageIcon size={24} color="var(--accent)" /> <h3>Dữ liệu hiện trạng công trình</h3></div>
+                <div className="media-dossier-grid">
+                  <div className="image-luxe-card">
+                    <div className="card-label-orb">01</div>
+                    <label>Ảnh hiện trạng gốc</label>
+                    <div className="image-frame"><img src={selectedProject.rawImage} alt="Ảnh gốc" /></div>
+                  </div>
+                  <div className="image-luxe-card">
+                    <div className="card-label-orb">02</div>
+                    <label>Ảnh khoanh vùng ý tưởng</label>
+                    <div className="image-frame"><img src={selectedProject.annotatedImage} alt="Ảnh khoanh vùng" /></div>
+                  </div>
+                  {(selectedProject.extraAssets || []).length > 0 && (
+                     <div className="extra-media-luxe">
+                        <label>Hình ảnh & Video tham khảo thêm</label>
+                        <div className="extra-luxe-scroll">
+                          {selectedProject.extraAssets?.map((asset, i) => (
+                            <div key={i} className="extra-item-frame" onClick={() => window.open(asset, '_blank')}>
+                              {isVideoAsset(asset) ? <div className="video-thumb-placeholder"><ExternalLink size={24} /></div> : <img src={asset} alt="Extra" />}
+                            </div>
+                          ))}
+                        </div>
+                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="requirement-section">
-                <div className="section-card glass-panel">
-                  <div className="section-header"><CheckCircle2 size={18} /> <h3>Phân tích yêu cầu & Mẫu chọn</h3></div>
-                  <div className="requirement-checklist">
-                    <div className="check-item"><label>Gói dịch vụ:</label><span className="val-tag service">{selectedProject.service}</span></div>
-                    <div className="check-item"><label>Nhánh xử lý:</label><span className="val-tag workflow">{getWorkflowLabel(selectedProject.workflowBranch)}</span></div>
-                    <div className="check-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px', marginTop: '10px' }}>
-                      <label>Mẫu thiết kế đã chọn:</label>
-                      <div className="req-tags-visual">
-                        {selectedProject.selections.thac && (
-                           <div className="req-asset-preview">
-                              <div className="req-asset-thumb"><img src={getAssetInfo(selectedProject.selections.thac, 'THAC')?.url} alt="" /></div>
-                              <div className="req-asset-info"><div className="req-asset-name">{getAssetName(selectedProject.selections.thac, 'THAC')}</div></div>
-                           </div>
-                        )}
-                        {(selectedProject.selections.ke || []).map(id => (
-                          <div key={id} className="req-asset-preview">
-                            <div className="req-asset-thumb"><img src={getAssetInfo(id, 'KE')?.url} alt="" /></div>
-                            <div className="req-asset-info"><div className="req-asset-name">{getAssetName(id, 'KE')}</div></div>
-                          </div>
-                        ))}
-                        {(selectedProject.selections.canh || []).map(id => (
-                          <div key={id} className="req-asset-preview">
-                            <div className="req-asset-thumb"><img src={getAssetInfo(id, 'CANH')?.url} alt="" /></div>
-                            <div className="req-asset-info"><div className="req-asset-name">{getAssetName(id, 'CANH')}</div></div>
-                          </div>
-                        ))}
-                        {!selectedProject.selections.thac && (!selectedProject.selections.ke?.length) && (!selectedProject.selections.canh?.length) && (
-                          <span className="val-tag">Chưa chọn mẫu</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="note-display"><label>Mô tả ý tưởng khách hàng:</label><div className="note-text">{selectedProject.note || 'Không có mô tả chi tiết.'}</div></div>
+              {/* SECTION: ANALYSIS & CHOICES */}
+              <div className="section-card glass-panel analytic-section">
+                <div className="section-header luxe"><Layers size={24} color="var(--accent)" /> <h3>Phân tích yêu cầu & Mẫu đã chọn</h3></div>
+                
+                <div className="analytic-entry">
+                  <label>Mô tả chi tiết từ khách hàng</label>
+                  <div className="quote-box">{selectedProject.note || 'Khách hàng không để lại ghi chú thêm.'}</div>
                 </div>
 
-                <div className="section-card glass-panel workflow-section">
-                  <div className="section-header"><Bot size={18} /> <h3>Nhánh tác vụ xử lý</h3></div>
-                  <div className="workflow-grid">
-                    {workflowOptions.map(option => (
-                      <button key={option.id} type="button" className={`workflow-card ${selectedProject.workflowBranch === option.id ? 'active' : ''}`} onClick={() => handleWorkflowSelect(option.id)}>
-                        <div className="workflow-card-icon">{option.icon}</div>
-                        <div className="workflow-card-content"><strong>{option.title}</strong><span>{option.description}</span></div>
-                      </button>
+                <div className="analytic-entry">
+                  <label>Chi tiết các hạng mục đã lựa chọn</label>
+                  <div className="asset-luxe-grid">
+                    {selectedProject.selections.thac && (
+                      <div className="asset-luxe-pill">
+                        <img src={getAssetInfo(selectedProject.selections.thac, 'THAC')?.url} alt="" />
+                        <span>{getAssetName(selectedProject.selections.thac, 'THAC')} (Thác nước)</span>
+                      </div>
+                    )}
+                    {(selectedProject.selections.ke || []).map(id => (
+                      <div key={id} className="asset-luxe-pill">
+                        <img src={getAssetInfo(id, 'KE')?.url} alt="" />
+                        <span>{getAssetName(id, 'KE')} (Kè đá)</span>
+                      </div>
                     ))}
+                    {(selectedProject.selections.canh || []).map(id => (
+                      <div key={id} className="asset-luxe-pill">
+                        <img src={getAssetInfo(id, 'CANH')?.url} alt="" />
+                        <span>{getAssetName(id, 'CANH')} (Cây xanh)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION: ACTIONS */}
+              <div className="section-card glass-panel action-section-luxe">
+                <div className="section-header luxe"><Send size={24} color="var(--accent)" /> <h3>Xử lý & Phản hồi</h3></div>
+                <div className="action-button-stack">
+                  <div className="workflow-status-bar">
+                    <label>Tiến trình hiện tại:</label>
+                    <div className="workflow-luxe-grid">
+                      {workflowOptions.map(option => (
+                        <button key={option.id} type="button" className={`workflow-luxe-card ${selectedProject.workflowBranch === option.id ? 'active' : ''}`} onClick={() => handleWorkflowSelect(option.id)}>
+                          <div className="workflow-card-orb">{option.icon}</div>
+                          <div className="workflow-card-txt">
+                            <strong>{option.title}</strong>
+                            <span>{option.description}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {selectedProject.workflowBranch === 'chatgpt_image' && (
-                    <div className="chatgpt-helper-panel" style={{ padding: '1rem', textAlign: 'center', background: 'var(--card-bg)', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.2)', marginTop: '1rem' }}>
-                      <p style={{ marginBottom: '1rem', color: '#64748b' }}>Tiến trình xử lý bằng AI được thực hiện độc lập tại <strong>Trạm AI (AI Studio)</strong>.</p>
-                      <button className="btn-primary" onClick={() => setShowAIStudio(true)} style={{ margin: '0 auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Bot size={18} /> Mở Trạm AI (để xem Master Prompt)
+                    <div className="chatgpt-luxe-box">
+                      <div className="ai-status-pulse"><Bot size={24} /> <span>Hệ thống AI đã sẵn sàng</span></div>
+                      <p>KTS có thể sử dụng Trạm AI để lấy <strong>Master Prompt</strong> và xử lý ảnh hiện trạng.</p>
+                      <button className="btn-luxe-admin ai-btn" onClick={() => setShowAIStudio(true)}>
+                        Mở Trạm AI & Lấy Prompt
                       </button>
                     </div>
                   )}
-                </div>
-
-                <div className="section-card glass-panel actions-panel">
-                  <div className="section-header"><Send size={18} /> <h3>Xử lý & Phản hồi</h3></div>
-                  <div className="action-buttons">
-                    <button className="btn-secondary" onClick={() => handleWorkflowSelect('manual_design')}>Mở trình thiết kế</button>
-                    <button className="btn-primary-admin" onClick={() => fileRef.current?.click()}>{selectedProject.status === 'done' ? 'Cập nhật bản vẽ' : 'Tải lên Design Hoàn thiện'}</button>
+                  <div className="btn-group-vertical">
+                    <button className="btn-luxe-admin main" onClick={() => handleWorkflowSelect('manual_design')}>
+                      <Paintbrush size={20} /> Mở trình thiết kế chuyên sâu
+                    </button>
+                    <button className="btn-luxe-admin outline" onClick={() => fileRef.current?.click()}>
+                      <Upload size={20} /> {selectedProject.status === 'done' ? 'Cập nhật bản vẽ mới' : 'Tải lên bản vẽ hoàn thiện'}
+                    </button>
                     <input type="file" accept="image/*" ref={fileRef} onChange={handleUploadResult} hidden />
                     {selectedProject.status === 'done' && (
-                      <button className="btn-zalo-admin" onClick={() => window.open(`https://zalo.me/${selectedProject.customerPhone.replace(/\D/g, '')}`, '_blank', 'noopener,noreferrer')}>Gửi Zalo cho khách hàng</button>
+                      <button className="btn-luxe-admin zalo" onClick={() => window.open(`https://zalo.me/${selectedProject.customerPhone.replace(/\D/g, '')}`, '_blank')}>
+                         <MessageCircle size={20} /> Phản hồi qua Zalo khách hàng
+                      </button>
                     )}
                   </div>
-                  {actionFeedback && <div className="action-feedback">{actionFeedback}</div>}
                 </div>
               </div>
             </div>
