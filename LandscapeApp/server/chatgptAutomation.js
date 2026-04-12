@@ -98,14 +98,14 @@ async function enableImageMode(page) {
       }
     });
     
-    await delay(1000);
+    await delay(400);
     
     const menuLabels = [/Tạo hình ảnh/i, /Create image/i, /Image generation/i];
     for (const label of menuLabels) {
       const option = page.getByText(label);
       if (await option.count()) {
         await option.first().click({ force: true });
-        await delay(800);
+        await delay(200);
         return;
       }
     }
@@ -113,15 +113,15 @@ async function enableImageMode(page) {
     // Fallback
     const promptInput = await findPromptInput(page);
     await promptInput.click();
-    await delay(400);
+    await delay(300);
     await page.keyboard.insertText('/');
-    await delay(1200);
+    await delay(400);
 
     for (const label of menuLabels) {
       const option = page.getByText(label);
       if (await option.count()) {
         await option.first().click({ force: true });
-        await delay(800);
+        await delay(200);
         return;
       }
     }
@@ -140,7 +140,7 @@ async function uploadFiles(page, filePaths) {
   for (const locator of fileInputs) {
     if (await locator.count()) {
       await locator.first().setInputFiles(filePaths);
-      await delay(4000);
+      await delay(1200);
       return;
     }
   }
@@ -368,7 +368,7 @@ async function dismissRateLimitDialog(page) {
 async function runSingleVariant(page, prompt, filePaths, tempDir, variantNumber, onImageReady) {
   try {
     await page.goto('https://chatgpt.com', { waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('networkidle', { timeout: 60000 }).catch(() => null);
+    // Bỏ chờ networkidle vì ChatGPT chạy web socket liên tục, khiến nó bị treo lâu
     await page.waitForSelector('#prompt-textarea, [contenteditable="true"]', { timeout: 30000 });
 
     await enableImageMode(page);
@@ -446,7 +446,7 @@ async function runChatGptAutomation({ prompt, assets, onImageReady }) {
     const defaultPage = browser.pages()[0];
 
     for (let variant = 1; variant <= 4; variant++) {
-      if (variant > 1) await delay(30000); // Chờ 30s giữa các tab để tránh rate limit
+      if (variant > 1) await delay(2000); // Chỉ delay 2s để trình duyệt kịp bung tab
 
       const targetPage = variant === 1 && defaultPage ? defaultPage : await browser.newPage();
       promises.push(runSingleVariant(targetPage, prompt, filePaths, tempDir, variant, onImageReady));

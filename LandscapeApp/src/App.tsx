@@ -328,6 +328,10 @@ export default function App() {
     // Final compression of annotated image if needed
     setSubmitStatus('Đang tối ưu hóa hình ảnh...');
     
+    const selectedThacVariant = selections.thac 
+      ? ASSETS.THAC.flatMap(c => c.variants || []).find(v => v.id === selections.thac)
+      : null;
+
     const projectData = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       timestamp: new Date().toISOString(),
@@ -336,7 +340,11 @@ export default function App() {
       customerEmail,
       rawImage,
       annotatedImage,
-      selections,
+      selections: {
+        ...selections,
+        thacUrl: selectedThacVariant?.url,
+        thacName: selectedThacVariant?.name
+      },
       service,
       note,
       extraAssets,

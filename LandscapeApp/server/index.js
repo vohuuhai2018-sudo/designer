@@ -14,6 +14,8 @@ function buildServerPrompt(project, assets) {
 
   const selectionLines = [];
   if (project.selections) {
+    if (project.selections.thacName)
+      selectionLines.push(`- Kiểu mẫu thác nước: ${project.selections.thacName}`);
     if (project.selections.ke && project.selections.ke.length > 0)
       selectionLines.push(`- Kè đá: ${project.selections.ke.join(', ')}`);
     if (project.selections.canh && project.selections.canh.length > 0)
@@ -131,8 +133,10 @@ async function resumePendingProjects() {
             { label: 'Ảnh hiện trạng gốc', url: project.rawImage, role: 'Ảnh nền chính, phải giữ nguyên kiến trúc, góc chụp và phối cảnh.' },
             { label: 'Ảnh khoanh vùng thiết kế', url: project.annotatedImage, role: 'Ảnh quy hoạch công năng bằng màu, dùng để xác định đúng vị trí từng hạng mục.' }
           ];
-          if (project.selections?.thac && (project.selections.thac.startsWith('http://') || project.selections.thac.startsWith('https://') || project.selections.thac.startsWith('data:'))) {
-            assets.push({ label: 'Mẫu khách chọn', url: project.selections.thac, role: 'Mẫu thác / vân đá chọn từ thư viện.' });
+          let thacUrl = project.selections?.thacUrl;
+          if (thacUrl) {
+            if (thacUrl.startsWith('/')) thacUrl = 'https://designer-jet.vercel.app' + thacUrl;
+            assets.push({ label: 'Mẫu khách chọn', url: thacUrl, role: 'Mẫu thác / vân đá chọn từ thư viện.' });
           }
 
           const resolvedPrompt = buildServerPrompt(project, assets);
@@ -269,9 +273,10 @@ app.post('/api/projects', async (req, res) => {
             { label: 'Ảnh khoanh vùng thiết kế', url: newProject.annotatedImage, role: 'Ảnh quy hoạch công năng bằng màu, dùng để xác định đúng vị trí từng hạng mục.' }
           ];
 
-          // Thêm mẫu thác nếu khách có chọn
-          if (newProject.selections?.thac && (newProject.selections.thac.startsWith('http://') || newProject.selections.thac.startsWith('https://') || newProject.selections.thac.startsWith('data:'))) {
-            assets.push({ label: 'Mẫu khách chọn', url: newProject.selections.thac, role: 'Mẫu thác / vân đá chọn từ thư viện.' });
+          let thacUrl = newProject.selections?.thacUrl;
+          if (thacUrl) {
+            if (thacUrl.startsWith('/')) thacUrl = 'https://designer-jet.vercel.app' + thacUrl;
+            assets.push({ label: 'Mẫu khách chọn', url: thacUrl, role: 'Mẫu thác / vân đá chọn từ thư viện.' });
           }
 
           // Xây dựng prompt trực tiếp từ dữ liệu project, không cần Gemini API
