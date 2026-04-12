@@ -682,18 +682,30 @@ function EditorView({
     onNext();
   };
 
+  const [isZoomed, setIsZoomed] = useState(false);
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view editor-view">
       <div className="editor-top">
         <button onClick={onBack} className="btn-back-premium"><ChevronLeft size={18} /> Quay lại</button>
-        <button 
-          onClick={saveAndNext} 
-          className={`nav-next-locked ${canNext ? 'is-ready' : ''}`}
-        >
-          Tiếp theo <ArrowRight size={20} />
-        </button>
+        <div className="editor-actions">
+           <button 
+             className={`btn-zoom-toggle ${isZoomed ? 'active' : ''}`}
+             onClick={() => setIsZoomed(!isZoomed)}
+             title={isZoomed ? "Thu nhỏ" : "Phóng to"}
+           >
+             {isZoomed ? <X size={20} /> : <Layers size={20} />}
+             <span>{isZoomed ? 'Đóng Zoom' : 'Phóng To'}</span>
+           </button>
+           <button 
+            onClick={saveAndNext} 
+            className={`nav-next-locked ${canNext ? 'is-ready' : ''}`}
+          >
+            Tiếp theo <ArrowRight size={20} />
+          </button>
+        </div>
       </div>
-      <div className="workspace">
+      <div className={`workspace ${isZoomed ? 'zoomed' : ''}`}>
         <canvas 
           ref={canvasRef} 
           onPointerDown={startDraw} 
@@ -701,8 +713,16 @@ function EditorView({
           onPointerUp={endDraw} 
           onPointerLeave={endDraw}
           onPointerCancel={endDraw}
-          style={{ touchAction: 'none' }}
+          style={{ 
+            touchAction: 'none',
+            width: isZoomed ? '200%' : '100%',
+            height: 'auto',
+            cursor: 'crosshair'
+          }}
         />
+        {isZoomed && (
+          <div className="zoom-hint">Anh/Chị có thể dùng 2 ngón tay hoặc cuộn để di chuyển vùng vẽ</div>
+        )}
       </div>
       <div className="brush-controls-container">
         <div className="editor-header-row">
@@ -711,7 +731,7 @@ function EditorView({
             className={`btn-help-modal ${!hasSeenSample ? 'pulse-btn' : ''}`} 
             onClick={() => { setShowSample(true); setHasSeenSample(true); }}
           >
-            <HelpCircle size={20} /> Cách khoanh vùng mẫu
+            <HelpCircle size={18} /> Hướng dẫn
           </button>
         </div>
         <div className="colors">
@@ -726,15 +746,14 @@ function EditorView({
             </button>
           ))}
         </div>
-        <div className="brush-info">
+        <div className="brush-info-mobile">
           <div className="brush-tools">
-            <button onClick={undo} className="btn-tool" disabled={history.length <= 1}><Undo2 size={18} /> Hoàn tác</button>
-            <button onClick={clearAll} className="btn-tool"><Trash2 size={18} /> Xóa hết</button>
+            <button onClick={undo} className="btn-tool" disabled={history.length <= 1}><Undo2 size={16} /> Hoàn tác</button>
+            <button onClick={clearAll} className="btn-tool"><Trash2 size={16} /> Xóa hết</button>
           </div>
-          <div className="customer-request-area">
-            <label>Mô tả chi tiết (Nếu có)</label>
+          <div className="customer-request-area-mini">
             <textarea 
-              placeholder="Anh chị hãy mô tả thêm chi tiết khác nếu có ví dụ như thác cao bao nhiêu kích thước công trình..."
+              placeholder="Ghi chú thêm (vd: thác cao 2m...)"
               value={note}
               onChange={e => onNoteChange(e.target.value)}
             />
