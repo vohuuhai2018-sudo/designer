@@ -85,18 +85,42 @@ async function findPromptInput(page) {
 }
 
 async function enableImageMode(page) {
-  console.log("-> Đang kích hoạt chế độ Tạo Hình Ảnh nhanh qua /...");
+  console.log("-> Đang kích hoạt chế độ Tạo Hình Ảnh qua menu /...");
   try {
     const input = await findPromptInput(page);
     await input.focus();
     
-    // Gõ lệnh trực tiếp để menu lọc ngay mục cần chọn
-    await page.keyboard.type('/Tạo hình ảnh');
-    await delay(300);
-    await page.keyboard.press('Enter');
-    await delay(600);
+    // Gõ phím / để hiện menu
+    await page.keyboard.type('/');
+    await delay(1000);
+
+    // Tìm chính xác mục "Tạo hình ảnh" trong danh sách và CLICK
+    // Thử nhiều loại selector để chắc chắn trúng mục menu
+    const menuSelectors = [
+      'div[role="menuitem"]',
+      'button[role="menuitem"]',
+      'div.flex.items-center.gap-2.p-2',
+      '[data-testid*="item"]'
+    ];
     
-    console.log("✅ Đã kích hoạt lệnh 'Tạo hình ảnh'.");
+    let clicked = false;
+    for (const selector of menuSelectors) {
+      const item = page.locator(selector).filter({ hasText: /^Tạo hình ảnh$/ }).first();
+      if (await item.isVisible()) {
+        await item.click();
+        clicked = true;
+        console.log(`✅ Đã click chọn 'Tạo hình ảnh' qua selector: ${selector}`);
+        break;
+      }
+    }
+
+    if (!clicked) {
+       // Fallback cuối cùng: nhấn Enter nếu gõ xong mà menu đã lọc đúng
+       await page.keyboard.press('Enter');
+       console.log("⚠️ Không click được menu, đã nhấn Enter dự phòng.");
+    }
+    
+    await delay(1000);
   } catch (error) {
     console.error('Lỗi khi kích hoạt chế độ hình ảnh:', error.message);
   }
