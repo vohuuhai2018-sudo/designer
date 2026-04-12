@@ -180,6 +180,8 @@ const ProjectSchema = new mongoose.Schema({
   annotatedImage: String,
   selections: {
     thac: String,
+    thacUrl: String,
+    thacName: String,
     ke: [String],
     canh: [String]
   },
@@ -420,7 +422,6 @@ app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
           }
         );
         // Dọn file tạm
-        await fs.unlink(outputPath).catch(() => null);
       } catch (e) {
         console.error('Lỗi upload ảnh:', e.message);
       }
@@ -428,7 +429,6 @@ app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
 
     const automationResult = await runChatGptAutomation({ prompt: resolvedPrompt, assets, onImageReady });
 
-    // Đánh dấu hoàn thành
     const updated = await Project.findOneAndUpdate(
       { id: req.params.id },
       { $set: { status: uploadCount > 0 ? 'done' : 'pending' } },

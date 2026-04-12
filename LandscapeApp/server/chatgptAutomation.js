@@ -445,8 +445,6 @@ async function runChatGptAutomation({ prompt, assets, onImageReady }) {
     const defaultPage = browser.pages()[0];
 
     for (let variant = 1; variant <= 4; variant++) {
-      if (variant > 1) await delay(1000); // 1s để trình duyệt mở tab không bị nghẽn
-
       const targetPage = variant === 1 && defaultPage ? defaultPage : await browser.newPage();
       promises.push(runSingleVariant(targetPage, prompt, filePaths, tempDir, variant, onImageReady));
     }
