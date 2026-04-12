@@ -100,21 +100,21 @@ const ASSETS = {
   THAC: [
     {
       id: 'thac_cothach',
-      url: '/assets/THAC/Đá Cổ Thạch/cothach_v7.png',
+      url: '/assets/THAC/Da Co Thach/cothach_v7.png',
       name: 'Đá Cổ Thạch',
       variants: Array.from({ length: 13 }, (_, i) => ({
         id: 'thac_cothach_v' + (i + 1),
-        url: '/assets/THAC/Đá Cổ Thạch/cothach_v' + (i + 1) + '.png',
+        url: '/assets/THAC/Da Co Thach/cothach_v' + (i + 1) + '.png',
         name: 'Mẫu Cổ Thạch ' + String(i + 1).padStart(2, '0')
       }))
     },
     {
       id: 'thac_vanmay',
-      url: '/assets/THAC/Đá Vân Mây/vanmay_v3.png',
+      url: '/assets/THAC/Da Van May/vanmay_v3.png',
       name: 'Đá Vân Mây',
       variants: Array.from({ length: 7 }, (_, i) => ({
         id: 'thac_vanmay_v' + (i + 1),
-        url: '/assets/THAC/Đá Vân Mây/vanmay_v' + (i + 1) + '.png',
+        url: '/assets/THAC/Da Van May/vanmay_v' + (i + 1) + '.png',
         name: 'Mẫu Vân Mây ' + String(i + 1).padStart(2, '0')
       }))
     },
