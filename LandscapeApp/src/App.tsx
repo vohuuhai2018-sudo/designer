@@ -237,6 +237,7 @@ export default function App() {
 
   const [submitStatus, setSubmitStatus] = useState('');
 
+  // Load projects when entering admin view
   useEffect(() => {
     if (view === 'admin') {
       fetch('http://localhost:5000/api/projects')
@@ -245,6 +246,26 @@ export default function App() {
         .catch(err => console.error('Failed to load projects:', err));
     }
   }, [view]);
+
+  // Auto-poll mỗi 10s khi có project đang processing
+  useEffect(() => {
+    if (view !== 'admin') return;
+    const hasProcessing = projects.some(p => p.status === 'processing');
+    if (!hasProcessing) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/projects');
+        const data = await res.json();
+        setProjects(data);
+        const stillProcessing = data.some((p: Project) => p.status === 'processing');
+        if (!stillProcessing) clearInterval(pollInterval);
+      } catch (e) { /* bỏ qua lỗi mạng */ }
+    }, 10000);
+
+    return () => clearInterval(pollInterval);
+  }, [view, projects]);
+
 
   const compressImage = (base64Str: string, maxWidth = 1200): Promise<string> => {
     return new Promise((resolve) => {
@@ -1337,28 +1358,16 @@ function AdminView({
 
   // --- AI HELPERS ---
   const getAiUploadAssets = (project: Project): AiUploadAsset[] => {
-    const customerAssets: AiUploadAsset[] = [
+    const assets: AiUploadAsset[] = [
       { label: 'Ảnh hiện trạng gốc', url: project.rawImage, role: 'Ảnh nền chính, phải giữ nguyên kiến trúc, góc chụp và phối cảnh.' },
-      { label: 'Ảnh khoanh vùng thiết kế', url: project.annotatedImage, role: 'Ảnh quy hoạch công năng bằng màu, dùng để xác định đúng vị trí từng hạng mục.' },
-      ...(project.extraAssets || []).filter(a => !isVideoAsset(a)).slice(0, 2).map((a, i) => ({
-        label: `Ảnh tham khảo khách ${i + 1}`, url: a, role: 'Ảnh khách gửi thêm để tham khảo phong cách, vật liệu hoặc hình khối mong muốn.'
-      }))
+      { label: 'Ảnh khoanh vùng thiết kế', url: project.annotatedImage, role: 'Ảnh quy hoạch công năng bằng màu, dùng để xác định đúng vị trí từng hạng mục.' }
     ];
-    const systemAssets = getSelectedSystemAiAssets(project);
-    const combined = [...customerAssets, ...systemAssets];
-    const seen = new Set<string>();
-    return combined.filter(a => { if (seen.has(a.url)) return false; seen.add(a.url); return true; }).slice(0, 6);
-  };
 
-  const getSelectedSystemAiAssets = (project: Project): AiUploadAsset[] => {
-    const assets: AiUploadAsset[] = [];
     if (project.selections.thac) {
       const info = getAssetInfo(project.selections.thac, 'THAC');
       if (info) assets.push({ label: `Mẫu khách chọn: ${info.name}`, url: info.url, role: 'Mẫu thác / vân đá chọn từ thư viện, dùng cho phối cảnh và vật liệu.' });
     }
-    SYSTEM_REFERENCE_LIBRARY.slice(0, 2).forEach(item => {
-      assets.push({ label: item.label, url: item.url, role: item.note || 'Tham khảo tổ hợp cảnh quan / hồ hệ thống.' });
-    });
+
     return assets;
   };
 
@@ -1379,52 +1388,58 @@ function AdminView({
   };
 
   const buildChatGptPrompt = (project: Project) => {
+    const hasNote = !!project.note?.trim();
+    const hasExtraAssets = (project.extraAssets?.length ?? 0) > 0;
+
     return [
-      'Bạn là chuyên gia dựng concept cảnh quan từ ảnh hiện trạng thực tế của khách hàng.',
-      'Hãy tạo 1 hình ảnh phối cảnh mới bám sát ảnh gốc và toàn bộ file tôi tải kèm.',
-      'Mục tiêu là bố trí đúng công năng theo ảnh khoanh vùng màu, đồng thời làm bố cục hợp lý, đẹp và khả thi thi công.',
+      'Bạn là chuyên gia concept cảnh quan. Nhiệm vụ của bạn là tạo ra 1 hình ảnh phối cảnh photorealistic bám sát dữ liệu thực tế tôi cung cấp — không sáng tạo tuỳ tiện.',
       '',
-      'Thông tin dự án',
-      `- Khách hàng: ${project.customerName}`,
-      `- Số điện thoại/Zalo: ${project.customerPhone}`,
-      `- Gói dịch vụ: ${project.service}`,
-      `- Nhánh xử lý: ${getWorkflowLabel(project.workflowBranch || 'chatgpt_image')}`,
+      '═══ DỮ LIỆU DỰ ÁN ═══',
+      `Khách hàng: ${project.customerName}`,
+      `Gói dịch vụ: ${project.service}`,
       '',
-      'Mẫu đã chọn',
+      '═══ CÁCH ĐỌC ẢNH KHOANH VÙNG (File 2) ═══',
+      'Hãy nhìn trực tiếp vào hình ảnh khoanh vùng thiết kế (File 2) mà tôi đính kèm.',
+      '→ Chỉ xử lý đúng những vùng màu bạn thực sự nhìn thấy trong ảnh đó.',
+      '→ Mỗi vùng màu tô là một khu vực công năng cần can thiệp. Đặt đúng hạng mục vào đúng vị trí không gian đó.',
+      '→ Nếu một loại công năng không có vùng màu tương ứng trong ảnh → TUYỆT ĐỐI không thêm vào.',
+      '→ Khu vực không có màu khoanh vùng = giữ nguyên hiện trạng, không thay đổi.',
+      '',
+      '═══ GỢI Ý CÁCH HIỂU CÁC MÀU PHỔ BIẾN (chỉ dùng nếu màu đó thực sự xuất hiện) ═══',
+      '  Đỏ / cam đậm → vị trí thác nước hoặc điểm nhấn nước rơi',
+      '  Xanh dương / xanh da trời → vùng hồ nước, mặt nước',
+      '  Tím / hoa cà → viền kè đá bao quanh hồ hoặc bồn',
+      '  Xanh lá → cây xanh, tùng, cỏ, thảm thực vật',
+      '  Vàng / cam nhạt → hầm lọc, kỹ thuật ẩn',
+      '  Trắng / xám sáng → sỏi, vật liệu nền trang trí',
+      '  Nâu → lối đi, gỗ, hoặc vật liệu chuyển tiếp',
+      '',
+      '═══ YÊU CẦU VÀ PHONG CÁCH TỪ KHÁCH HÀNG ═══',
+      hasNote
+        ? `"${project.note!.trim()}"`
+        : 'Khách không để lại ghi chú cụ thể. Hãy dựa hoàn toàn vào ảnh khoanh vùng và mẫu đã chọn.',
+      '',
+      '═══ MẪU PHONG CÁCH ĐÃ CHỌN ═══',
       ...buildSelectionLines(project),
       '',
-      'Quy ước màu trên ảnh khoanh vùng',
-      ...getColorRuleLines(),
-      '- Nếu một màu không xuất hiện trong ảnh khoanh vùng thì không tự ý thêm hạng mục đó, trừ khi ghi chú khách yêu cầu rõ ràng.',
+      ...(hasExtraAssets
+        ? [
+            '═══ TÀI NGUYÊN THAM KHẢO BỔ SUNG ═══',
+            'Khách có gửi thêm hình tham khảo phong cách/vật liệu. Tinh thần của các hình đó đã được tổng hợp trong phần yêu cầu ở trên.',
+            'Hãy bám sát yêu cầu văn bản, không phán đoán thêm.',
+            '',
+          ]
+        : []),
+      '═══ QUY TẮC TẠO ẢNH BẮT BUỘC ═══',
+      '1. Giữ nguyên 100% góc chụp, phối cảnh, tỷ lệ từ ảnh hiện trạng (File 1).',
+      '2. Giữ nguyên toàn bộ kiến trúc nhà, tường, cửa, cột, bậc thang — trừ phần nằm trong vùng khoanh màu.',
+      '3. Chỉ thêm / thay đổi đúng vị trí không gian đã được đánh dấu màu trong ảnh khoanh vùng.',
+      '4. Áp dụng vật liệu và bố cục từ mẫu đã chọn cho đúng hạng mục tương ứng.',
+      '5. Không thêm bất kỳ hạng mục nào không có vùng màu trong ảnh khoanh vùng.',
+      '6. Kết quả phải tự nhiên, khả thi thi công thực tế, không méo hình, không sai tỷ lệ.',
       '',
-      'Cách hiểu bố cục và sắp xếp công năng',
-      '- Ưu tiên đọc đúng vị trí từ ảnh khoanh vùng: mỗi hạng mục phải nằm đúng trong vùng màu tương ứng.',
-      '- Nếu vùng đỏ và xanh dương liền nhau, bố trí thác đổ vào hồ cá hoặc mặt nước một cách tự nhiên.',
-      '- Vùng tím phải ôm theo viền hồ, viền bồn hoặc bờ kè, không đặt rời rạc.',
-      '- Vùng xanh lá là lớp cảnh quan mềm để cân bằng tổng thể, không che cửa chính, cửa sổ và lối đi.',
-      '- Vùng vàng là hầm lọc, xử lý kín đáo, hợp lý, có thể ẩn sau cây, đá hoặc nắp kỹ thuật gọn gàng.',
-      '- Vùng nâu và trắng là các lớp phụ trợ cho lối đi, sỏi, nền và chuyển tiếp vật liệu.',
-      '- Bạn được phép hiệu chỉnh kích thước, cao độ, độ cong mép hồ, tỷ lệ cây và tỷ lệ đá để tổng thể cân đối, nhưng không được làm lệch vị trí chức năng chính đã khoanh màu.',
-      '',
-      'Mô tả khách hàng',
-      project.note?.trim() || 'Không có mô tả bổ sung.',
-      '',
-      'Yêu cầu bắt buộc',
-      '- Giữ nguyên góc chụp, phối cảnh và tỷ lệ của ảnh hiện trạng.',
-      '- Giữ nguyên kiến trúc nhà, cửa, cột, bậc tam cấp, lớp ốp hiện có nếu không nằm trong vùng cần xử lý.',
-      '- Chỉ can thiệp vào khu vực đã được khoanh vùng hoặc mô tả.',
-      '- Ưu tiên vật liệu, bố cục và phong cách theo đúng các mẫu đã chọn và ảnh tham khảo.',
-      '- Sắp xếp lại tỷ lệ công năng cho đẹp mắt, hợp lý và cân đối nhưng vẫn phải trùng vị trí quy hoạch trên ảnh màu.',
-      '- Hình ảnh đầu ra cần tự nhiên, khả thi để thi công thực tế.',
-      '- Nếu có xung đột giữa ảnh tham khảo và hiện trạng, ưu tiên hiện trạng thực tế của khách.',
-      '',
-      'Ý nghĩa từng file upload',
+      '═══ FILE ĐÍNH KÈM ═══',
       ...buildAiAssetLines(project),
-      '',
-      'Đầu ra mong muốn',
-      '- 1 hình ảnh cảnh quan hoàn chỉnh, photorealistic, đẹp, rõ ràng, không bị méo hình.',
-      '- Hình phải cho thấy cách đặt thác, hồ, kè, cây xanh và hầm lọc một cách thống nhất, có chú ý đến tầm nhìn từ cửa chính.',
-      '- Tuyệt đối không đặt công năng sai màu, sai vị trí, sai tỷ lệ so với ảnh khoanh vùng.'
     ].join('\n');
   };
 
@@ -1656,8 +1671,22 @@ function AdminView({
           </section>
 
           <section className="studio-result-center">
-            <div className="prompt-header-row">
+            <div className="prompt-header-row" style={{ justifyContent: 'space-between', marginBottom: '16px' }}>
               <div className="prompt-title"><ImageIcon size={24} /> <h3>KẾT QUẢ AI DESIGN (DALL-E 3)</h3></div>
+              {aiResultImages.length > 0 && (
+                 <button 
+                    className="btn-luxe-admin outline" 
+                    style={{ padding: '6px 12px', fontSize: '13px', background: 'rgba(255, 60, 60, 0.1)', color: '#ff4d4f', border: '1px solid #ff4d4f', height: 'auto' }}
+                    onClick={async () => {
+                       if (window.confirm("Bạn có chắc muốn xóa TOÀN BỘ ảnh kết quả hiện tại để tạo lứa mới không?")) {
+                          const updated = await onUpdateProject(selectedProject.id, { aiResults: [] });
+                          setSelectedProject(updated);
+                       }
+                    }}
+                 >
+                    <Trash2 size={16} /> Xóa tất cả
+                 </button>
+              )}
             </div>
             {aiResultImages.length === 0 ? (
               <div className="ai-result-empty">
@@ -1666,7 +1695,23 @@ function AdminView({
             ) : (
               <div className="ai-result-grid">
                 {aiResultImages.slice().reverse().map((imageUrl, index) => (
-                  <div key={`${imageUrl}-${index}`} className="ai-result-card">
+                  <div key={`${imageUrl}-${index}`} className="ai-result-card" style={{ position: 'relative' }}>
+                    <button 
+                       className="ai-result-delete-btn" 
+                       title="Xóa ảnh này"
+                       style={{ position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}
+                       onClick={async () => {
+                          const newResults = selectedProject.aiResults.filter((img: string) => img !== imageUrl);
+                          try {
+                             const updated = await onUpdateProject(selectedProject.id, { aiResults: newResults });
+                             setSelectedProject(updated);
+                          } catch {
+                             setActionFeedback("Lỗi khi xóa ảnh.");
+                          }
+                       }}
+                    >
+                       <X size={14} />
+                    </button>
                     <img src={imageUrl} alt={`AI Generation ${index + 1}`} />
                     <div className="ai-result-actions">
                       <button className="btn-link-inline" onClick={() => window.open(imageUrl, '_blank')}><ExternalLink size={16} /> Xem ảnh</button>
@@ -1972,6 +2017,21 @@ function AdminView({
                           <div className="pkg-tag">{project.service}</div>
                           <div className="wf-tag">{getWorkflowShortLabel(project.workflowBranch)}</div>
                         </div>
+                        {project.status === 'processing' && (
+                          <div className="card-ai-generating">
+                            <span className="generating-spinner" />
+                            <span>Đang tạo ảnh AI... {project.aiResults?.length ? `(${project.aiResults.length}/4 ảnh)` : ''}</span>
+                          </div>
+                        )}
+                        {project.aiResults && project.aiResults.length > 0 && (
+                          <div className="card-ai-preview-grid">
+                            {project.aiResults.slice(0, 4).reverse().map((img, i) => (
+                               <div key={i} className="card-ai-thumb" title="Ảnh AI tạo ra">
+                                  <img src={img} alt={`AI Thumb ${i+1}`} />
+                               </div>
+                            ))}
+                          </div>
+                        )}
                       </button>
                     ))}
                   </div>

@@ -40,17 +40,30 @@ async function saveDataUrlToFile(dataUrl, filePath) {
 }
 
 async function downloadAssetToFile(asset, targetDir, index) {
-  const extensionFromUrl = asset.url.startsWith('data:')
-    ? 'png'
-    : path.extname(new URL(asset.url).pathname || '').replace('.', '');
-  const fallbackExtension = extensionFromUrl || 'png';
-  const filePath = path.join(targetDir, `${String(index + 1).padStart(2, '0')}_${sanitizeFileName(asset.label)}.${fallbackExtension}`);
+  const url = (asset.url || '').trim();
 
-  if (asset.url.startsWith('data:')) {
-    return saveDataUrlToFile(asset.url, filePath);
+  if (!url) {
+    throw new Error(`Asset "${asset.label}" có URL rỗng, không thể tải.`);
   }
 
-  const response = await fetch(asset.url);
+  if (url.startsWith('data:')) {
+    const filePath = path.join(targetDir, `${String(index + 1).padStart(2, '0')}_${sanitizeFileName(asset.label)}.png`);
+    return saveDataUrlToFile(url, filePath);
+  }
+
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    throw new Error(`Asset "${asset.label}" có URL không hợp lệ: ${url.slice(0, 60)}`);
+  }
+
+  let extensionFromUrl = 'png';
+  try {
+    const ext = path.extname(new URL(url).pathname || '').replace('.', '');
+    if (ext) extensionFromUrl = ext;
+  } catch (_) { /* giữ mặc định png */ }
+
+  const filePath = path.join(targetDir, `${String(index + 1).padStart(2, '0')}_${sanitizeFileName(asset.label)}.${extensionFromUrl}`);
+
+  const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Không tải được tài nguyên: ${asset.label}`);
   }
@@ -154,16 +167,97 @@ async function countEditButtons(page) {
 }
 
 async function waitForImageCompletion(page, previousCount) {
-  await page.waitForFunction(prev => {
-    const keywords = ['Chỉnh sửa', 'Edit'];
-    const count = Array.from(document.querySelectorAll('*')).filter(node => {
-      const text = node.textContent?.trim();
-      return Boolean(text) && keywords.includes(text) && node.children.length <= 1;
-    }).length;
-    return count > prev;
-  }, previousCount, { timeout: 240000 });
+  // Chạy đồng thời: vừa chờ ảnh xong, vừa định kỳ quét và đóng popup chặn
+  let dialogPollInterval;
+
+  const dialogPoller = new Promise(resolve => {
+    dialogPollInterval = setInterval(async () => {
+      try {
+        const dismissed = await page.evaluate(() => {
+          const keywords = ['Đã hiểu', 'OK', 'Got it', 'Understood', 'Đồng ý', 'Tiếp tục', 'Continue'];
+          const buttons = Array.from(document.querySelectorAll('button, [role="button"]'));
+          const target = buttons.find(btn => {
+            const text = btn.textContent?.trim() || '';
+            return keywords.some(kw => text === kw || text.includes(kw));
+          });
+          if (target) { target.click(); return true; }
+          return false;
+        });
+        if (dismissed) {
+          console.log('[Dialog Poller] Đã tự động đóng popup chặn trong lúc chờ ảnh...');
+        }
+      } catch (_) { /* Bỏ qua lỗi khi page đang loading */ }
+    }, 3000);
+    // resolve không bao giờ gọi - interval chạy cho đến khi cleared
+    void resolve;
+  });
+
+  try {
+    await page.waitForFunction(prev => {
+      const keywords = ['Chỉnh sửa', 'Edit'];
+      const count = Array.from(document.querySelectorAll('*')).filter(node => {
+        const text = node.textContent?.trim();
+        return Boolean(text) && keywords.includes(text) && node.children.length <= 1;
+      }).length;
+      return count > prev;
+    }, previousCount, { timeout: 240000 });
+  } finally {
+    clearInterval(dialogPollInterval);
+  }
 
   await delay(8000);
+}
+
+async function handleVariantSelection(page) {
+  // Phát hiện nếu ChatGPT đưa ra câu hỏi chọn phương án (2 nút lựa chọn)
+  const hasVariantPicker = await page.evaluate(() => {
+    const variantKeywords = [
+      'Phương án 1', 'Phương án 2',
+      'Tùy chọn 1', 'Tùy chọn 2',
+      'Option 1', 'Option 2',
+      'Option A', 'Option B',
+      'Lựa chọn 1', 'Lựa chọn 2',
+      'Variant 1', 'Variant 2'
+    ];
+    const buttons = Array.from(document.querySelectorAll('button, [role="button"]'));
+    const matched = buttons.filter(btn => {
+      const text = btn.textContent?.trim() || '';
+      return variantKeywords.some(kw => text.includes(kw));
+    });
+    return matched.length >= 2;
+  });
+
+  if (hasVariantPicker) {
+    console.log('[Variant Picker] Phát hiện ChatGPT đưa ra 2 phương án, chọn ngẫu nhiên...');
+    await page.evaluate(() => {
+      const variantKeywords = [
+        'Phương án 1', 'Phương án 2',
+        'Tùy chọn 1', 'Tùy chọn 2',
+        'Option 1', 'Option 2',
+        'Option A', 'Option B',
+        'Lựa chọn 1', 'Lựa chọn 2',
+        'Variant 1', 'Variant 2'
+      ];
+      const buttons = Array.from(document.querySelectorAll('button, [role="button"]'));
+      const matched = buttons.filter(btn => {
+        const text = btn.textContent?.trim() || '';
+        return variantKeywords.some(kw => text.includes(kw));
+      });
+      if (matched.length >= 2) {
+        // Chọn ngẫu nhiên
+        const pick = matched[Math.floor(Math.random() * matched.length)];
+        pick.click();
+      }
+    });
+    console.log('[Variant Picker] Đã bấm lựa chọn, chờ ảnh render...');
+    await delay(3000);
+    // Chờ thêm ảnh hoàn thiện sau khi select
+    await page.waitForFunction(() => {
+      const images = Array.from(document.querySelectorAll('img'));
+      return images.some(img => img.src && !img.src.includes('avatar') && !img.src.includes('logo') && img.width > 200);
+    }, { timeout: 120000 });
+    await delay(5000);
+  }
 }
 
 async function tryNativeDownload(page, outputPath) {
@@ -234,7 +328,99 @@ async function tryFetchImage(page, outputPath) {
   return outputPath;
 }
 
-async function runChatGptAutomation({ prompt, assets }) {
+async function waitUntilClear(page, label) {
+  const DIALOG_KEYWORDS = ['Đã hiểu', 'OK', 'Got it', 'Understood', 'Đồng ý', 'Tiếp tục', 'Continue'];
+  const BLOCK_PHRASES  = ['Quá nhiều yêu cầu', 'Too many requests', 'Rate limit', 'temporarily limited'];
+  const maxWait = 120000; // 2 phút tối đa
+  const pollInterval = 2000;
+  const start = Date.now();
+
+  while (Date.now() - start < maxWait) {
+    try {
+      const result = await page.evaluate((dkw, bph) => {
+        // Tìm và bấm nút dismiss
+        const buttons = Array.from(document.querySelectorAll('button, [role="button"]'));
+        const btn = buttons.find(b => dkw.some(k => (b.textContent?.trim() || '').includes(k)));
+        if (btn) { btn.click(); return 'dismissed'; }
+        // Kiểm tra còn dialog chặn không
+        const blocked = bph.some(ph => document.body?.innerText?.includes(ph));
+        return blocked ? 'blocked' : 'clear';
+      }, DIALOG_KEYWORDS, BLOCK_PHRASES);
+
+      if (result === 'dismissed') {
+        console.log(`[${label}] Đã bấm "Đã hiểu", chờ dialog đóng...`);
+        await delay(3000);
+        continue; // Kiểm tra lại lần nữa
+      }
+      if (result === 'clear') return; // Sạch - tiếp tục
+      // result === 'blocked' - dialog còn đó chờ thêm
+      console.log(`[${label}] Đang chờ ChatGPT bỏ giới hạn... (${Math.round((Date.now()-start)/1000)}s)`);
+    } catch (_) { return; }
+    await delay(pollInterval);
+  }
+  console.log(`[${label}] Vượt quá thời gian chờ dialog, tiếp tục...`);
+}
+
+async function dismissRateLimitDialog(page) {
+  await waitUntilClear(page, 'Dialog');
+}
+
+async function runSingleVariant(page, prompt, filePaths, tempDir, variantNumber, onImageReady) {
+  try {
+    await page.goto('https://chatgpt.com', { waitUntil: 'domcontentloaded' });
+    await page.waitForLoadState('networkidle', { timeout: 60000 }).catch(() => null);
+    await page.waitForSelector('#prompt-textarea, [contenteditable="true"]', { timeout: 30000 });
+
+    await enableImageMode(page);
+    await uploadFiles(page, filePaths);
+
+    await fillPrompt(page, prompt);
+
+    // Đóng dialog "Quá nhiều yêu cầu" hoặc bất kỳ popup chặn nào nếu có
+    await dismissRateLimitDialog(page);
+
+    const editCountBefore = await countEditButtons(page);
+    const input = await findPromptInput(page);
+
+    // Thử gửi bằng nút Submit trước, fallback sang Enter
+    const sent = await page.evaluate(() => {
+      const submitBtn = document.querySelector('button[data-testid="send-button"], button[aria-label="Send"], button[aria-label="Gửi"]');
+      if (submitBtn && !submitBtn.disabled) { submitBtn.click(); return true; }
+      return false;
+    });
+    if (!sent) {
+      await input.press('Enter');
+    }
+    console.log(`[Tab ${variantNumber}] Đã gửi prompt, đang chờ ChatGPT xử lý...`);
+
+    // Sau khi gửi, vẫn kiểm tra lần nữa nếu dialog xuất hiện
+    await delay(2000);
+    await dismissRateLimitDialog(page);
+
+    console.log(`[Tab ${variantNumber}] Đang chờ ChatGPT hoàn thiện hình ảnh...`);
+    await waitForImageCompletion(page, editCountBefore);
+
+    // Xử lý nếu ChatGPT đưa ra 2 lựa chọn phương án để người dùng chọn
+    await handleVariantSelection(page);
+
+    const outputPath = path.join(tempDir, `chatgpt_result_${Date.now()}_tab${variantNumber}.png`);
+    await tryFetchImage(page, outputPath);
+    
+    console.log(`[Tab ${variantNumber}] Đã tiếp nhận và tải ảnh thành công!`);
+    // Gọi callback ngay lập tức để upload không chờ tab khác
+    if (typeof onImageReady === 'function') {
+      await onImageReady(outputPath);
+    }
+    await page.close().catch(() => null);
+    return outputPath;
+  } catch (error) {
+    console.error(`[Tab ${variantNumber}] Lỗi:`, error);
+    await page.close().catch(() => null);
+    return null;
+  }
+}
+
+async function runChatGptAutomation({ prompt, assets, onImageReady }) {
   const tempDir = path.join(os.tmpdir(), `landscape-chatgpt-${Date.now()}`);
   await ensureDirectory(tempDir);
 
@@ -254,42 +440,40 @@ async function runChatGptAutomation({ prompt, assets }) {
       args: ['--disable-blink-features=AutomationControlled']
     });
 
-    const page = browser.pages()[0] || await browser.newPage();
-    await page.goto('https://chatgpt.com', { waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('networkidle', { timeout: 60000 }).catch(() => null);
-    await page.waitForSelector('#prompt-textarea, [contenteditable="true"]', { timeout: 30000 });
+    const promises = [];
+    const filePaths = inputFiles.map(file => file.filePath);
 
-    await enableImageMode(page);
-    await uploadFiles(page, inputFiles.map(file => file.filePath));
-    await fillPrompt(page, prompt);
-
-    const outputPaths = [];
-    let editCountBefore = await countEditButtons(page);
-    await (await findPromptInput(page)).press('Enter');
+    const defaultPage = browser.pages()[0];
 
     for (let variant = 1; variant <= 4; variant++) {
-      console.log(`Đang chờ ChatGPT hoàn thiện phương án ${variant}/4...`);
-      await waitForImageCompletion(page, editCountBefore);
-      const outputPath = path.join(tempDir, `chatgpt_result_${Date.now()}_${variant}.png`);
+      if (variant > 1) await delay(30000); // Chờ 30s giữa các tab để tránh rate limit
 
-      try {
-        await tryFetchImage(page, outputPath);
-        outputPaths.push(outputPath);
-        console.log(`Đã tải thành công phương án ${variant}`);
-      } catch (error) {
-        console.error(`Lỗi tải phương án ${variant}:`, error);
-      }
-
-      if (variant < 4) {
-        console.log(`Yêu cầu ChatGPT tạo tiếp phương án ${variant + 1}...`);
-        await delay(1500); // Give ChatGPT UI a moment to settle
-        editCountBefore = await countEditButtons(page);
-        await fillPrompt(page, `Cảm ơn. Hãy tạo tiếp 1 phương án thiết kế thứ ${variant + 1} nữa nhé. Giữ nguyên cấu trúc bối cảnh, nhưng thay đổi một chút về sắc thái ánh sáng, vật liệu đá hoặc cách bố trí cụm tùng/cây phụ để có thêm góc nhìn tham khảo.`);
-        await (await findPromptInput(page)).press('Enter');
-      }
+      const targetPage = variant === 1 && defaultPage ? defaultPage : await browser.newPage();
+      promises.push(runSingleVariant(targetPage, prompt, filePaths, tempDir, variant, onImageReady));
     }
 
-    return { outputPaths, chatUrl: page.url() };
+    const results = await Promise.all(promises);
+    let outputPaths = results.filter(Boolean);
+
+    // Retry: nếu thiếu ảnh, tạo thêm tab mới cho đến khi đủ 4
+    let retryAttempt = 0;
+    while (outputPaths.length < 4 && retryAttempt < 4) {
+      const missing = 4 - outputPaths.length;
+      console.log(`[RETRY] Cần tạo thêm ${missing} ảnh (lần ${retryAttempt + 1})...`);
+      await delay(5000); // Chờ để tránh rate limit
+      const retryPromises = [];
+      for (let i = 0; i < missing; i++) {
+        await delay(2000);
+        const retryPage = await browser.newPage();
+        retryPromises.push(runSingleVariant(retryPage, prompt, filePaths, tempDir, outputPaths.length + i + 1));
+      }
+      const retryResults = await Promise.all(retryPromises);
+      outputPaths = [...outputPaths, ...retryResults.filter(Boolean)];
+      retryAttempt++;
+    }
+
+    console.log(`[AUTO] Tổng cộng thu được ${outputPaths.length}/4 ảnh.`);
+    return { outputPaths, chatUrl: 'https://chatgpt.com' };
   } finally {
     if (browser) {
       await browser.close().catch(() => null);

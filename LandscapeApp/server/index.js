@@ -7,6 +7,70 @@ require('dotenv').config();
 const { runChatGptAutomation } = require('./chatgptAutomation');
 const { generateLandscapePrompt } = require('./geminiPromptService');
 
+// Hàm tạo prompt thuần từ dữ liệu project — không cần Gemini API
+function buildServerPrompt(project, assets) {
+  const hasNote = !!(project.note && project.note.trim());
+  const hasExtra = (project.extraAssets && project.extraAssets.length > 0);
+
+  const selectionLines = [];
+  if (project.selections) {
+    if (project.selections.ke && project.selections.ke.length > 0)
+      selectionLines.push(`- Kè đá: ${project.selections.ke.join(', ')}`);
+    if (project.selections.canh && project.selections.canh.length > 0)
+      selectionLines.push(`- Cảnh quan: ${project.selections.canh.join(', ')}`);
+  }
+  if (selectionLines.length === 0) selectionLines.push('- Chưa có mẫu chọn cụ thể');
+
+  const assetLines = assets.map((a, i) => `- File ${i + 1}: ${a.label}. ${a.role}`);
+
+  const lines = [
+    'Bạn là chuyên gia concept cảnh quan. Nhiệm vụ của bạn là tạo ra 1 hình ảnh phối cảnh photorealistic bám sát dữ liệu thực tế tôi cung cấp — không sáng tạo tuỳ tiện.',
+    '',
+    '═══ DỮ LIỆU DỰ ÁN ═══',
+    `Khách hàng: ${project.customerName}`,
+    `Gói dịch vụ: ${project.service}`,
+    '',
+    '═══ CÁCH ĐỌC ẢNH KHOANH VÙNG (File 2) ═══',
+    'Hãy nhìn trực tiếp vào hình ảnh khoanh vùng thiết kế (File 2) mà tôi đính kèm.',
+    '→ Chỉ xử lý đúng những vùng màu bạn thực sự nhìn thấy trong ảnh đó.',
+    '→ Mỗi vùng màu tô là một khu vực công năng cần can thiệp. Đặt đúng hạng mục vào đúng vị trí không gian đó.',
+    '→ Nếu một loại công năng không có vùng màu tương ứng trong ảnh → TUYỆT ĐỐI không thêm vào.',
+    '→ Khu vực không có màu khoanh vùng = giữ nguyên hiện trạng, không thay đổi.',
+    '',
+    '═══ GỢI Ý CÁCH HIỂU CÁC MÀU PHỔ BIẾN (chỉ dùng nếu màu đó thực sự xuất hiện) ═══',
+    '  Đỏ / cam đậm → vị trí thác nước hoặc điểm nhấn nước rơi',
+    '  Xanh dương / xanh da trời → vùng hồ nước, mặt nước',
+    '  Tím / hoa cà → viền kè đá bao quanh hồ hoặc bồn',
+    '  Xanh lá → cây xanh, tùng, cỏ, thảm thực vật',
+    '  Vàng / cam nhạt → hầm lọc, kỹ thuật ẩn',
+    '  Trắng / xám sáng → sỏi, vật liệu nền trang trí',
+    '  Nâu → lối đi, gỗ, hoặc vật liệu chuyển tiếp',
+    '',
+    '═══ YÊU CẦU VÀ PHONG CÁCH TỪ KHÁCH HÀNG ═══',
+    hasNote ? `"${project.note.trim()}"` : 'Khách không để lại ghi chú cụ thể. Hãy dựa hoàn toàn vào ảnh khoanh vùng và mẫu đã chọn.',
+    '',
+    '═══ MẪU PHONG CÁCH ĐÃ CHỌN ═══',
+    ...selectionLines,
+    '',
+    ...(hasExtra ? [
+      '═══ TÀI NGUYÊN THAM KHẢO BỔ SUNG ═══',
+      'Khách có gửi thêm hình tham khảo phong cách/vật liệu. Tinh thần đã tổng hợp trong phần yêu cầu ở trên.',
+      '',
+    ] : []),
+    '═══ QUY TẮC TẠO ẢNH BẮT BUỘC ═══',
+    '1. Giữ nguyên 100% góc chụp, phối cảnh, tỷ lệ từ ảnh hiện trạng (File 1).',
+    '2. Giữ nguyên toàn bộ kiến trúc nhà, tường, cửa, cột, bậc thang — trừ phần nằm trong vùng khoanh màu.',
+    '3. Chỉ thêm / thay đổi đúng vị trí không gian đã được đánh dấu màu trong ảnh khoanh vùng.',
+    '4. Áp dụng vật liệu và bố cục từ mẫu đã chọn cho đúng hạng mục tương ứng.',
+    '5. Không thêm bất kỳ hạng mục nào không có vùng màu trong ảnh khoanh vùng.',
+    '6. Kết quả phải tự nhiên, khả thi thi công thực tế, không méo hình, không sai tỷ lệ.',
+    '',
+    '═══ FILE ĐÍNH KÈM ═══',
+    ...assetLines,
+  ];
+  return lines.join('\n');
+}
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -21,10 +85,76 @@ cloudinary.config({
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// MongoDB Connection
+// MongoDB Connection + Startup Recovery
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('Connected to MongoDB Atlas'))
+  .then(async () => {
+    console.log('Connected to MongoDB Atlas');
+    // Khôi phục các project bị bỏ dở sau khi restart server
+    setTimeout(resumePendingProjects, 5000);
+  })
   .catch(err => console.error('MongoDB connection error:', err));
+
+async function resumePendingProjects() {
+  try {
+    // Chưa có model lúc này, gọi sau khi schema được define — dùng flag tránh gọi sớm
+    if (!global._projectModelReady) return;
+    const stuck = await Project.find({
+      service: 'Gói Cơ Bản',
+      $or: [
+        { status: 'pending' },
+        { status: 'processing', $expr: { $lt: [{ $size: { $ifNull: ['$aiResults', []] } }, 4] } }
+      ]
+    }).lean();
+
+    if (stuck.length === 0) {
+      console.log('[STARTUP] Không có dự án nào cần xử lý lại.');
+      return;
+    }
+
+    console.log(`[STARTUP] Phát hiện ${stuck.length} dự án Gói Cơ Bản chưa hoàn thành. Đang kích hoạt lại...`);
+
+    for (const project of stuck) {
+      setImmediate(async () => {
+        try {
+          const assets = [
+            { label: 'Ảnh hiện trạng gốc', url: project.rawImage, role: 'Ảnh nền chính, phải giữ nguyên kiến trúc, góc chụp và phối cảnh.' },
+            { label: 'Ảnh khoanh vùng thiết kế', url: project.annotatedImage, role: 'Ảnh quy hoạch công năng bằng màu, dùng để xác định đúng vị trí từng hạng mục.' }
+          ];
+          if (project.selections?.thac && (project.selections.thac.startsWith('http://') || project.selections.thac.startsWith('https://') || project.selections.thac.startsWith('data:'))) {
+            assets.push({ label: 'Mẫu khách chọn', url: project.selections.thac, role: 'Mẫu thác / vân đá chọn từ thư viện.' });
+          }
+
+          const resolvedPrompt = buildServerPrompt(project, assets);
+          await Project.findOneAndUpdate({ id: project.id }, { status: 'processing', workflowBranch: 'chatgpt_image' });
+
+          let count = (project.aiResults || []).length;
+          const onImageReady = async (outputPath) => {
+            try {
+              const url = await uploadToCloudinary(outputPath);
+              if (!url || !url.startsWith('http')) return;
+              count++;
+              console.log(`[RESUME] ✅ Ảnh #${count} cho "${project.customerName}"`);
+              await Project.findOneAndUpdate(
+                { id: project.id },
+                { $set: { status: 'processing', workflowBranch: 'chatgpt_image' }, $push: { aiResults: url } }
+              );
+              await fs.unlink(outputPath).catch(() => null);
+            } catch (e) { console.error('[RESUME] Lỗi upload:', e.message); }
+          };
+
+          await runChatGptAutomation({ prompt: resolvedPrompt, assets, onImageReady });
+          await Project.findOneAndUpdate({ id: project.id }, { $set: { status: 'done' } });
+          console.log(`[RESUME] ✅ Hoàn thành "${project.customerName}"`);
+        } catch (e) {
+          console.error(`[RESUME] ❌ Lỗi "${project.customerName}":`, e.message);
+          await Project.findOneAndUpdate({ id: project.id }, { status: 'pending' }).catch(() => null);
+        }
+      });
+    }
+  } catch (e) {
+    console.error('[STARTUP] Lỗi startup recovery:', e.message);
+  }
+}
 
 // Schema
 const ProjectSchema = new mongoose.Schema({
@@ -49,6 +179,7 @@ const ProjectSchema = new mongoose.Schema({
 });
 
 const Project = mongoose.model('Project', ProjectSchema);
+global._projectModelReady = true; // Cho phép resumePendingProjects chạy
 
 // Helper: Upload to Cloudinary
 const uploadToCloudinary = async (fileStr) => {
@@ -97,6 +228,59 @@ app.post('/api/projects', async (req, res) => {
     await newProject.save();
     console.log('Project saved to MongoDB with Cloudinary links');
     res.status(201).json(newProject);
+
+    // Auto-trigger ChatGPT generation in background for Gói Cơ Bản
+    if (data.service === 'Gói Cơ Bản') {
+      console.log(`[AUTO] Tự động kích hoạt ChatGPT cho dự án "${data.customerName}" (${newProject.id})...`);
+      setImmediate(async () => {
+        try {
+          const assets = [
+            { label: 'Ảnh hiện trạng gốc', url: newProject.rawImage, role: 'Ảnh nền chính, phải giữ nguyên kiến trúc, góc chụp và phối cảnh.' },
+            { label: 'Ảnh khoanh vùng thiết kế', url: newProject.annotatedImage, role: 'Ảnh quy hoạch công năng bằng màu, dùng để xác định đúng vị trí từng hạng mục.' }
+          ];
+
+          // Thêm mẫu thác nếu khách có chọn
+          if (newProject.selections?.thac && (newProject.selections.thac.startsWith('http://') || newProject.selections.thac.startsWith('https://') || newProject.selections.thac.startsWith('data:'))) {
+            assets.push({ label: 'Mẫu khách chọn', url: newProject.selections.thac, role: 'Mẫu thác / vân đá chọn từ thư viện.' });
+          }
+
+          // Xây dựng prompt trực tiếp từ dữ liệu project, không cần Gemini API
+          const resolvedPrompt = buildServerPrompt(newProject.toObject(), assets);
+
+          await Project.findOneAndUpdate({ id: newProject.id }, { status: 'processing', workflowBranch: 'chatgpt_image' });
+
+          let autoCount = 0;
+          const onImageReady = async (outputPath) => {
+            try {
+              const url = await uploadToCloudinary(outputPath);
+              if (!url || !url.startsWith('http')) return;
+              autoCount++;
+              console.log(`[AUTO] ✅ Ảnh #${autoCount} đã upload cho "${data.customerName}"`);
+              await Project.findOneAndUpdate(
+                { id: newProject.id },
+                {
+                  $set: { status: 'processing', workflowBranch: 'chatgpt_image', ...(autoCount === 1 ? { finalImage: url } : {}) },
+                  $push: { aiResults: url }
+                }
+              );
+              await fs.unlink(outputPath).catch(() => null);
+            } catch (e) {
+              console.error(`[AUTO] Lỗi upload ảnh:`, e.message);
+            }
+          };
+
+          await runChatGptAutomation({ prompt: resolvedPrompt, assets, onImageReady });
+
+          if (autoCount > 0) {
+            await Project.findOneAndUpdate({ id: newProject.id }, { $set: { status: 'done' } });
+            console.log(`[AUTO] ✅ Hoàn thành tự động tạo ${autoCount} ảnh cho "${data.customerName}"`);
+          }
+        } catch (err) {
+          console.error(`[AUTO] ❌ Lỗi tự động tạo ảnh cho "${data.customerName}":`, err.message);
+          await Project.findOneAndUpdate({ id: newProject.id }, { status: 'pending' }).catch(() => null);
+        }
+      });
+    }
   } catch (err) {
     console.error('Submission error:', err);
     res.status(400).json({ error: err.message });
@@ -117,6 +301,10 @@ app.patch('/api/projects/:id', async (req, res) => {
 
     if (req.body.finalImage) {
       updates.finalImage = await uploadToCloudinary(req.body.finalImage);
+    }
+
+    if (Array.isArray(req.body.aiResults)) {
+      updates.aiResults = req.body.aiResults;
     }
 
     const updated = await Project.findOneAndUpdate(
@@ -157,8 +345,6 @@ app.post('/api/projects/:id/ai-prompt', async (req, res) => {
 });
 
 app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
-    let let_outputPath;
-
   try {
     const { prompt, assets } = req.body;
 
@@ -180,48 +366,56 @@ app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
       ? prompt.trim()
       : await generateLandscapePrompt(project.toObject(), assets);
 
-    const automationResult = await runChatGptAutomation({ prompt: resolvedPrompt, assets });
-    const pathsToUpload = automationResult.outputPaths || [automationResult.outputPath].filter(Boolean);
+    let firstUrl = null;
+    let uploadCount = 0;
 
-    const uploadedResults = [];
-    for (const p of pathsToUpload) {
-      if (!p) continue;
-      const url = await uploadToCloudinary(p);
-      if (url && url.startsWith('http')) {
-        uploadedResults.push(url);
+    // Callback: mỗi khi một ảnh tải xong thì upload + push vào DB ngay
+    const onImageReady = async (outputPath) => {
+      try {
+        const url = await uploadToCloudinary(outputPath);
+        if (!url || !url.startsWith('http')) return;
+        uploadCount++;
+        if (!firstUrl) firstUrl = url;
+        console.log(`[Ảnh #${uploadCount}] Đã upload: ${url}`);
+        await Project.findOneAndUpdate(
+          { id: req.params.id },
+          {
+            $set: { workflowBranch: 'chatgpt_image', status: 'processing', finalImage: firstUrl },
+            $push: { aiResults: url }
+          }
+        );
+        // Dọn file tạm
+        await fs.unlink(outputPath).catch(() => null);
+      } catch (e) {
+        console.error('Lỗi upload ảnh:', e.message);
       }
-    }
+    };
 
-    if (uploadedResults.length === 0) {
-      throw new Error('Không upload được bất kỳ ảnh kết quả nào lên Cloudinary.');
-    }
+    const automationResult = await runChatGptAutomation({ prompt: resolvedPrompt, assets, onImageReady });
 
+    // Đánh dấu hoàn thành
     const updated = await Project.findOneAndUpdate(
       { id: req.params.id },
-      {
-        $set: {
-          workflowBranch: 'chatgpt_image',
-          status: 'done',
-          finalImage: uploadedResults[0]
-        },
-        $push: { aiResults: { $each: uploadedResults } }
-      },
+      { $set: { status: uploadCount > 0 ? 'done' : 'pending' } },
       { new: true }
     );
+
+    if (uploadCount === 0) {
+      throw new Error('Không upload được bất kỳ ảnh kết quả nào lên Cloudinary.');
+    }
 
     res.json({
       project: updated,
       prompt: resolvedPrompt,
-      outputUrl: uploadedResults[0],
-      chatUrl: automationResult.chatUrl
+      outputUrl: firstUrl,
+      chatUrl: automationResult?.chatUrl
     });
   } catch (err) {
     console.error('ChatGPT generation error:', err);
     res.status(500).json({ error: err.message || 'Không thể tự động tạo ảnh với ChatGPT.' });
-  } finally {
-      // Cleanup happens in automation script mostly.
   }
 });
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
