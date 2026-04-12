@@ -371,7 +371,7 @@ async function runSingleVariant(page, prompt, filePaths, tempDir, variantNumber,
     await page.waitForSelector('#prompt-textarea, [contenteditable="true"]', { timeout: 30000 });
 
     // Chọn công cụ "Tạo hình ảnh" từ menu để kích hoạt DALL-E chuẩn cho mọi tài khoản
-    await selectGenerateImageTool(page);
+    await enableImageMode(page);
 
     await uploadFiles(page, filePaths);
 
