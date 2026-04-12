@@ -393,14 +393,19 @@ async function dismissRateLimitDialog(page) {
 
 async function runSingleVariant(page, prompt, filePaths, tempDir, variantNumber, onImageReady) {
   try {
-    // Luôn mở một phiên chat mới với model GPT-4o để đảm bảo quyền hạn up ảnh
-    await page.goto('https://chatgpt.com/?model=gpt-4o', { waitUntil: 'domcontentloaded' });
+    // Ép buộc mở một phiên chat hoàn toàn mới (New Chat)
+    await page.goto('https://chatgpt.com/', { waitUntil: 'domcontentloaded' });
+    // Nếu URL có chứa mã định danh (nghĩa là đang ở chat cũ), ta ép về trang chủ lần nữa
+    if (page.url().includes('chatgpt.com/c/')) {
+        await page.goto('https://chatgpt.com/');
+    }
+    
     await page.waitForSelector('#prompt-textarea, [contenteditable="true"]', { timeout: 30000 });
 
-    // Xóa sạch nội dung cũ nếu tab bị dùng lại
+    // Đảm bảo ô nhập liệu trống không
     await clearTextarea(page);
 
-    // Chọn công cụ "Tạo hình ảnh" từ menu để kích hoạt DALL-E
+    // Kích hoạt chế độ Tạo hình ảnh
     await enableImageMode(page);
 
     await uploadFiles(page, filePaths);
