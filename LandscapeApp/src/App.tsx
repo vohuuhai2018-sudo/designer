@@ -28,7 +28,8 @@ import {
   HelpCircle,
   Mail,
   AlertTriangle,
-  MessageCircle
+  MessageCircle,
+  Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
