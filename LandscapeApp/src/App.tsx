@@ -1214,14 +1214,40 @@ function AdminView({
   };
 
   const groupProjects = () => {
-    return projects.reduce<Record<string, Project[]>>((acc, project) => {
-      const createdAt = new Date(project.timestamp);
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-      let dateKey = createdAt.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-      if (createdAt.toDateString() === today.toDateString()) dateKey = 'Hôm nay';
-      else if (createdAt.toDateString() === yesterday.toDateString()) dateKey = 'Hôm qua';
+    // Sort projects strictly descending by timestamp first
+    const sortedProjects = [...projects].sort((a, b) => b.timestamp - a.timestamp);
+    
+    // Get VN time for today and yesterday
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    
+    const opts: Intl.DateTimeFormatOptions = { timeZone: 'Asia/Ho_Chi_Minh' };
+    const todayVN = today.toLocaleDateString('vi-VN', opts);
+    const yesterdayVN = yesterday.toLocaleDateString('vi-VN', opts);
+
+    return sortedProjects.reduce<Record<string, Project[]>>((acc, project) => {
+      const pDate = new Date(project.timestamp);
+      const pDateVN = pDate.toLocaleDateString('vi-VN', opts);
+      
+      let dateKey = pDateVN;
+
+      if (pDateVN === todayVN) {
+        dateKey = 'Hôm nay';
+      } else if (pDateVN === yesterdayVN) {
+        dateKey = 'Hôm qua';
+      } else {
+        // Calculate difference in days using VN time
+        const diffTime = new Date(new Date().toLocaleString('en-US', opts)).setHours(0,0,0,0) - new Date(pDate.toLocaleString('en-US', opts)).setHours(0,0,0,0);
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays <= 7 && diffDays > 1) {
+            dateKey = `${diffDays} ngày trước`;
+        } else {
+            dateKey = `Ngày ${pDateVN}`;
+        }
+      }
+
       if (!acc[dateKey]) acc[dateKey] = [];
       acc[dateKey].push(project);
       return acc;
@@ -1246,16 +1272,27 @@ function AdminView({
   const loadRawImageIntoDesigner = async (project: Project, opts?: { force?: boolean }) => {
     if (!opts?.force && autoLoadedDesignerProjectRef.current === project.id) return;
     try {
-      const response = await fetch(project.rawImage);
-      if (response.ok) {
-        const buffer = await response.arrayBuffer();
-        if (postBufferToDesigner(buffer)) {
-          autoLoadedDesignerProjectRef.current = project.id;
-          setDesignerStatus('Đã nạp ảnh hiện trạng vào bàn làm việc.');
+      if (project.rawImage.startsWith('data:')) {
+        const response = await fetch(project.rawImage);
+        if (response.ok) {
+          const buffer = await response.arrayBuffer();
+          if (postBufferToDesigner(buffer)) {
+            autoLoadedDesignerProjectRef.current = project.id;
+            setDesignerStatus('Đã nạp ảnh hiện trạng vào bàn làm việc.');
+          }
         }
+      } else {
+        const frame = designerFrameRef.current;
+        if (!frame?.contentWindow) { setDesignerStatus('Trình thiết kế chưa sẵn sàng.'); return; }
+        const absoluteUrl = toAbsoluteAssetUrl(project.rawImage);
+        const script = `app.open("${absoluteUrl}", null, true);`;
+        frame.contentWindow.postMessage(script, '*');
+        autoLoadedDesignerProjectRef.current = project.id;
+        setDesignerStatus('Đã nạp ảnh hiện trạng vào bàn làm việc.');
       }
     } catch (e) {
       console.error('Load raw image error:', e);
+      setDesignerStatus('Lỗi khi nạp ảnh gốc.');
     }
   };
 
@@ -1708,7 +1745,6 @@ function AdminView({
           <div style={{ position: 'relative', width: '100%', height: '100%' }}>
             <iframe ref={designerFrameRef} src={getDesignerUrl()} className="photopea-iframe" title="Photoshop Online"
               onLoad={() => {
-                if (!selectedProject.rawImage.startsWith('data:')) return;
                 window.setTimeout(() => { void loadRawImageIntoDesigner(selectedProject); }, 1800);
               }}
             />
@@ -1909,23 +1945,24 @@ function AdminView({
             ) : (
               Object.keys(grouped).map(dateGroup => (
                 <div key={dateGroup} className="folder-date-section">
-                  <div className="date-badge"><Folder size={16} /> {dateGroup}</div>
+                  <div className="date-badge-luxe"><Folder size={18} color="var(--accent)" /> {dateGroup}</div>
                   <div className="customer-cards-grid">
                     {grouped[dateGroup].map(project => (
-                      <button key={project.id} type="button" className={`management-card ${project.status}`} onClick={() => setSelectedProject(project)}>
-                        <div className="card-header">
-                          <span className="time">{new Date(project.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
-                          <div className={`status-indicator ${project.status}`}></div>
+                      <button key={project.id} type="button" className="management-card-luxe" onClick={() => setSelectedProject(project)}>
+                        <div className="card-top-row">
+                          <span className="time-stamp-luxe">
+                            {new Date(project.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}
+                          </span>
+                          <div className={`status-badge-luxe ${project.status}`}>{getStatusLabel(project.status)}</div>
                         </div>
-                        <div className="card-main">
-                          <div className="customer-name">{project.customerName}</div>
-                          <div className="customer-phone">{project.customerPhone}</div>
+                        <div className="card-client-info">
+                          <div className="client-name">{project.customerName}</div>
+                          <div className="client-phone"><Phone size={14} /> {project.customerPhone}</div>
                         </div>
-                        <div className="card-meta-row">
-                          <div className="service-name">{project.service}</div>
-                          <div className={`workflow-mini-tag ${project.workflowBranch || 'empty'}`}>{getWorkflowShortLabel(project.workflowBranch)}</div>
+                        <div className="card-package-row">
+                          <div className="pkg-tag">{project.service}</div>
+                          <div className="wf-tag">{getWorkflowShortLabel(project.workflowBranch)}</div>
                         </div>
-                        <div className="card-footer"><span>{getStatusLabel(project.status)}</span><ChevronRight size={18} /></div>
                       </button>
                     ))}
                   </div>

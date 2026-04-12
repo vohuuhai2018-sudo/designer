@@ -1534,138 +1534,129 @@ canvas {
   gap: 14px;
 }
 
-.management-card {
+.management-card-luxe {
   width: 100%;
   text-align: left;
-  padding: 24px;
-  border-radius: 20px;
+  padding: 20px;
+  border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+  transition: all 0.3s ease;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.management-card:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: var(--accent);
+.management-card-luxe:hover {
+  background: rgba(226, 177, 112, 0.05);
+  border-color: rgba(226, 177, 112, 0.3);
   transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
-.card-header {
+.card-top-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
 }
 
-.card-header .time-stamp {
+.time-stamp-luxe {
   font-size: 0.85rem;
   color: var(--text-muted);
-  font-weight: 700;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-badge-luxe {
+  padding: 6px 12px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 900;
   letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
-.status-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #f59e0b; /* Pending */
+.status-badge-luxe.pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
 }
 
-.management-card.done .status-dot { background: #10b981; }
-.management-card.processing .status-dot { background: #3b82f6; }
+.status-badge-luxe.processing {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+}
 
-.customer-name {
-  font-size: 1.4rem;
+.status-badge-luxe.done {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+}
+
+.card-client-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.client-name {
+  font-size: 1.3rem;
   font-weight: 950;
   color: #fff;
-  margin-bottom: 6px;
   letter-spacing: -0.01em;
 }
 
-.customer-phone {
-  font-size: 1rem;
-  color: var(--text-muted);
+.client-phone {
+  font-size: 0.95rem;
+  color: var(--accent-light);
   display: flex;
   align-items: center;
   gap: 8px;
+  font-weight: 600;
 }
 
-.card-footer {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+.card-package-row {
   display: flex;
-  justify-content: space-between;
+  gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
-.service-badge-item {
+.pkg-tag {
+  background: rgba(226, 177, 112, 0.15);
+  color: var(--accent);
+  padding: 6px 12px;
+  border-radius: 8px;
   font-size: 0.8rem;
-  font-weight: 900;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.card-main {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.card-meta-row {
-  margin-top: 14px;
-}
-
-.customer-name {
-  font-size: 1.1rem;
   font-weight: 800;
+  border: 1px solid rgba(226, 177, 112, 0.2);
+}
+
+.wf-tag {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ccc;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.date-badge-luxe {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  padding: 10px 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
   color: #fff;
-}
-
-.customer-phone,
-.time {
-  color: var(--text-muted);
-  font-size: 0.92rem;
-}
-
-.service-name {
-  color: var(--accent);
-  font-weight: 800;
-}
-
-.status-indicator {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #f59e0b;
-}
-
-.status-indicator.processing {
-  background: #3b82f6;
-}
-
-.status-indicator.done {
-  background: #10b981;
-}
-
-.workflow-mini-tag {
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-
-.workflow-mini-tag.manual_design {
-  color: #f8fafc;
-}
-
-.workflow-mini-tag.chatgpt_image {
-  color: #93c5fd;
+  font-weight: 900;
+  font-size: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  margin-bottom: 8px;
 }
 
 .dossier-layout {
