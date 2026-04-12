@@ -682,57 +682,32 @@ function EditorView({
     onNext();
   };
 
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [isPanning, setIsPanning] = useState(false);
-
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view editor-view">
       <div className="editor-top">
         <button onClick={onBack} className="btn-back-premium"><ChevronLeft size={18} /> Quay lại</button>
-        <div className="editor-actions">
-           <button 
-             className={`btn-zoom-toggle ${isZoomed ? 'active' : ''}`}
-             onClick={() => setIsZoomed(!isZoomed)}
-             title={isZoomed ? "Thu nhỏ" : "Phóng to"}
-           >
-             {isZoomed ? <X size={20} /> : <Layers size={20} />}
-           </button>
-           <button 
-             className={`pan-mode-btn ${isPanning ? 'active' : ''}`}
-             onClick={() => setIsPanning(!isPanning)}
-             title={isPanning ? "Vẽ" : "Di chuyển"}
-           >
-             <Bot size={20} />
-           </button>
-           <button 
-            onClick={saveAndNext} 
-            className={`nav-next-locked ${canNext ? 'is-ready' : ''}`}
-          >
-            Tiếp theo <ArrowRight size={20} />
-          </button>
-        </div>
+        <button 
+          onClick={saveAndNext} 
+          className={`nav-next-locked ${canNext ? 'is-ready' : ''}`}
+        >
+          Tiếp theo <ArrowRight size={20} />
+        </button>
       </div>
-      <div className={`workspace ${isZoomed ? 'zoomed' : ''}`}>
+      <div className="workspace">
         <canvas 
           ref={canvasRef} 
-          onPointerDown={isPanning ? undefined : startDraw} 
-          onPointerMove={isPanning ? undefined : draw} 
-          onPointerUp={isPanning ? undefined : endDraw} 
-          onPointerLeave={isPanning ? undefined : endDraw}
-          onPointerCancel={isPanning ? undefined : endDraw}
+          onPointerDown={startDraw} 
+          onPointerMove={draw} 
+          onPointerUp={endDraw} 
+          onPointerLeave={endDraw}
+          onPointerCancel={endDraw}
           style={{ 
-            touchAction: isPanning ? 'auto' : 'none',
-            width: isZoomed ? '200%' : '100%',
+            touchAction: 'none',
+            width: '100%',
             height: 'auto',
-            cursor: isPanning ? 'grab' : 'crosshair'
+            display: 'block'
           }}
         />
-        {isZoomed && !isPanning && (
-          <div className="zoom-hint">Bấm icon Robot phía trên để bật chế độ Di chuyển/Kéo hình</div>
-        )}
-        {isPanning && (
-          <div className="zoom-hint active">Chế độ Di chuyển: Dùng 1 hoặc 2 ngón tay để kéo hình</div>
-        )}
       </div>
       <div className="brush-controls-container">
         <div className="editor-header-row">
@@ -741,7 +716,7 @@ function EditorView({
             className={`btn-help-modal ${!hasSeenSample ? 'pulse-btn' : ''}`} 
             onClick={() => { setShowSample(true); setHasSeenSample(true); }}
           >
-            <HelpCircle size={18} /> Hướng dẫn
+            <HelpCircle size={20} /> Cách khoanh vùng mẫu
           </button>
         </div>
         <div className="colors">
@@ -749,23 +724,22 @@ function EditorView({
             <button 
               key={c.hex} 
               className={`color-item ${color === c.hex ? 'active' : ''}`} 
-              onClick={() => { setColor(c.hex); setIsPanning(false); }}
-              disabled={isPanning}
+              onClick={() => setColor(c.hex)}
             >
               <span className="color-dot" style={{ backgroundColor: c.hex }} />
               <span className="color-label">{c.meaning}</span>
             </button>
           ))}
         </div>
-        <div className="brush-info-mobile">
+        <div className="brush-info">
           <div className="brush-tools">
-            <button onClick={undo} className="btn-tool" disabled={history.length <= 1}><Undo2 size={16} /> Hoàn tác</button>
-            <button onClick={clearAll} className="btn-tool"><Trash2 size={16} /> Xóa hết</button>
+            <button onClick={undo} className="btn-tool" disabled={history.length <= 1}><Undo2 size={18} /> Hoàn tác</button>
+            <button onClick={clearAll} className="btn-tool"><Trash2 size={18} /> Xóa hết</button>
           </div>
-          <div className="customer-request-area-mini">
-            <label>Mô tả ý tưởng chi tiết</label>
+          <div className="customer-request-area">
+            <label>Mô tả chi tiết (Nếu có)</label>
             <textarea 
-              placeholder="Anh/Chị hãy mô tả thêm chi tiết khác (Ví dụ: thác cao 2m, phong cách hiện đại...)"
+              placeholder="Anh chị hãy mô tả thêm chi tiết khác nếu có ví dụ như thác cao bao nhiêu kích thước công trình..."
               value={note}
               onChange={e => onNoteChange(e.target.value)}
             />
