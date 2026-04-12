@@ -34,6 +34,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import './App.css';
 
+// --- API BASE ---
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 // --- TYPES ---
 type AppView = 'welcome' | 'upload' | 'editor' | 'service' | 'plan' | 'submit' | 'success' | 'admin';
 type WorkflowBranch = 'manual_design' | 'chatgpt_image';
@@ -242,7 +245,7 @@ export default function App() {
   useEffect(() => {
     if (view === 'admin') {
       setIsLoadingProjects(true);
-      fetch('http://localhost:5000/api/projects')
+      fetch(`${API_BASE}/api/projects`)
         .then(res => res.json())
         .then(data => {
           setProjects(data);
@@ -263,7 +266,7 @@ export default function App() {
 
     const pollInterval = setInterval(async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/projects');
+        const res = await fetch(`${API_BASE}/api/projects`);
         const data = await res.json();
         setProjects(data);
         const stillProcessing = data.some((p: Project) => p.status === 'processing');
@@ -332,7 +335,7 @@ export default function App() {
       await new Promise(r => setTimeout(r, 600));
       
       setSubmitStatus('Đang truyền tải dữ liệu...');
-      const response = await fetch('http://localhost:5000/api/projects', {
+      const response = await fetch(`${API_BASE}/api/projects`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(projectData)
@@ -430,7 +433,7 @@ export default function App() {
             isLoading={isLoadingProjects}
             onBack={resetAll}
             onUpdateProject={async (id, updates) => {
-              const response = await fetch(`http://localhost:5000/api/projects/${id}`, {
+              const response = await fetch(`${API_BASE}/api/projects/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updates)
@@ -441,7 +444,7 @@ export default function App() {
               return payload as Project;
             }}
             onGenerateAiImage={async (id, payload) => {
-              const response = await fetch(`http://localhost:5000/api/projects/${id}/chatgpt-generate`, {
+              const response = await fetch(`${API_BASE}/api/projects/${id}/chatgpt-generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)

@@ -81,8 +81,15 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Middleware
-app.use(cors());
+// Middleware — CORS cho phép FE Vercel + local dev gọi tới BE
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
+  : null; // null = cho tất cả (dev mode)
+
+app.use(cors({
+  origin: allowedOrigins || true,
+  credentials: true
+}));
 app.use(express.json({ limit: '50mb' }));
 
 // MongoDB Connection + Startup Recovery
