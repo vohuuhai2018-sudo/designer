@@ -496,20 +496,28 @@ async function runChatGptAutomation({ prompt, assets, onImageReady }) {
       args: ['--disable-blink-features=AutomationControlled']
     });
 
-    const promises = [];
+    const outputPaths = [];
     const filePaths = inputFiles.map(file => file.filePath);
-
     const defaultPage = browser.pages()[0];
 
+    // CHẠY TUẦN TỰ (SEQUENTIAL) THEO YÊU CẦU: Xong tab 1 mới mở tab 2
     for (let variant = 1; variant <= 2; variant++) {
+      console.log(`[AUTO] Bắt đầu xử lý phương án #${variant}...`);
       const targetPage = variant === 1 && defaultPage ? defaultPage : await browser.newPage();
-      promises.push(runSingleVariant(targetPage, prompt, filePaths, tempDir, variant, onImageReady));
-      await delay(2000); // Đội hình 2s giữa các tab để tránh bị ChatGPT chặn truy cập đồng thời
+      
+      // Đợi hoàn thành các bước up hình và gửi prompt của tab này xong xuôi
+      const result = await runSingleVariant(targetPage, prompt, filePaths, tempDir, variant, onImageReady);
+      
+      if (result) {
+        outputPaths.push(result);
+      }
+      
+      // Nghỉ một chút giữa 2 tab để ChatGPT không bị quá tải
+      await delay(3000);
     }
 
-    const settledResults = await Promise.allSettled(promises);
-    const results = settledResults.map(r => r.status === 'fulfilled' ? r.value : null);
-    let outputPaths = results.filter(Boolean);
+    // Kết quả cuối cùng
+    console.log(`[AUTO] Tổng cộng thu được ${outputPaths.length}/2 ảnh.`);
 
     // Retry: nếu thiếu ảnh, tạo thêm tab mới cho đến khi đủ 2
     let retryAttempt = 0;
