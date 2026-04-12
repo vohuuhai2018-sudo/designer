@@ -403,6 +403,7 @@ export default function App() {
         {view === 'editor' && (
           <EditorView
             rawImage={rawImage}
+            annotatedImage={annotatedImage}
             onAnnotatedChange={setAnnotatedImage}
             note={note}
             onNoteChange={setNote}
@@ -570,9 +571,10 @@ function UploadView({ onBack, onUpload }: { onBack: () => void, onUpload: (img: 
 }
 
 function EditorView({
-  rawImage, onAnnotatedChange, note, onNoteChange, onBack, onNext
+  rawImage, annotatedImage, onAnnotatedChange, note, onNoteChange, onBack, onNext
 }: {
   rawImage: string;
+  annotatedImage: string;
   onAnnotatedChange: (img: string) => void;
   note: string;
   onNoteChange: (n: string) => void;
@@ -602,9 +604,14 @@ function EditorView({
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
       setHistory([ctx.getImageData(0, 0, canvas.width, canvas.height)]);
+      // Nếu đã có ảnh hiệu chỉnh trước đó, đánh dấu là đã vẽ để hiện nút Tiếp theo
+      if (annotatedImage) {
+        setIsDrawn(true);
+      }
     };
-    img.src = rawImage;
-  }, [rawImage]);
+    // Ưu tiên nạp lại ảnh đã khoanh vùng nếu có
+    img.src = annotatedImage || rawImage;
+  }, [rawImage, annotatedImage]);
 
   const getPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current!;
