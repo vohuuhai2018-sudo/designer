@@ -37,6 +37,19 @@ import './App.css';
 // --- API BASE ---
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+// --- API HELPER ---
+// Tự động thêm header ngrok-skip-browser-warning để bỏ qua trang cảnh báo ngrok free tier
+function apiFetch(path: string, options?: RequestInit): Promise<Response> {
+  const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+  return fetch(url, {
+    ...options,
+    headers: {
+      'ngrok-skip-browser-warning': 'true',
+      ...(options?.headers || {}),
+    },
+  });
+}
+
 // --- TYPES ---
 type AppView = 'welcome' | 'upload' | 'editor' | 'service' | 'plan' | 'submit' | 'success' | 'admin';
 type WorkflowBranch = 'manual_design' | 'chatgpt_image';
@@ -235,9 +248,10 @@ export default function App() {
   const [note, setNote] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [extraAssets, setExtraAssets] = useState<string[]>([]);
-   const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedProjectId, setSubmittedProjectId] = useState<string>('');
 
   const [submitStatus, setSubmitStatus] = useState('');
 
@@ -245,7 +259,7 @@ export default function App() {
   useEffect(() => {
     if (view === 'admin') {
       setIsLoadingProjects(true);
-      fetch(`${API_BASE}/api/projects`)
+      apiFetch('/api/projects')
         .then(res => res.json())
         .then(data => {
           setProjects(data);
@@ -266,7 +280,7 @@ export default function App() {
 
     const pollInterval = setInterval(async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/projects`);
+        const res = await apiFetch('/api/projects');
         const data = await res.json();
         setProjects(data);
         const stillProcessing = data.some((p: Project) => p.status === 'processing');
@@ -335,7 +349,7 @@ export default function App() {
       await new Promise(r => setTimeout(r, 600));
       
       setSubmitStatus('Đang truyền tải dữ liệu...');
-      const response = await fetch(`${API_BASE}/api/projects`, {
+      const response = await apiFetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(projectData)
@@ -343,8 +357,9 @@ export default function App() {
 
       if (!response.ok) throw new Error('Lỗi khi gửi dữ liệu.');
       
+      setSubmittedProjectId(projectData.id);
       setSubmitStatus('Hoàn tất!');
-      confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });
+      if (service !== 'Gói Cơ Bản') confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });
       setView('success');
     } catch (error) {
       alert('Không thể gửi dữ liệu. Vui lòng thử lại.');
@@ -364,6 +379,7 @@ export default function App() {
     setService('');
     setNote('');
     setExtraAssets([]);
+    setSubmittedProjectId('');
     setView('welcome');
   };
 
@@ -425,7 +441,7 @@ export default function App() {
           />
         )}
         {view === 'success' && (
-          <SuccessView onReset={resetAll} />
+          <SuccessView projectId={submittedProjectId} service={service} onReset={resetAll} />
         )}
         {view === 'admin' && (
           <AdminView
@@ -433,7 +449,7 @@ export default function App() {
             isLoading={isLoadingProjects}
             onBack={resetAll}
             onUpdateProject={async (id, updates) => {
-              const response = await fetch(`${API_BASE}/api/projects/${id}`, {
+              const response = await apiFetch(`/api/projects/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updates)
@@ -444,7 +460,7 @@ export default function App() {
               return payload as Project;
             }}
             onGenerateAiImage={async (id, payload) => {
-              const response = await fetch(`${API_BASE}/api/projects/${id}/chatgpt-generate`, {
+              const response = await apiFetch(`/api/projects/${id}/chatgpt-generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -1162,7 +1178,75 @@ function SubmitView({
   );
 }
 
-function SuccessView({ onReset }: { onReset: () => void }) {
+function SuccessView({ projectId, service, onReset }: { projectId: string; service: string; onReset: () => void }) {
+  const [project, setProject] = useState<Project | null>(null);
+
+  useEffect(() => {
+    if (!projectId || service !== 'Gói Cơ Bản') return;
+    
+    const fetchProject = async () => {
+      try {
+        const res = await apiFetch(`/api/projects/${projectId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setProject(data);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    
+    fetchProject();
+    const interval = setInterval(fetchProject, 5000);
+    return () => clearInterval(interval);
+  }, [projectId, service]);
+
+  if (service === 'Gói Cơ Bản') {
+    const isDone = project?.status === 'done';
+    const images = project?.aiResults || [];
+    
+    return (
+      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="view success-view" style={{ maxWidth: '800px', width: '90%' }}>
+         {!isDone ? (
+           <>
+             <div className="processing-spinner" style={{margin: '2rem auto'}}>
+               <RefreshCcw size={64} className="spin" color="var(--accent)" />
+             </div>
+             <h2 style={{ fontSize: '2rem', fontWeight: 800 }}>Hệ thống đang thiết kế...</h2>
+             <p className="hint">Máy chủ Sơn Hải đang tự động vẽ các phương án dựa trên ý tưởng của Anh/Chị. Quá trình này có thể mất vài phút. Vui lòng không đóng trang.</p>
+             {images.length > 0 && <p style={{color: 'var(--accent)', fontWeight: 'bold', fontSize: '1.2rem'}}>Đã hoàn thiện {images.length}/4 phương án...</p>}
+           </>
+         ) : (
+           <>
+             <div className="success-icon"><CheckCircle2 size={64} /></div>
+             <h2 style={{ fontSize: '2rem', fontWeight: 800 }}>Đã hoàn thành bản vẽ!</h2>
+             <p className="hint">Dưới đây là các phương án thiết kế AI đã tự động tổng hợp theo yêu cầu của Anh/Chị.</p>
+           </>
+         )}
+         
+         {images.length > 0 && (
+           <div className="results-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginTop: '2rem', width: '100%' }}>
+             {images.map((url, i) => (
+               <div key={i} style={{ position: 'relative', width: '100%', paddingTop: '100%', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                 <img src={url} alt={`Phương án ${i+1}`} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                 <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.6)', padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>
+                   Phương án {i + 1}
+                 </div>
+               </div>
+             ))}
+           </div>
+         )}
+         
+         {isDone && (
+           <button className="btn-primary main-cta" onClick={onReset} style={{ marginTop: '3rem' }}>
+             Tạo Dự Án Mới
+           </button>
+         )}
+      </motion.div>
+    );
+  }
+
+  // Hiển thị cho các gói không phải "Gói Cơ Bản"
   return (
     <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="view success-view">
       <div className="success-icon"><CheckCircle2 size={100} /></div>
