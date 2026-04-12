@@ -1231,9 +1231,9 @@ function SuccessView({ projectId, service, onReset }: { projectId: string; servi
          {images.length > 0 && (
            <div className="results-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginTop: '2rem', width: '100%' }}>
              {images.map((url, i) => (
-               <div key={i} style={{ position: 'relative', width: '100%', paddingTop: '100%', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-                 <img src={url} alt={`Phương án ${i+1}`} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                 <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.6)', padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>
+               <div key={i} style={{ position: 'relative', width: '100%', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.25)', display: 'flex', justifyContent: 'center' }}>
+                 <img src={url} alt={`Phương án ${i+1}`} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                 <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.7)', padding: '10px', textAlign: 'center', fontWeight: 'bold' }}>
                    Phương án {i + 1}
                  </div>
                </div>
