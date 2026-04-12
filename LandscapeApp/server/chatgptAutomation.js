@@ -381,13 +381,21 @@ async function runSingleVariant(page, prompt, filePaths, tempDir, variantNumber,
     const editCountBefore = await countEditButtons(page);
     const input = await findPromptInput(page);
 
-    // Thử gửi bằng nút Submit trước, fallback sang Enter
-    const sent = await page.evaluate(() => {
-      const submitBtn = document.querySelector('button[data-testid="send-button"], button[aria-label="Send"], button[aria-label="Gửi"]');
-      if (submitBtn && !submitBtn.disabled) { submitBtn.click(); return true; }
-      return false;
-    });
-    if (!sent) {
+    // Chờ cho đến khi nút gửi sáng lên (nghĩa là ảnh đã được upload xong)
+    console.log(`[Tab ${variantNumber}] Đang chờ ảnh tải lên hoàn tất để bấm Gửi...`);
+    let sendBtn = null;
+    for (let attempt = 0; attempt < 15; attempt++) {
+      sendBtn = await page.locator('button[data-testid="send-button"], button[aria-label*="Send"], button[aria-label*="Gửi"]').first();
+      if (await sendBtn.isVisible() && !(await sendBtn.isDisabled())) {
+        break;
+      }
+      await delay(1000);
+    }
+
+    if (sendBtn && await sendBtn.isVisible() && !(await sendBtn.isDisabled())) {
+      await sendBtn.click();
+    } else {
+      console.log(`[Tab ${variantNumber}] Nút gửi chưa sẵn sàng, thử nhấn Enter...`);
       await input.press('Enter');
     }
     console.log(`[Tab ${variantNumber}] Đã gửi prompt, đang chờ ChatGPT xử lý...`);

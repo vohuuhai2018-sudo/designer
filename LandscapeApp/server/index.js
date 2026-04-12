@@ -3,7 +3,8 @@ const fs = require('fs/promises');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const cloudinary = require('cloudinary').v2;
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { runChatGptAutomation } = require('./chatgptAutomation');
 const { generateLandscapePrompt } = require('./geminiPromptService');
 
