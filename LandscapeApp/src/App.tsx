@@ -571,8 +571,9 @@ function WelcomeView({ onStart, onAdmin }: { onStart: () => void, onAdmin: () =>
   );
 }
 
-function UploadView({ onUpload }: { onUpload: (img: string) => void }) {
+function UploadView({ rawImage, onUpload }: { rawImage: string, onUpload: (img: string) => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string>(rawImage || '');
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -580,6 +581,7 @@ function UploadView({ onUpload }: { onUpload: (img: string) => void }) {
     const reader = new FileReader();
     reader.onload = ev => {
       const result = ev.target?.result as string;
+      setPreview(result);
       onUpload(result);
     };
     reader.readAsDataURL(file);
@@ -588,10 +590,15 @@ function UploadView({ onUpload }: { onUpload: (img: string) => void }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view upload-view">
       <h2 style={{marginTop: '2rem'}}>Tải ảnh hiện trạng</h2>
-      <p className="hint">Chọn một bức ảnh chụp vị trí mà bạn muốn thiết kế cảnh quan.</p>
       <div className="upload-area" onClick={() => fileRef.current?.click()}>
-        <div className="upload-circle"><Camera size={60} /></div>
-        <span className="upload-prompt">NHẤN ĐỂ CHỌN ẢNH</span>
+        {preview ? (
+          <img src={preview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '28px' }} />
+        ) : (
+          <>
+            <div className="upload-circle"><Camera size={60} /></div>
+            <span className="upload-prompt">NHẤN ĐỂ CHỌN ẢNH</span>
+          </>
+        )}
       </div>
 
       <input type="file" accept="image/*" ref={fileRef} onChange={handleFile} hidden />
