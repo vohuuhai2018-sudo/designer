@@ -370,7 +370,9 @@ async function runSingleVariant(page, prompt, filePaths, tempDir, variantNumber,
     await page.goto('https://chatgpt.com', { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('#prompt-textarea, [contenteditable="true"]', { timeout: 30000 });
 
-    // BỎ BẢN MENU ĐỂ CHẠY NHANH: ChatGPT sẽ tự nhận diện yêu cầu vẽ hình từ Prompt
+    // Chọn công cụ "Tạo hình ảnh" từ menu để kích hoạt DALL-E chuẩn cho mọi tài khoản
+    await selectGenerateImageTool(page);
+
     await uploadFiles(page, filePaths);
 
     await fillPrompt(page, prompt);
