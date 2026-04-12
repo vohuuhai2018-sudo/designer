@@ -35,7 +35,7 @@ import confetti from 'canvas-confetti';
 import './App.css';
 
 // --- TYPES ---
-type AppView = 'welcome' | 'upload' | 'editor' | 'service' | 'submit' | 'success' | 'admin';
+type AppView = 'welcome' | 'upload' | 'editor' | 'service' | 'plan' | 'submit' | 'success' | 'admin';
 type WorkflowBranch = 'manual_design' | 'chatgpt_image';
 
 interface Selection {
@@ -62,7 +62,7 @@ interface Project {
   aiResults?: string[];
 }
 
-type ProjectUpdate = Partial<Pick<Project, 'status' | 'workflowBranch' | 'finalImage'>>;
+type ProjectUpdate = Partial<Pick<Project, 'status' | 'workflowBranch' | 'finalImage' | 'aiResults'>>;
 
 interface DesignerLibraryItem {
   id: string;
@@ -476,7 +476,7 @@ function WelcomeView({ onStart, onAdmin }: { onStart: () => void, onAdmin: () =>
 
 function UploadView({ onBack, onUpload }: { onBack: () => void, onUpload: (img: string) => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string>('');
+  const [preview] = useState<string>('');
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -546,11 +546,11 @@ function EditorView({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [drawing, setDrawing] = useState(false);
   const [color, setColor] = useState('#ef4444');
-  const [brushSize, setBrushSize] = useState(20);
+  const [brushSize] = useState(20);
   const [history, setHistory] = useState<ImageData[]>([]);
   const [showSample, setShowSample] = useState(false);
   const [hasSeenSample, setHasSeenSample] = useState(false);
-  const [isDrawn, setIsDrawn] = useState(false);
+  const [, setIsDrawn] = useState(false);
   const [showNotification, setShowNotification] = useState<string | null>(null);
 
   const colors = ANNOTATION_COLOR_RULES.map(r => ({ hex: r.hex, label: r.color, meaning: r.meaning }));
@@ -1045,12 +1045,12 @@ function PlanSelectionView({ service, onServiceChange, onBack, onNext }: {
 }
 
 function SubmitView({
-  customerName, onNameChange, customerPhone, onPhoneChange, customerEmail, onEmailChange, rawImage, annotatedImage, extraAssets, onExtraAssetsChange, onBack, onSubmit, isSubmitting, submitStatus
+  customerName, onNameChange, customerPhone, onPhoneChange, customerEmail, onEmailChange, extraAssets, onExtraAssetsChange, onBack, onSubmit, isSubmitting, submitStatus
 }: {
   customerName: string; onNameChange: (n: string) => void;
   customerPhone: string; onPhoneChange: (p: string) => void;
   customerEmail: string; onEmailChange: (e: string) => void;
-  rawImage: string; annotatedImage: string;
+  rawImage?: string; annotatedImage?: string;
   extraAssets: string[]; onExtraAssetsChange: (a: string[]) => void;
   onBack: () => void; onSubmit: () => void; isSubmitting: boolean;
   submitStatus: string;
@@ -1212,11 +1212,6 @@ function AdminView({
     return info ? info.name : id;
   };
 
-  const getWorkflowLabel = (branch?: WorkflowBranch) => {
-    if (branch === 'manual_design') return 'Thiết kế thủ công';
-    if (branch === 'chatgpt_image') return 'ChatGPT tạo ảnh';
-    return 'Chưa chọn nhánh';
-  };
 
   const getWorkflowShortLabel = (branch?: WorkflowBranch) => {
     if (branch === 'manual_design') return 'Thiết kế tay';
@@ -1236,7 +1231,7 @@ function AdminView({
 
   const groupProjects = () => {
     // Sort projects strictly descending by timestamp first
-    const sortedProjects = [...projects].sort((a, b) => b.timestamp - a.timestamp);
+    const sortedProjects = [...projects].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     
     // Get VN time for today and yesterday
     const today = new Date();
@@ -1371,9 +1366,6 @@ function AdminView({
     return assets;
   };
 
-  const getColorRuleLines = () => {
-    return ANNOTATION_COLOR_RULES.map(rule => `- ${rule.color} (${rule.hex}): ${rule.meaning}. ${rule.instruction}`);
-  };
 
   const buildSelectionLines = (project: Project) => {
     const lines: string[] = [];
@@ -1701,7 +1693,7 @@ function AdminView({
                        title="Xóa ảnh này"
                        style={{ position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}
                        onClick={async () => {
-                          const newResults = selectedProject.aiResults.filter((img: string) => img !== imageUrl);
+                          const newResults = (selectedProject.aiResults || []).filter((img: string) => img !== imageUrl);
                           try {
                              const updated = await onUpdateProject(selectedProject.id, { aiResults: newResults });
                              setSelectedProject(updated);
