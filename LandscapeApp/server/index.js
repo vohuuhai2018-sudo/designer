@@ -245,6 +245,7 @@ app.get('/api/projects/:id', async (req, res) => {
 app.post('/api/projects', async (req, res) => {
   try {
     const data = req.body;
+    console.log(`[PROJECT] Nhận dữ liệu từ khách ${data.customerName}. Selections:`, JSON.stringify(data.selections));
     console.log('Uploading images to Cloudinary...');
 
     // 1. Upload Raw Image
@@ -260,9 +261,24 @@ app.post('/api/projects', async (req, res) => {
       );
     }
 
+
+    // 3. Upload Selected Asset (3rd image) to Cloudinary to ensure ChatGPT can access it
+    if (data.selections?.thacUrl) {
+      // Nếu là đường dẫn tương đối (bắt đầu bằng /), chuyển thành tuyệt đối dựa trên link Vercel để upload lên Cloudinary
+      let absoluteThacUrl = data.selections.thacUrl;
+      if (absoluteThacUrl.startsWith('/')) {
+        // Encode URL to handle spaces and Vietnamese characters
+        absoluteThacUrl = 'https://designer-jet.vercel.app' + encodeURI(absoluteThacUrl);
+      }
+      console.log('Uploading selected Thac model to Cloudinary:', absoluteThacUrl);
+      data.selections.thacUrl = await uploadToCloudinary(absoluteThacUrl);
+    }
+    
+    // Create project
     const newProject = new Project(data);
     await newProject.save();
-    console.log('Project saved to MongoDB with Cloudinary links');
+
+    console.log('Project saved to DB:', newProject.id);
     res.status(201).json(newProject);
 
     // Auto-trigger ChatGPT generation in background for Gói Cơ Bản
@@ -277,7 +293,6 @@ app.post('/api/projects', async (req, res) => {
 
           let thacUrl = newProject.selections?.thacUrl;
           if (thacUrl) {
-            if (thacUrl.startsWith('/')) thacUrl = 'https://designer-jet.vercel.app' + thacUrl;
             assets.push({ label: 'Mẫu khách chọn', url: thacUrl, role: 'Mẫu thác / vân đá chọn từ thư viện.' });
           }
 

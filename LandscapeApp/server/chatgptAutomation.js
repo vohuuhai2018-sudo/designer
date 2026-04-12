@@ -140,7 +140,7 @@ async function uploadFiles(page, filePaths) {
   for (const locator of fileInputs) {
     if (await locator.count()) {
       await locator.first().setInputFiles(filePaths);
-      await delay(1200);
+      await delay(400);
       return;
     }
   }
@@ -151,9 +151,9 @@ async function uploadFiles(page, filePaths) {
 async function fillPrompt(page, prompt) {
   const promptInput = await findPromptInput(page);
   await promptInput.click();
-  await delay(300);
+  await delay(100);
   await page.keyboard.insertText(prompt);
-  await delay(500);
+  await delay(200);
 }
 
 async function countEditButtons(page) {
