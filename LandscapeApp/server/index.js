@@ -7,6 +7,25 @@ require('dotenv').config();
 const { runChatGptAutomation } = require('./chatgptAutomation');
 const { generateLandscapePrompt } = require('./geminiPromptService');
 
+// Helper để tìm Link ảnh mẫu nếu FrontEnd chỉ gửi ID (hoặc fix cho các ca cũ)
+function resolveThacUrl(selections) {
+  if (selections?.thacUrl) return selections.thacUrl;
+  
+  const thacId = selections?.thac;
+  if (!thacId) return null;
+
+  // Bản đồ map ID -> Path (Sử dụng tên thư mục KHÔNG DẤU mà anh vừa đổi)
+  if (thacId.startsWith('thac_cothach_v')) {
+    const num = thacId.replace('thac_cothach_v', '');
+    return `/assets/THAC/Da Co Thach/cothach_v${num}.png`;
+  }
+  if (thacId.startsWith('thac_vanmay_v')) {
+    const num = thacId.replace('thac_vanmay_v', '');
+    return `/assets/THAC/Da Van May/vanmay_v${num}.png`;
+  }
+  return null;
+}
+
 // Hàm tạo prompt thuần từ dữ liệu project — không cần Gemini API
 function buildServerPrompt(project, assets) {
   const hasNote = !!(project.note && project.note.trim());
@@ -133,9 +152,11 @@ async function resumePendingProjects() {
             { label: 'Ảnh hiện trạng gốc', url: project.rawImage, role: 'Ảnh nền chính, phải giữ nguyên kiến trúc, góc chụp và phối cảnh.' },
             { label: 'Ảnh khoanh vùng thiết kế', url: project.annotatedImage, role: 'Ảnh quy hoạch công năng bằng màu, dùng để xác định đúng vị trí từng hạng mục.' }
           ];
-          let thacUrl = project.selections?.thacUrl;
+          let thacUrl = resolveThacUrl(project.selections);
           if (thacUrl) {
-            if (thacUrl.startsWith('/')) thacUrl = 'https://designer-jet.vercel.app' + thacUrl;
+            if (thacUrl.startsWith('/')) {
+              thacUrl = 'https://designer-jet.vercel.app' + encodeURI(thacUrl);
+            }
             assets.push({ label: 'Mẫu khách chọn', url: thacUrl, role: 'Mẫu thác / vân đá chọn từ thư viện.' });
           }
 
@@ -245,7 +266,7 @@ app.get('/api/projects/:id', async (req, res) => {
 app.post('/api/projects', async (req, res) => {
   try {
     const data = req.body;
-    console.log(`[PROJECT] Nhận dữ liệu từ khách ${data.customerName}. Selections:`, JSON.stringify(data.selections));
+    console.log('[DEBUG] Full Request Body Selections:', JSON.stringify(data.selections, null, 2));
     console.log('Uploading images to Cloudinary...');
 
     // 1. Upload Raw Image
@@ -291,8 +312,12 @@ app.post('/api/projects', async (req, res) => {
             { label: 'Ảnh khoanh vùng thiết kế', url: newProject.annotatedImage, role: 'Ảnh quy hoạch công năng bằng màu, dùng để xác định đúng vị trí từng hạng mục.' }
           ];
 
-          let thacUrl = newProject.selections?.thacUrl;
+          let thacUrl = resolveThacUrl(newProject.selections);
           if (thacUrl) {
+            // Encode if it's a relative path
+            if (thacUrl.startsWith('/')) {
+              thacUrl = 'https://designer-jet.vercel.app' + encodeURI(thacUrl);
+            }
             assets.push({ label: 'Mẫu khách chọn', url: thacUrl, role: 'Mẫu thác / vân đá chọn từ thư viện.' });
           }
 
