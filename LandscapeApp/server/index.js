@@ -157,7 +157,7 @@ app.post('/api/projects/:id/ai-prompt', async (req, res) => {
 });
 
 app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
-  let outputPath;
+    let let_outputPath;
 
   try {
     const { prompt, assets } = req.body;
@@ -181,11 +181,19 @@ app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
       : await generateLandscapePrompt(project.toObject(), assets);
 
     const automationResult = await runChatGptAutomation({ prompt: resolvedPrompt, assets });
-    outputPath = automationResult.outputPath;
+    const pathsToUpload = automationResult.outputPaths || [automationResult.outputPath].filter(Boolean);
 
-    const uploadedResult = await uploadToCloudinary(outputPath);
-    if (!uploadedResult || !uploadedResult.startsWith('http')) {
-      throw new Error('Không upload được ảnh kết quả lên Cloudinary.');
+    const uploadedResults = [];
+    for (const p of pathsToUpload) {
+      if (!p) continue;
+      const url = await uploadToCloudinary(p);
+      if (url && url.startsWith('http')) {
+        uploadedResults.push(url);
+      }
+    }
+
+    if (uploadedResults.length === 0) {
+      throw new Error('Không upload được bất kỳ ảnh kết quả nào lên Cloudinary.');
     }
 
     const updated = await Project.findOneAndUpdate(
@@ -194,9 +202,9 @@ app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
         $set: {
           workflowBranch: 'chatgpt_image',
           status: 'done',
-          finalImage: uploadedResult
+          finalImage: uploadedResults[0]
         },
-        $push: { aiResults: uploadedResult }
+        $push: { aiResults: { $each: uploadedResults } }
       },
       { new: true }
     );
@@ -204,16 +212,14 @@ app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
     res.json({
       project: updated,
       prompt: resolvedPrompt,
-      outputUrl: uploadedResult,
+      outputUrl: uploadedResults[0],
       chatUrl: automationResult.chatUrl
     });
   } catch (err) {
     console.error('ChatGPT generation error:', err);
     res.status(500).json({ error: err.message || 'Không thể tự động tạo ảnh với ChatGPT.' });
   } finally {
-    if (outputPath) {
-      await fs.unlink(outputPath).catch(() => null);
-    }
+      // Cleanup happens in automation script mostly.
   }
 });
 

@@ -72,23 +72,50 @@ async function findPromptInput(page) {
 }
 
 async function enableImageMode(page) {
-  const promptInput = await findPromptInput(page);
-  await promptInput.click();
-  await delay(400);
-  await page.keyboard.insertText('/');
-  await delay(1200);
-
-  const menuLabels = [/Tạo hình ảnh/i, /Create image/i, /Image generation/i];
-  for (const label of menuLabels) {
-    const option = page.getByText(label);
-    if (await option.count()) {
-      await option.first().click();
-      await delay(800);
-      return;
+  console.log("-> Thiết lập chế độ Tạo Hình Ảnh qua menu...");
+  try {
+    await page.evaluate(() => {
+      const textarea = document.querySelector('#prompt-textarea');
+      if (textarea) {
+        const container = textarea.parentElement.parentElement;
+        if (container) {
+          const btn = container.querySelector('button');
+          if (btn) btn.click();
+        }
+      }
+    });
+    
+    await delay(1000);
+    
+    const menuLabels = [/Tạo hình ảnh/i, /Create image/i, /Image generation/i];
+    for (const label of menuLabels) {
+      const option = page.getByText(label);
+      if (await option.count()) {
+        await option.first().click({ force: true });
+        await delay(800);
+        return;
+      }
     }
-  }
+    
+    // Fallback
+    const promptInput = await findPromptInput(page);
+    await promptInput.click();
+    await delay(400);
+    await page.keyboard.insertText('/');
+    await delay(1200);
 
-  await page.keyboard.press('Backspace');
+    for (const label of menuLabels) {
+      const option = page.getByText(label);
+      if (await option.count()) {
+        await option.first().click({ force: true });
+        await delay(800);
+        return;
+      }
+    }
+    await page.keyboard.press('Backspace');
+  } catch (error) {
+    console.error('Menu fallback:', error);
+  }
 }
 
 async function uploadFiles(page, filePaths) {
@@ -140,44 +167,40 @@ async function waitForImageCompletion(page, previousCount) {
 }
 
 async function tryNativeDownload(page, outputPath) {
+  console.log("Cố gắng tải ảnh bằng cách click giao diện...");
   const [downloadHandle] = await Promise.all([
     page.waitForEvent('download', { timeout: 15000 }),
-    (async () => {
-      const clicked = await page.evaluate(() => {
-        const keywords = ['Chỉnh sửa', 'Edit'];
-        const nodes = Array.from(document.querySelectorAll('*'));
-        let editNode = null;
+    page.evaluate(() => {
+      const keywords = ['Chỉnh sửa', 'Edit'];
+      const nodes = Array.from(document.querySelectorAll('*'));
+      let editNode = null;
 
-        for (let index = nodes.length - 1; index >= 0; index -= 1) {
-          const text = nodes[index].textContent?.trim();
-          if (text && keywords.includes(text) && nodes[index].children.length <= 1) {
-            editNode = nodes[index];
-            break;
-          }
+      for (let index = nodes.length - 1; index >= 0; index -= 1) {
+        const text = nodes[index].textContent?.trim();
+        if (text && keywords.includes(text) && nodes[index].children.length <= 1) {
+          editNode = nodes[index];
+          break;
         }
-
-        if (!editNode) return false;
-
-        let container = editNode.parentElement;
-        while (container && container !== document.body) {
-          const buttons = Array.from(container.querySelectorAll('button, a'));
-          if (buttons.length >= 2 && container.querySelector('svg')) {
-            const downloadButton = buttons.find(button => button !== editNode && !editNode.contains(button) && !button.contains(editNode));
-            if (downloadButton) {
-              downloadButton.click();
-              return true;
-            }
-          }
-          container = container.parentElement;
-        }
-
-        return false;
-      });
-
-      if (!clicked) {
-        throw new Error('Không bấm được nút tải ảnh qua giao diện.');
       }
-    })()
+
+      if (!editNode) return false;
+
+      let container = editNode.parentElement;
+      while (container && container !== document.body) {
+        const buttons = Array.from(container.querySelectorAll('button, a, [role="button"]'));
+        if (buttons.length >= 2) {
+          const downloadButton = buttons.find(button => button !== editNode && !editNode.contains(button) && !button.contains(editNode));
+          if (downloadButton) {
+            downloadButton.click();
+            return true;
+          }
+        }
+        container = container.parentElement;
+      }
+      return false;
+    }).then(clicked => {
+      if (!clicked) throw new Error('Không bấm được nút tải ảnh qua giao diện.');
+    })
   ]);
 
   await downloadHandle.saveAs(outputPath);
@@ -185,23 +208,29 @@ async function tryNativeDownload(page, outputPath) {
 }
 
 async function tryFetchImage(page, outputPath) {
-  const imageUrl = await page.evaluate(() => {
-    const images = Array.from(document.querySelectorAll('img'));
-    const validImages = images.filter(image => image.src && !image.src.includes('avatar') && !image.src.includes('logo') && image.width > 200);
-    return validImages.length ? validImages[validImages.length - 1].src : null;
-  });
-
-  if (!imageUrl) {
-    throw new Error('Không tìm thấy ảnh kết quả trên ChatGPT.');
-  }
-
-  const response = await fetch(imageUrl);
-  if (!response.ok) {
-    throw new Error('Không tải được ảnh kết quả từ ChatGPT.');
-  }
-
-  const buffer = Buffer.from(await response.arrayBuffer());
-  await fs.writeFile(outputPath, buffer);
+  console.log("Kích hoạt tải ảnh qua Blob fetch nội bộ...");
+  const [downloadHandle] = await Promise.all([
+    page.waitForEvent('download', { timeout: 15000 }),
+    page.evaluate(async () => {
+      const images = Array.from(document.querySelectorAll('img'));
+      const validImages = images.filter(image => image.src && !image.src.includes('avatar') && !image.src.includes('logo') && image.width > 200);
+      const imageUrl = validImages.length ? validImages[validImages.length - 1].src : null;
+      if (!imageUrl) throw new Error('Không tìm thấy ảnh.');
+      
+      const res = await fetch(imageUrl);
+      const blob = await res.blob();
+      const tempUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = tempUrl;
+      a.download = 'chatgpt_result.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(tempUrl);
+    })
+  ]);
+  
+  await downloadHandle.saveAs(outputPath);
   return outputPath;
 }
 
@@ -234,19 +263,33 @@ async function runChatGptAutomation({ prompt, assets }) {
     await uploadFiles(page, inputFiles.map(file => file.filePath));
     await fillPrompt(page, prompt);
 
-    const editCountBefore = await countEditButtons(page);
+    const outputPaths = [];
+    let editCountBefore = await countEditButtons(page);
     await (await findPromptInput(page)).press('Enter');
-    await waitForImageCompletion(page, editCountBefore);
 
-    const outputPath = path.join(tempDir, `chatgpt_result_${Date.now()}.png`);
+    for (let variant = 1; variant <= 4; variant++) {
+      console.log(`Đang chờ ChatGPT hoàn thiện phương án ${variant}/4...`);
+      await waitForImageCompletion(page, editCountBefore);
+      const outputPath = path.join(tempDir, `chatgpt_result_${Date.now()}_${variant}.png`);
 
-    try {
-      await tryNativeDownload(page, outputPath);
-    } catch (error) {
-      await tryFetchImage(page, outputPath);
+      try {
+        await tryFetchImage(page, outputPath);
+        outputPaths.push(outputPath);
+        console.log(`Đã tải thành công phương án ${variant}`);
+      } catch (error) {
+        console.error(`Lỗi tải phương án ${variant}:`, error);
+      }
+
+      if (variant < 4) {
+        console.log(`Yêu cầu ChatGPT tạo tiếp phương án ${variant + 1}...`);
+        await delay(1500); // Give ChatGPT UI a moment to settle
+        editCountBefore = await countEditButtons(page);
+        await fillPrompt(page, `Cảm ơn. Hãy tạo tiếp 1 phương án thiết kế thứ ${variant + 1} nữa nhé. Giữ nguyên cấu trúc bối cảnh, nhưng thay đổi một chút về sắc thái ánh sáng, vật liệu đá hoặc cách bố trí cụm tùng/cây phụ để có thêm góc nhìn tham khảo.`);
+        await (await findPromptInput(page)).press('Enter');
+      }
     }
 
-    return { outputPath, chatUrl: page.url() };
+    return { outputPaths, chatUrl: page.url() };
   } finally {
     if (browser) {
       await browser.close().catch(() => null);

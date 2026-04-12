@@ -115,21 +115,46 @@ def automate_chatgpt(image_path):
         page.wait_for_selector('#prompt-textarea', timeout=30000)
         time.sleep(2)
         
-        # 1. SETUP TẠO ẢNH
+        # 1. SETUP TẠO ẢNH BẰNG MENU FILE
         try:
-            chat_input = page.locator('#prompt-textarea')
-            chat_input.click()
-            time.sleep(0.5)
-            chat_input.evaluate("node => node.innerHTML = ''")
-            page.keyboard.insert_text("/")
-            time.sleep(1.5)
+            print("-> Thiết lập chế độ Tạo Hình Ảnh...")
+            # Kích hoạt menu "+" trước ô nhập liệu (bằng JavaScript để tránh lệch DOM)
+            page.evaluate('''() => {
+                let textarea = document.querySelector('#prompt-textarea');
+                if (textarea) {
+                    // Lùi ra ngoài 2, 3 cấp để tìm nút chứa dấu + hoặc ghim gắn file dính liền
+                    let container = textarea.parentElement.parentElement;
+                    if (container) {
+                        let btn = container.querySelector('button');
+                        if (btn) btn.click();
+                    }
+                }
+            }''')
+            
+            time.sleep(1)
+            
+            # Quét cụm từ trên Menu vừa xuất hiện
             tao_hinh_anh = page.get_by_text("Tạo hình ảnh", exact=False)
             if tao_hinh_anh.count() > 0:
-                tao_hinh_anh.first.click()
+                tao_hinh_anh.first.click(force=True)
+                print("-> Đã chọn chế độ 'Tạo hình ảnh' qua menu thành công!")
             else:
-                page.keyboard.press("Backspace")
-        except:
-            pass
+                # Khắc phục dự phòng (Fallback): Dùng phím tắt '/'
+                print("-> Không thấy trên Menu, bật qua thử phím tắt '/'...")
+                chat_input = page.locator('#prompt-textarea')
+                chat_input.click()
+                chat_input.evaluate("node => node.innerHTML = ''")
+                page.keyboard.insert_text("/")
+                time.sleep(1.5)
+                tao_hinh_anh_slash = page.get_by_text("Tạo hình ảnh", exact=False)
+                if tao_hinh_anh_slash.count() > 0:
+                    tao_hinh_anh_slash.first.click(force=True)
+                else:
+                    page.keyboard.press("Backspace")
+            
+            time.sleep(1)
+        except Exception as e:
+            print(f"-> Bỏ qua lập trình menu (lỗi nhỏ): {e}")
 
         # 2. UPLOAD ẢNH LOCAL
         print(f"-> Đang bốc ảnh {os.path.basename(image_path)} quăng lên web...")

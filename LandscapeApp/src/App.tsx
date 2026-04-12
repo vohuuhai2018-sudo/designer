@@ -1604,6 +1604,15 @@ function AdminView({
                <Bot size={22} /> {isGeneratingAi ? 'Đang gửi Prompt...' : 'Khởi chạy ChatGPT'}
              </button>
              {aiStudioStatus && <div className="studio-status-inline">{aiStudioStatus}</div>}
+             <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+               <strong style={{ color: '#f59e0b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                 <AlertTriangle size={14} /> Khắc phục lỗi tải ảnh ChatGPT:
+               </strong>
+               <p style={{ color: '#fcd34d', fontSize: '0.8rem', marginTop: '6px', lineHeight: '1.4' }}>
+                 Nếu ChatGPT hiển thị báo lỗi màu đỏ <em>"Tối đa 0 lần tải lên..."</em>, nguyên nhân do anh đang dùng nhánh <strong>DALL-E GPT</strong> (Nó không cho phép gửi file).<br/>
+                 👉 Hãy mở giao diện ChatGPT, chuyển về <strong>GPT-4o</strong> (mặc định), sau đó tải lại ảnh. GPT-4o sẽ phân tích ảnh và tự động điều khiển DALL-E vẽ kết quả.
+               </p>
+             </div>
           </div>
         </aside>
 
