@@ -501,7 +501,7 @@ async function runChatGptAutomation({ prompt, assets, onImageReady }) {
 
     const defaultPage = browser.pages()[0];
 
-    for (let variant = 1; variant <= 4; variant++) {
+    for (let variant = 1; variant <= 2; variant++) {
       const targetPage = variant === 1 && defaultPage ? defaultPage : await browser.newPage();
       promises.push(runSingleVariant(targetPage, prompt, filePaths, tempDir, variant, onImageReady));
       await delay(2000); // Đội hình 2s giữa các tab để tránh bị ChatGPT chặn truy cập đồng thời
@@ -511,10 +511,10 @@ async function runChatGptAutomation({ prompt, assets, onImageReady }) {
     const results = settledResults.map(r => r.status === 'fulfilled' ? r.value : null);
     let outputPaths = results.filter(Boolean);
 
-    // Retry: nếu thiếu ảnh, tạo thêm tab mới cho đến khi đủ 4
+    // Retry: nếu thiếu ảnh, tạo thêm tab mới cho đến khi đủ 2
     let retryAttempt = 0;
-    while (outputPaths.length < 4 && retryAttempt < 4) {
-      const missing = 4 - outputPaths.length;
+    while (outputPaths.length < 2 && retryAttempt < 2) {
+      const missing = 2 - outputPaths.length;
       console.log(`[RETRY] Cần tạo thêm ${missing} ảnh (lần ${retryAttempt + 1})...`);
       await delay(5000); // Chờ để tránh rate limit
       const retryPromises = [];
@@ -528,7 +528,7 @@ async function runChatGptAutomation({ prompt, assets, onImageReady }) {
       retryAttempt++;
     }
 
-    console.log(`[AUTO] Tổng cộng thu được ${outputPaths.length}/4 ảnh.`);
+    console.log(`[AUTO] Tổng cộng thu được ${outputPaths.length}/2 ảnh.`);
     return { outputPaths, chatUrl: 'https://chatgpt.com' };
   } finally {
     if (browser) {
