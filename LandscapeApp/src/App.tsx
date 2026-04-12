@@ -683,6 +683,7 @@ function EditorView({
   };
 
   const [isZoomed, setIsZoomed] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view editor-view">
@@ -695,7 +696,13 @@ function EditorView({
              title={isZoomed ? "Thu nhỏ" : "Phóng to"}
            >
              {isZoomed ? <X size={20} /> : <Layers size={20} />}
-             <span>{isZoomed ? 'Đóng Zoom' : 'Phóng To'}</span>
+           </button>
+           <button 
+             className={`pan-mode-btn ${isPanning ? 'active' : ''}`}
+             onClick={() => setIsPanning(!isPanning)}
+             title={isPanning ? "Vẽ" : "Di chuyển"}
+           >
+             <Bot size={20} />
            </button>
            <button 
             onClick={saveAndNext} 
@@ -708,20 +715,23 @@ function EditorView({
       <div className={`workspace ${isZoomed ? 'zoomed' : ''}`}>
         <canvas 
           ref={canvasRef} 
-          onPointerDown={startDraw} 
-          onPointerMove={draw} 
-          onPointerUp={endDraw} 
-          onPointerLeave={endDraw}
-          onPointerCancel={endDraw}
+          onPointerDown={isPanning ? undefined : startDraw} 
+          onPointerMove={isPanning ? undefined : draw} 
+          onPointerUp={isPanning ? undefined : endDraw} 
+          onPointerLeave={isPanning ? undefined : endDraw}
+          onPointerCancel={isPanning ? undefined : endDraw}
           style={{ 
-            touchAction: 'none',
+            touchAction: isPanning ? 'auto' : 'none',
             width: isZoomed ? '200%' : '100%',
             height: 'auto',
-            cursor: 'crosshair'
+            cursor: isPanning ? 'grab' : 'crosshair'
           }}
         />
-        {isZoomed && (
-          <div className="zoom-hint">Anh/Chị có thể dùng 2 ngón tay hoặc cuộn để di chuyển vùng vẽ</div>
+        {isZoomed && !isPanning && (
+          <div className="zoom-hint">Bấm icon Robot phía trên để bật chế độ Di chuyển/Kéo hình</div>
+        )}
+        {isPanning && (
+          <div className="zoom-hint active">Chế độ Di chuyển: Dùng 1 hoặc 2 ngón tay để kéo hình</div>
         )}
       </div>
       <div className="brush-controls-container">
@@ -739,7 +749,8 @@ function EditorView({
             <button 
               key={c.hex} 
               className={`color-item ${color === c.hex ? 'active' : ''}`} 
-              onClick={() => setColor(c.hex)}
+              onClick={() => { setColor(c.hex); setIsPanning(false); }}
+              disabled={isPanning}
             >
               <span className="color-dot" style={{ backgroundColor: c.hex }} />
               <span className="color-label">{c.meaning}</span>
@@ -752,8 +763,9 @@ function EditorView({
             <button onClick={clearAll} className="btn-tool"><Trash2 size={16} /> Xóa hết</button>
           </div>
           <div className="customer-request-area-mini">
+            <label>Mô tả ý tưởng chi tiết</label>
             <textarea 
-              placeholder="Ghi chú thêm (vd: thác cao 2m...)"
+              placeholder="Anh/Chị hãy mô tả thêm chi tiết khác (Ví dụ: thác cao 2m, phong cách hiện đại...)"
               value={note}
               onChange={e => onNoteChange(e.target.value)}
             />
