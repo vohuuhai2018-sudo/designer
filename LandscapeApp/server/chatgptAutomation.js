@@ -368,10 +368,9 @@ async function dismissRateLimitDialog(page) {
 async function runSingleVariant(page, prompt, filePaths, tempDir, variantNumber, onImageReady) {
   try {
     await page.goto('https://chatgpt.com', { waitUntil: 'domcontentloaded' });
-    // Bỏ chờ networkidle vì ChatGPT chạy web socket liên tục, khiến nó bị treo lâu
     await page.waitForSelector('#prompt-textarea, [contenteditable="true"]', { timeout: 30000 });
 
-    await enableImageMode(page);
+    // BỎ BẢN MENU ĐỂ CHẠY NHANH: ChatGPT sẽ tự nhận diện yêu cầu vẽ hình từ Prompt
     await uploadFiles(page, filePaths);
 
     await fillPrompt(page, prompt);
@@ -446,13 +445,14 @@ async function runChatGptAutomation({ prompt, assets, onImageReady }) {
     const defaultPage = browser.pages()[0];
 
     for (let variant = 1; variant <= 4; variant++) {
-      if (variant > 1) await delay(2000); // Chỉ delay 2s để trình duyệt kịp bung tab
+      if (variant > 1) await delay(1000); // 1s để trình duyệt mở tab không bị nghẽn
 
       const targetPage = variant === 1 && defaultPage ? defaultPage : await browser.newPage();
       promises.push(runSingleVariant(targetPage, prompt, filePaths, tempDir, variant, onImageReady));
     }
 
-    const results = await Promise.all(promises);
+    const settledResults = await Promise.allSettled(promises);
+    const results = settledResults.map(r => r.status === 'fulfilled' ? r.value : null);
     let outputPaths = results.filter(Boolean);
 
     // Retry: nếu thiếu ảnh, tạo thêm tab mới cho đến khi đủ 4
