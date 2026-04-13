@@ -312,8 +312,12 @@ export default function App() {
   const syncSystemContent = async () => {
     console.log('Syncing system content to:', API_BASE);
     try {
-      // 1. Local Cache
-      localStorage.setItem('sh_system_content', JSON.stringify(systemContent));
+      // 1. Local Cache (Optional - don't let it block server sync)
+      try {
+        localStorage.setItem('sh_system_content', JSON.stringify(systemContent));
+      } catch (localErr) {
+        console.warn('LocalStorage limit reached - skipping local cache, relying on server sync.');
+      }
       
       // 2. Server Sync
       const res = await apiFetch('/api/system-content', {
