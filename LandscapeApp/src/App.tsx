@@ -2538,14 +2538,30 @@ function AdminView({
 
   // --- AI HELPERS ---
   const getAiUploadAssets = (project: Project): AiUploadAsset[] => {
+    const isBasic = project.service === 'Gói Cơ bản';
+
+    // Extract model URL from note for Basic Package
+    const modelMatch = project.note?.match(/\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:\s*(https?:\/\/[^\n]+)/i)
+      ?? project.note?.match(/https?:\/\/[^\s\n]+/);
+    const modelUrl = modelMatch ? (modelMatch[1] ?? modelMatch[0])?.trim() : null;
+
     const assets: AiUploadAsset[] = [
-      { label: 'Ảnh hiện trạng gốc', url: project.rawImage, role: 'Ảnh nền chính, phải giữ nguyên kiến trúc, góc chụp và phối cảnh.' },
-      { label: 'Ảnh khoanh vùng thiết kế', url: project.annotatedImage, role: 'Ảnh quy hoạch công năng bằng màu, dùng để xác định đúng vị trí từng hạng mục.' }
+      { label: 'Ảnh hiện trạng gốc (Image 1)', url: project.rawImage, role: 'Ảnh nền chính, phải giữ nguyên kiến trúc, góc chụp và phối cảnh.' },
     ];
 
-    if (project.selections.thac) {
-      const info = getAssetInfo(project.selections.thac, 'THAC');
-      if (info) assets.push({ label: `Mẫu khách chọn: ${info.name}`, url: info.url, role: 'Mẫu thác / vân đá chọn từ thư viện, dùng cho phối cảnh và vật liệu.' });
+    if (isBasic) {
+      // Basic Package: show model reference image as Image 2
+      if (modelUrl) {
+        assets.push({ label: 'Ảnh mẫu khách đã chọn (Image 2)', url: modelUrl, role: 'Mẫu phong cách tham khảo. Dùng làm nguồn cảm hứng về đá, cây, hồ — KHÔNG sao chép layout.' });
+      }
+    } else {
+      // Other packages: annotated zone image as Image 2
+      assets.push({ label: 'Ảnh khoanh vùng thiết kế', url: project.annotatedImage, role: 'Ảnh quy hoạch công năng bằng màu, dùng để xác định đúng vị trí từng hạng mục.' });
+
+      if (project.selections.thac) {
+        const info = getAssetInfo(project.selections.thac, 'THAC');
+        if (info) assets.push({ label: `Mẫu khách chọn: ${info.name}`, url: info.url, role: 'Mẫu thác / vân đá chọn từ thư viện, dùng cho phối cảnh và vật liệu.' });
+      }
     }
 
     return assets;
