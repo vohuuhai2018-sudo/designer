@@ -1469,7 +1469,7 @@ function ServiceView({
 
 function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, onSelect: (url: string) => void }) {
   const [subStep, setSubStep] = useState<'category' | 'gallery'>('category');
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<any>(null); // Chứa toàn bộ object ảnh thay vì chỉ url
 
   const categories = [
     { id: 'ho_co_dien', name: 'HỒ KOI SÂN VƯỜN CỔ ĐIỂN', icon: <Waves size={32} />, active: true },
@@ -1486,21 +1486,13 @@ function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, o
     });
   });
 
-  const handleImgPick = (url: string) => {
-    setSelectedImage(url);
-    // Tự động chuyển vùng sau 0.8s để user kịp thấy hiệu ứng sáng
-    setTimeout(() => {
-      onSelect(url);
-    }, 800);
-  };
-
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="view basic-selection-view">
        <div className="selection-panel" style={{ marginTop: '140px' }}>
           <div className="title-group" style={{ textAlign: 'center', marginBottom: '3rem' }}>
             <h2 style={{ fontSize: '2.5rem', fontWeight: 900 }}>{subStep === 'category' ? 'Phong Cách Bạn Muốn?' : 'Chọn Mẫu Bạn Ưng Ý Nhất'}</h2>
             <p style={{ fontSize: '1.2rem', color: 'rgba(255,255,255,0.6)' }}>
-              {subStep === 'category' ? 'Hãy chọn một danh mục để xem các mẫu thiết kế thực tế.' : 'Nhấp vào hình ảnh để chọn mẫu tham khảo cho KTS.'}
+              {subStep === 'category' ? 'Hãy chọn một danh mục để xem các mẫu thiết kế thực tế.' : 'Nhấp vào hình ảnh để xem chi tiết và chốt mẫu yêu thích.'}
             </p>
           </div>
 
@@ -1542,16 +1534,52 @@ function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, o
                    {galleryImages.map((img, idx) => (
                      <div 
                        key={img.id || idx} 
-                       className={`gallery-item-luxe ${selectedImage === img.url ? 'active' : ''}`}
-                       onClick={() => handleImgPick(img.url)}
+                       className="gallery-item-luxe"
+                       onClick={() => setSelectedImage(img)}
                      >
                        <img src={img.url} alt={img.name} />
                        <div className="gallery-overlay">
-                          <CheckCircle2 size={40} className="check-icon" />
+                          <CheckCircle2 size={40} className="check-icon" style={{ opacity: 0.5 }} />
                           <span>Mẫu {img.name}</span>
                        </div>
                      </div>
                    ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Modal Chốt Mẫu (Fullscreen Modal) */}
+          <AnimatePresence>
+            {selectedImage && (
+              <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                exit={{ opacity: 0 }} 
+                className="samples-modal-overlay" 
+                style={{ zIndex: 4000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <div className="preview-modal-content" style={{ background: 'var(--primary)', width: '90%', maxWidth: '450px', borderRadius: '24px', overflow: 'hidden', border: '2px solid var(--accent)' }}>
+                  <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1.2' }}>
+                    <img src={selectedImage.url} alt={selectedImage.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <button 
+                      onClick={() => setSelectedImage(null)} 
+                      style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(0,0,0,0.5)', borderRadius: '50%', padding: '8px', color: '#fff' }}
+                    >
+                      <X size={24} />
+                    </button>
+                  </div>
+                  <div style={{ padding: '24px', textAlign: 'center' }}>
+                    <h3 style={{ fontSize: '1.6rem', color: 'var(--accent)', marginBottom: '10px' }}>{selectedImage.name}</h3>
+                    <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '24px', fontSize: '1rem' }}>Anh/Chị đã ưng ý mẫu phong cách này và muốn KTS dùng làm chuẩn tham khảo?</p>
+                    <button 
+                      className="btn-primary" 
+                      style={{ width: '100%', fontSize: '1.2rem', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                      onClick={() => onSelect(selectedImage.url)}
+                    >
+                      CHỐT MẪU NÀY <CheckCircle2 size={24} />
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             )}
