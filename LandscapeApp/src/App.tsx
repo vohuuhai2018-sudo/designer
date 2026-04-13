@@ -614,7 +614,7 @@ function UploadView({
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view upload-view nav-offset">
       <h2 style={{marginTop: '2rem'}}>Tải ảnh hiện trạng công trình</h2>
-      <div className="upload-area" onClick={() => fileRef.current?.click()} style={{ border: preview ? 'none' : '3px dashed rgba(226,177,112,0.4)' }}>
+      <div className="upload-area" onClick={() => fileRef.current?.click()} style={{ border: preview ? 'none' : '3px dashed rgba(226,177,112,0.4)', borderRadius: '28px', background: '#0f172a' }}>
         {preview ? (
           <div style={{ position: 'relative', width: '100%', height: '100%' }}>
             <img src={preview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '28px' }} />
@@ -642,14 +642,55 @@ function UploadView({
             <li>Đảm bảo ảnh rõ nét, không bị rung hay mờ.</li>
             <li>Ưu tiên ánh sáng ban ngày để màu sắc chuẩn nhất.</li>
           </ul>
-          <div className="sample-photo-container">
-            <p className="sample-label">Góc chụp minh họa chuẩn:</p>
-            <div className="sample-photo">
-              <img src="/assets/sample_angle.jpg" alt="Minh họa góc chụp chuẩn" />
-            </div>
+          <div className="guide-demo-premium">
+            <p>Góc chụp minh họa chuẩn:</p>
+            <img src="https://images.unsplash.com/photo-1590073242678-70ee3fc28e8e?q=80&w=800" alt="Guide" />
           </div>
         </div>
       )}
+
+      {/* NEW SECTION FOR ADDITIONAL ASSETS */}
+      <div className="extra-assets-section-premium">
+        <div className="extra-header-premium">
+          <div className="extra-title-group">
+            <Layers size={26} color="var(--accent)" />
+            <h3>Hình ảnh, video và tài liệu liên quan</h3>
+          </div>
+          <p className="extra-desc-premium">
+            Gửi thêm để KTS hiểu ý bạn hơn: các góc chụp khác, video quay dự án, ảnh phác thảo tay, 
+            ảnh mẫu bạn yêu thích, video bạn mô tả yêu cầu trên giấy...
+          </p>
+        </div>
+
+        <div className="multi-upload-trigger" onClick={() => multiFileRef.current?.click()}>
+          <div className="multi-upload-box-premium">
+            <div className="multi-icon-stack">
+              <ImageIcon size={32} />
+              <Play size={24} />
+              <Folder size={20} />
+            </div>
+            <span>NHẤN ĐỂ CHỌN NHIỀU TÀI LIỆU CÙNG LÚC</span>
+          </div>
+        </div>
+        <input type="file" multiple accept="image/*,video/*" ref={multiFileRef} onChange={handleMultiFiles} hidden />
+
+        {extraAssets.length > 0 && (
+          <div className="extra-preview-grid-premium">
+            {extraAssets.map((asset, idx) => (
+              <div key={idx} className="extra-preview-item" style={{ width: '100px', height: '100px' }}>
+                {asset.startsWith('data:video') ? (
+                  <video src={asset} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <img src={asset} alt={`Extra ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                )}
+                <button className="btn-remove-extra" onClick={(e) => { e.stopPropagation(); removeExtraAsset(idx); }}>
+                  <X size={18} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {preview && (
         <button className="btn-primary main-cta" onClick={() => onUpload(preview)} style={{ marginTop: '20px' }}>
