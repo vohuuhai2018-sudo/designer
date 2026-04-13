@@ -631,18 +631,19 @@ function UploadView({
       <input type="file" accept="image/*" ref={fileRef} onChange={handleFile} hidden />
       
       {!preview && (
-        <div className="upload-guide-compact">
-          <div className="guide-header-compact">
-            <Zap size={18} color="var(--accent)" />
-            <span>MẸO CHỤP ẢNH HIỆN TRẠNG</span>
+        <div className="upload-guide-side">
+          <div className="guide-content-left">
+            <div className="guide-header-side">
+              <Zap size={20} color="var(--accent)" />
+              <span>MẸO CHỤP ẢNH</span>
+            </div>
+            <ul className="guide-list-side">
+              <li>Bao quát toàn bộ không gian.</li>
+              <li>Đứng chính diện, tránh nghiêng.</li>
+              <li>Ảnh rõ nét, không rung mờ.</li>
+            </ul>
           </div>
-          <ul className="guide-list-compact">
-            <li>Bao quát toàn bộ không gian.</li>
-            <li>Đứng chính diện, tránh góc nghiêng.</li>
-            <li>Ảnh rõ nét, không rung mờ.</li>
-          </ul>
-          <div className="guide-demo-compact">
-            <span style={{ fontSize: '0.9rem', color: '#94a3b8' }}>Góc minh họa chuẩn:</span>
+          <div className="guide-visual-right">
             <img src="/assets/sample_angle.jpg" alt="Guide" />
           </div>
         </div>
