@@ -800,7 +800,6 @@ function WelcomeView({ onStart, onAdmin }: { onStart: () => void, onAdmin: () =>
 }
 
 function UploadView({ 
-function UploadView({ 
   rawImage, onUpload, extraAssets, onExtraAssetsChange, onProceed, systemContent,
   service, note, onNoteChange
 }: { 
