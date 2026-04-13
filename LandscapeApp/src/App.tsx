@@ -1505,7 +1505,15 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onFeedback, on
     : [];
   
   const replacerRef = useRef<HTMLInputElement>(null);
-  const [pendingReplace, setPendingReplace] = useState<{ type: 'tip' | 'plan' | 'library', planIdx?: number, mediaIdx?: number, cat?: string, itemId?: string } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<any>(null); // For drill-down variants
+  const [pendingReplace, setPendingReplace] = useState<{ 
+    type: 'tip' | 'plan' | 'library' | 'variant', 
+    planIdx?: number, 
+    mediaIdx?: number, 
+    cat?: string, 
+    itemId?: string,
+    variantId?: string 
+  } | null>(null);
 
   const handleMediaReplace = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1531,6 +1539,22 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onFeedback, on
           onSystemContentUpdate({ ...systemContent, library: newLib });
           onFeedback(`Đã cập nhật ảnh mẫu cho ${catList[idx].name}.`);
         }
+      } else if (pendingReplace.type === 'variant' && pendingReplace.cat && pendingReplace.itemId && pendingReplace.variantId) {
+        const newLib = { ...systemContent.library };
+        const catList = [...newLib[pendingReplace.cat as keyof typeof ASSETS]];
+        const pIdx = catList.findIndex((it: any) => it.id === pendingReplace.itemId);
+        if (pIdx !== -1) {
+          const variants = [...(catList[pIdx].variants || [])];
+          const vIdx = variants.findIndex(v => v.id === pendingReplace.variantId);
+          if (vIdx !== -1) {
+            variants[vIdx] = { ...variants[vIdx], url: result };
+            catList[pIdx] = { ...catList[pIdx], variants };
+            newLib[pendingReplace.cat as keyof typeof ASSETS] = catList as any;
+            onSystemContentUpdate({ ...systemContent, library: newLib });
+            onFeedback(`Đã cập nhật ảnh biến thể ${variants[vIdx].name}.`);
+            if (selectedItem?.id === pendingReplace.itemId) setSelectedItem(catList[pIdx]);
+          }
+        }
       }
       setPendingReplace(null);
     };
@@ -1549,9 +1573,9 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onFeedback, on
 
         <div className="sidebar-group">
           <label>DANH MỤC THƯ VIỆN</label>
-          <button className={selectedCat === 'THAC' ? 'active' : ''} onClick={() => setSelectedCat('THAC')}><Layers size={18} /> THÁC ĐÁ</button>
-          <button className={selectedCat === 'KE' ? 'active' : ''} onClick={() => setSelectedCat('KE')}><Box size={18} /> KÈ ĐÁ / BỜ</button>
-          <button className={selectedCat === 'CANH' ? 'active' : ''} onClick={() => setSelectedCat('CANH')}><Sparkles size={18} /> CẢNH QUAN</button>
+          <button className={selectedCat === 'THAC' ? 'active' : ''} onClick={() => { setSelectedCat('THAC'); setSelectedItem(null); }}><Layers size={18} /> THÁC ĐÁ</button>
+          <button className={selectedCat === 'KE' ? 'active' : ''} onClick={() => { setSelectedCat('KE'); setSelectedItem(null); }}><Box size={18} /> KÈ ĐÁ / BỜ</button>
+          <button className={selectedCat === 'CANH' ? 'active' : ''} onClick={() => { setSelectedCat('CANH'); setSelectedItem(null); }}><Sparkles size={18} /> CẢNH QUAN</button>
         </div>
 
         <div className="sidebar-divider" />
@@ -1688,18 +1712,83 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onFeedback, on
              />
              <button className="btn-save-logic" onClick={() => onFeedback('Đã lưu cấu hình logic mới.')}>LƯU CẤU HÌNH HỆ THỐNG</button>
            </div>
+        ) : selectedItem ? (
+           <div className="logic-editor-box">
+             <div className="manager-header" style={{ marginBottom: '30px' }}>
+               <button className="btn-back-minimal" onClick={() => setSelectedItem(null)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '1rem', padding: 0 }}>
+                 <ChevronLeft size={20} /> QUAY LẠI DANH SÁCH
+               </button>
+               <h3 style={{ marginTop: '15px' }}>Quản lý biến thể: {selectedItem.name}</h3>
+               <button className="btn-add-asset" onClick={() => {
+                 const newLib = { ...systemContent.library };
+                 const catList = [...newLib[selectedCat as keyof typeof ASSETS]];
+                 const pIdx = catList.findIndex((it: any) => it.id === selectedItem.id);
+                 if (pIdx !== -1) {
+                   const variants = [...(catList[pIdx].variants || [])];
+                   const newId = `${selectedItem.id}_v${variants.length + 1}`;
+                   variants.push({
+                     id: newId,
+                     url: "https://images.unsplash.com/photo-1590059132718-502424533173?q=80&w=1200",
+                     name: `Biến thể mới ${variants.length + 1}`
+                   });
+                   catList[pIdx] = { ...catList[pIdx], variants };
+                   newLib[selectedCat as keyof typeof ASSETS] = catList as any;
+                   onSystemContentUpdate({ ...systemContent, library: newLib });
+                   setSelectedItem(catList[pIdx]);
+                   onFeedback('Đã thêm 1 biến thể mới. Anh/Chị hãy nhấn EDIT để thay ảnh nhé!');
+                 }
+               }}>+ Thêm biến thể mới</button>
+             </div>
+             
+             <div className="asset-grid-manager">
+               {(selectedItem.variants || []).map((v: any, vIdx: number) => (
+                 <div key={v.id} className="asset-card-admin">
+                   <div className="asset-preview-box">
+                     <img src={v.url} alt={v.name} />
+                     <div className="asset-actions-overlay">
+                       <button onClick={() => { 
+                         setPendingReplace({ type: 'variant', cat: selectedCat, itemId: selectedItem.id, variantId: v.id }); 
+                         replacerRef.current?.click(); 
+                       }}>THAY THẾ</button>
+                     </div>
+                   </div>
+                   <div className="asset-meta-box">
+                     <div className="asset-id">{v.id}</div>
+                     <input 
+                       className="variant-name-edit" 
+                       value={v.name} 
+                       onChange={(e) => {
+                         const newLib = { ...systemContent.library };
+                         const catList = [...newLib[selectedCat as keyof typeof ASSETS]];
+                         const pIdx = catList.findIndex((it: any) => it.id === selectedItem.id);
+                         if (pIdx !== -1) {
+                           const vars = [...catList[pIdx].variants];
+                           vars[vIdx] = { ...vars[vIdx], name: e.target.value };
+                           catList[pIdx] = { ...catList[pIdx], variants: vars };
+                           newLib[selectedCat as keyof typeof ASSETS] = catList as any;
+                           onSystemContentUpdate({ ...systemContent, library: newLib });
+                           setSelectedItem(catList[pIdx]);
+                         }
+                       }} 
+                       style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', width: '100%', padding: '4px 8px', borderRadius: '4px', fontSize: '0.9rem' }}
+                     />
+                   </div>
+                 </div>
+               ))}
+             </div>
+           </div>
         ) : (
           <>
             <div className="manager-header">
               <h3>Quản lý {selectedCat}</h3>
-              <button className="btn-add-asset" onClick={() => onFeedback('Tính năng thêm mới sẽ được cập nhật.')}>+ Thêm mẫu mới</button>
+              <button className="btn-add-asset" onClick={() => onFeedback('Tính năng thêm mẫu chính sẽ được cập nhật.')}>+ Thêm mẫu mới</button>
             </div>
             <div className="asset-grid-manager">
               {catItems.map((item: any) => (
-                <div key={item.id} className="asset-card-admin">
+                <div key={item.id} className="asset-card-admin" onClick={() => setSelectedItem(item)} style={{ cursor: 'pointer' }}>
                   <div className="asset-preview-box">
                     <img src={item.url} alt={item.name} />
-                    <div className="asset-actions-overlay">
+                    <div className="asset-actions-overlay" onClick={e => e.stopPropagation()}>
                       <button onClick={() => { 
                         setPendingReplace({ type: 'library', cat: selectedCat, itemId: item.id }); 
                         replacerRef.current?.click(); 
@@ -1709,7 +1798,7 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onFeedback, on
                   <div className="asset-meta-box">
                     <div className="asset-id">{item.id}</div>
                     <div className="asset-name">{item.name}</div>
-                    <div className="asset-variants-count">{item.variants?.length || 0} biến thể</div>
+                    <div className="asset-variants-count">{item.variants?.length || 0} biến thể (Bấm để quản lý)</div>
                   </div>
                 </div>
               ))}
