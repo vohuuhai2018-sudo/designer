@@ -263,6 +263,14 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedProjectId, setSubmittedProjectId] = useState<string>('');
 
+  // --- SIMPLE ROUTING ---
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path === '/admin') {
+      setView('login');
+    }
+  }, []);
+
   // --- SYSTEM DYNAMIC CONTENT ---
   const [systemContent, setSystemContent] = useState(() => {
     const defaults = {
@@ -540,7 +548,7 @@ export default function App() {
         </div>
       )}
 
-      <div className={`container ${view === 'admin' ? 'full-width' : ''}`}>
+      <div className={`container ${(view as any) === 'admin' || (view as any) === 'login' ? 'full-width' : ''}`}>
         <AnimatePresence mode="wait">
         {view === 'welcome' && (
           <WelcomeView 
