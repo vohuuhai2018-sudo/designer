@@ -260,6 +260,68 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedProjectId, setSubmittedProjectId] = useState<string>('');
 
+  // --- SYSTEM DYNAMIC CONTENT ---
+  const [systemContent, setSystemContent] = useState(() => {
+    const saved = localStorage.getItem('sh_system_content');
+    if (saved) return JSON.parse(saved);
+    return {
+      tips: {
+        title: "MẸO CHỤP ẢNH",
+        items: [
+          "Bao quát toàn bộ không gian.",
+          "Đứng chính diện, tránh nghiêng.",
+          "Ảnh rõ nét, không rung mờ."
+        ],
+        sampleImage: "/assets/sample_angle.jpg"
+      },
+      plans: [
+        {
+          id: "free",
+          name: "Gói Miễn phí",
+          header: "1. GÓI MIỄN PHÍ",
+          sub: "Phác thảo nhanh ý tưởng sơ bộ (1 tấm hình gọn gàng).",
+          media: [{ type: 'image', url: "https://images.unsplash.com/photo-1598902108854-10e335adac99?q=80&w=1200" }]
+        },
+        {
+          id: "basic",
+          name: "Gói Cơ bản",
+          header: "2. GÓI CƠ BẢN",
+          sub: "KTS thiết kế 1 bản vẽ 3D chuẩn hóa (1 tấm hình chất lượng cao).",
+          media: [{ type: 'image', url: "https://images.unsplash.com/photo-1516455590571-18256e5bb4ff?q=80&w=1200" }]
+        },
+        {
+          id: "advanced",
+          name: "Gói Nâng cao",
+          header: "3. GÓI NÂNG CAO",
+          sub: "1 Bản vẽ thiết kế chuẩn + 1 Video diễn họa 3D sống động.",
+          media: [
+            { type: 'image', url: "https://images.unsplash.com/photo-1613545325278-f24b0cae1224?q=80&w=1200" },
+            { type: 'video', url: "https://assets.mixkit.co/videos/preview/mixkit-residential-house-with-a-pool-and-green-landscaping-12270-large.mp4" }
+          ]
+        },
+        {
+          id: "premium",
+          name: "Gói Premium",
+          header: "4. GÓI PREMIUM (TRỌN BỘ 3D)",
+          sub: "Thiết kế 3D toàn diện, xuất 6 góc nhìn đẹp nhất + 1 Video 4K diễn họa chi tiết.",
+          media: [
+            { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=1" },
+            { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=2" },
+            { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=3" },
+            { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=4" },
+            { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=5" },
+            { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=6" },
+            { type: 'video', url: "https://assets.mixkit.co/videos/preview/mixkit-modern-apartment-building-with-green-garden-and-pool-21272-large.mp4" }
+          ]
+        }
+      ]
+    };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sh_system_content', JSON.stringify(systemContent));
+  }, [systemContent]);
+
   // Load projects when entering admin view
   useEffect(() => {
     if (view === 'admin') {
@@ -485,6 +547,7 @@ export default function App() {
         {view === 'plan' && (
           <PlanSelectionView 
             service={service} 
+            systemContent={systemContent}
             onServiceChange={(s) => {
               setService(s);
               setView('upload'); // Jump immediately
@@ -512,6 +575,8 @@ export default function App() {
           <AdminView
             projects={projects}
             isLoading={isLoadingProjects}
+            systemContent={systemContent}
+            onSystemContentUpdate={setSystemContent}
             onBack={resetAll}
             onUpdateProject={async (id, updates) => {
               const response = await apiFetch(`/api/projects/${id}`, {
@@ -639,16 +704,14 @@ function UploadView({
           <div className="guide-content-left">
             <div className="guide-header-side">
               <Zap size={20} color="var(--accent)" />
-              <span>MẸO CHỤP ẢNH</span>
+              <span>{systemContent.tips.title}</span>
             </div>
             <ul className="guide-list-side">
-              <li>Bao quát toàn bộ không gian.</li>
-              <li>Đứng chính diện, tránh nghiêng.</li>
-              <li>Ảnh rõ nét, không rung mờ.</li>
+              {systemContent.tips.items.map((it: string, idx: number) => <li key={idx}>{it}</li>)}
             </ul>
           </div>
           <div className="guide-visual-right">
-            <img src="/assets/sample_angle.jpg" alt="Guide" />
+            <img src={systemContent.tips.sampleImage} alt="Guide" />
           </div>
         </div>
       )}
@@ -1149,9 +1212,10 @@ function ServiceView({
   );
 }
 
-function PlanSelectionView({ service, onServiceChange }: {
+function PlanSelectionView({ service, onServiceChange, systemContent }: {
   service: string;
   onServiceChange: (s: string) => void;
+  systemContent: any;
 }) {
   const [showSamples, setShowSamples] = useState(false);
   const services = [
@@ -1213,46 +1277,28 @@ function PlanSelectionView({ service, onServiceChange }: {
                 <p className="case-sub" style={{ fontSize: '1.3rem', color: '#fff', fontWeight: 600 }}>
                   "Thiết kế một hồ cá koi thác đá vân mây bên trái có tùng la hán và đèn đá, có hầm lọc tròn và bộ bàn để lên trên đó."
                 </p>
-                <img src="https://images.unsplash.com/photo-1590073242678-70ee3fc28e8e?q=80&w=1200" alt="Hiện trạng" className="sample-img-large" />
+                <img src={systemContent.tips.sampleImage} alt="Hiện trạng" className="sample-img-large" />
               </div>
 
-              <div className="sample-case">
-                <div className="case-header">1. GÓI MIỄN PHÍ</div>
-                <p className="case-sub">Phác thảo nhanh ý tưởng sơ bộ (1 tấm hình gọn gàng).</p>
-                <img src="https://images.unsplash.com/photo-1598902108854-10e335adac99?q=80&w=1200" alt="Miễn phí" className="sample-img-large" />
-              </div>
-
-              <div className="sample-case">
-                <div className="case-header">2. GÓI CƠ BẢN</div>
-                <p className="case-sub">KTS thiết kế 1 bản vẽ 3D chuẩn hóa (1 tấm hình chất lượng cao).</p>
-                <img src="https://images.unsplash.com/photo-1516455590571-18256e5bb4ff?q=80&w=1200" alt="Cơ bản" className="sample-img-large" />
-              </div>
-
-              <div className="sample-case">
-                <div className="case-header">3. GÓI NÂNG CAO</div>
-                <p className="case-sub">1 Bản vẽ thiết kế chuẩn + 1 Video diễn họa 3D sống động.</p>
-                <img src="https://images.unsplash.com/photo-1613545325278-f24b0cae1224?q=80&w=1200" alt="Nâng cao" className="sample-img-large" />
-                <div className="sample-video-placeholder" style={{ marginTop: '20px' }}>
-                  <video autoPlay loop muted playsInline className="sample-img-large">
-                    <source src="https://assets.mixkit.co/videos/preview/mixkit-residential-house-with-a-pool-and-green-landscaping-12270-large.mp4" type="video/mp4" />
-                  </video>
+              {systemContent.plans.map((p: any) => (
+                <div key={p.id} className="sample-case">
+                  <div className="case-header">{p.header}</div>
+                  <p className="case-sub">{p.sub}</p>
+                  <div className={p.id === 'premium' ? 'sample-grid-6' : ''}>
+                    {p.media.map((m: any, idx: number) => (
+                      m.type === 'video' ? (
+                        <div key={idx} className="sample-video-placeholder" style={{ marginTop: '20px', width: '100%' }}>
+                          <video autoPlay loop muted playsInline className="sample-img-large">
+                            <source src={m.url} type="video/mp4" />
+                          </video>
+                        </div>
+                      ) : (
+                        <img key={idx} src={m.url} alt={`${p.name} ${idx}`} className={p.id === 'premium' ? 'sample-img-grid' : 'sample-img-large'} />
+                      )
+                    ))}
+                  </div>
                 </div>
-              </div>
-
-              <div className="sample-case">
-                <div className="case-header">4. GÓI PREMIUM (TRỌN BỘ 3D)</div>
-                <p className="case-sub">Thiết kế 3D toàn diện, xuất 6 góc nhìn đẹp nhất + 1 Video 4K diễn họa chi tiết.</p>
-                <div className="sample-grid-6">
-                  {[...Array(6)].map((_, i) => (
-                    <img key={i} src={`https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=${i}`} alt={`Premium ${i}`} className="sample-img-grid" />
-                  ))}
-                </div>
-                <div className="sample-video-placeholder" style={{ marginTop: '20px' }}>
-                   <video autoPlay loop muted playsInline className="sample-img-large">
-                    <source src="https://assets.mixkit.co/videos/preview/mixkit-modern-apartment-building-with-green-garden-and-pool-21272-large.mp4" type="video/mp4" />
-                  </video>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
@@ -1445,15 +1491,47 @@ function SuccessView({ projectId, service, onReset }: { projectId: string; servi
     </motion.div>
   );
 }
-// --- ASSET MANAGER VIEW ---
-function AssetManagerView({ onFeedback, onClose }: { onFeedback: (msg: string) => void, onClose: () => void }) {
-  const [selectedCat, setSelectedCat] = useState<'THAC' | 'KE' | 'CANH' | 'LOGIC' | 'AI_STUDIO'>('THAC');
+      </div>
+    </motion.div>
+  );
+}
+
+// --- HELPER WRAPPER FOR ASSET MANAGER ---
+function AssetManagerView({ systemContent, onSystemContentUpdate, onFeedback, onClose }: { 
+  systemContent: any, onSystemContentUpdate: (c: any) => void, onFeedback: (msg: string) => void, onClose: () => void 
+}) {
+  const [selectedCat, setSelectedCat] = useState<'THAC' | 'KE' | 'CANH' | 'LOGIC' | 'AI_STUDIO' | 'TIPS' | 'PLANS'>('THAC');
   const catItems = (selectedCat === 'THAC' || selectedCat === 'KE' || selectedCat === 'CANH') 
     ? ASSETS[selectedCat as keyof typeof ASSETS] 
     : [];
+  
+  const replacerRef = useRef<HTMLInputElement>(null);
+  const [pendingReplace, setPendingReplace] = useState<{ type: 'tip' | 'plan', planIdx?: number, mediaIdx?: number } | null>(null);
+
+  const handleMediaReplace = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !pendingReplace) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const result = ev.target?.result as string;
+      if (pendingReplace.type === 'tip') {
+        onSystemContentUpdate({ ...systemContent, tips: { ...systemContent.tips, sampleImage: result } });
+        onFeedback('Đã cập nhật ảnh minh họa mẹo chụp.');
+      } else if (pendingReplace.type === 'plan' && pendingReplace.planIdx !== undefined && pendingReplace.mediaIdx !== undefined) {
+        const newPlans = [...systemContent.plans];
+        newPlans[pendingReplace.planIdx].media[pendingReplace.mediaIdx].url = result;
+        onSystemContentUpdate({ ...systemContent, plans: newPlans });
+        onFeedback('Đã cập nhật tệp mẫu cho gói dịch vụ.');
+      }
+      setPendingReplace(null);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="asset-manager-workspace-fixed">
+      <input type="file" ref={replacerRef} onChange={handleMediaReplace} hidden />
       <div className="workspace-sidebar">
         <div className="sidebar-header-luxe">
            <button onClick={onClose} className="btn-exit-workspace"><ChevronLeft size={20} /> QUAY LẠI TRANG CHỦ</button>
@@ -1470,9 +1548,17 @@ function AssetManagerView({ onFeedback, onClose }: { onFeedback: (msg: string) =
         <div className="sidebar-divider" />
 
         <div className="sidebar-group">
+          <label>NỘI DUNG GIAO DIỆN</label>
+          <button className={selectedCat === 'PLANS' ? 'active' : ''} onClick={() => setSelectedCat('PLANS')}><Crown size={18} /> GÓI DỊCH VỤ</button>
+          <button className={selectedCat === 'TIPS' ? 'active' : ''} onClick={() => setSelectedCat('TIPS')}><Zap size={18} /> MẸO CHỤP ẢNH</button>
+        </div>
+
+        <div className="sidebar-divider" />
+
+        <div className="sidebar-group">
           <label>CÔNG CỤ HỆ THỐNG</label>
-          <button className={selectedCat === 'AI_STUDIO' ? 'active' : ''} onClick={() => setSelectedCat('AI_STUDIO')}><Zap size={18} /> AI ASSET STUDIO</button>
-          <button className={selectedCat === 'LOGIC' ? 'active' : ''} onClick={() => setSelectedCat('LOGIC')}><Bot size={18} /> CẤU HÌNH LOGIC</button>
+          <button className={selectedCat === 'AI_STUDIO' ? 'active' : ''} onClick={() => setSelectedCat('AI_STUDIO')}><Bot size={18} /> AI ASSET STUDIO</button>
+          <button className={selectedCat === 'LOGIC' ? 'active' : ''} onClick={() => setSelectedCat('LOGIC')}><Monitor size={18} /> CẤU HÌNH LOGIC & VIDEO</button>
         </div>
 
         <div className="sidebar-footer-info">
@@ -1496,12 +1582,86 @@ function AssetManagerView({ onFeedback, onClose }: { onFeedback: (msg: string) =
               <AIStudioContent onFeedback={onFeedback} />
             </div>
           </div>
+        ) : selectedCat === 'TIPS' ? (
+          <div className="logic-editor-box">
+             <div className="manager-header">
+               <h3>Quản lý: Mẹo chụp ảnh hiện trạng</h3>
+             </div>
+             <div className="tips-editor-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+               <div className="tips-form">
+                  <label>Tiêu đề vùng</label>
+                  <input className="luxe-input" value={systemContent.tips.title} onChange={e => {
+                    const newTips = {...systemContent.tips, title: e.target.value};
+                    onSystemContentUpdate({...systemContent, tips: newTips});
+                  }} style={{width: '100%', background: '#000', color: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #444', marginBottom: '15px'}} />
+                  
+                  <label style={{marginTop: '20px', display: 'block'}}>Danh sách mẹo (Mỗi dòng 1 mẹo)</label>
+                  <textarea className="luxe-textarea" style={{height: '200px', width: '100%', background: '#000', color: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #444'}} value={systemContent.tips.items.join('\n')} onChange={e => {
+                    const newTips = {...systemContent.tips, items: e.target.value.split('\n')};
+                    onSystemContentUpdate({...systemContent, tips: newTips});
+                  }} />
+               </div>
+               <div className="tips-visual">
+                  <label>Ảnh minh họa mẹo chụp</label>
+                  <div className="asset-card-admin" style={{marginTop: '10px'}}>
+                    <div className="asset-preview-box">
+                      <img src={systemContent.tips.sampleImage} alt="Tips" />
+                      <div className="asset-actions-overlay">
+                        <button onClick={() => { setPendingReplace({ type: 'tip' }); replacerRef.current?.click(); }}>THAY THẾ ẢNH</button>
+                      </div>
+                    </div>
+                  </div>
+               </div>
+             </div>
+             <button className="btn-save-logic" style={{marginTop: '30px'}} onClick={() => onFeedback('Hệ thống đã tự động lưu thay đổi Mẹo chụp ảnh.')}>CẬP NHẬT GIAO DIỆN</button>
+          </div>
+        ) : selectedCat === 'PLANS' ? (
+          <div className="logic-editor-box">
+             <div className="manager-header">
+               <h3>Quản lý: Dữ liệu mẫu các Gói dịch vụ</h3>
+             </div>
+             <div className="plans-editor-scroll" style={{display: 'flex', flexDirection: 'column', gap: '40px'}}>
+                {systemContent.plans.map((p: any, pIdx: number) => (
+                  <div key={p.id} className="plan-edit-card" style={{background: 'rgba(255,255,255,0.03)', padding: '30px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.08)'}}>
+                    <h4 style={{color: 'var(--accent)', fontSize: '1.4rem', marginBottom: '15px', fontWeight: 900}}>{p.name}</h4>
+                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px'}}>
+                      <div>
+                        <label>Tiêu đề hiển thị</label>
+                        <input className="luxe-input" value={p.header} onChange={e => {
+                          const newPlans = [...systemContent.plans];
+                          newPlans[pIdx].header = e.target.value;
+                          onSystemContentUpdate({...systemContent, plans: newPlans});
+                        }} style={{width: '100%', background: '#000', color: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #444', marginBottom: '15px'}} />
+                        
+                        <label>Mô tả phụ</label>
+                        <textarea className="luxe-input" value={p.sub} onChange={e => {
+                          const newPlans = [...systemContent.plans];
+                          newPlans[pIdx].sub = e.target.value;
+                          onSystemContentUpdate({...systemContent, plans: newPlans});
+                        }} style={{width: '100%', height: '80px', background: '#000', color: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #444'}} />
+                      </div>
+                      <div className="plan-media-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px'}}>
+                        {p.media.map((m: any, mIdx: number) => (
+                          <div key={mIdx} className="asset-preview-box" style={{borderRadius: '8px', overflow: 'hidden', height: '80px'}}>
+                             {m.type === 'video' ? <div style={{height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#222'}}><VideoIcon size={20} /></div> : <img src={m.url} alt="plan" style={{width: '100%', height: '100%', objectFit: 'cover'}} />}
+                             <div className="asset-actions-overlay">
+                                <button style={{padding: '4px', fontSize: '0.6rem'}} onClick={() => { setPendingReplace({ type: 'plan', planIdx: pIdx, mediaIdx: mIdx }); replacerRef.current?.click(); }}>EDIT</button>
+                             </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+             </div>
+             <button className="btn-save-logic" style={{marginTop: '30px'}} onClick={() => onFeedback('Toàn bộ dữ liệu gói đã được lưu thành công.')}>LƯU TOÀN BỘ DỮ LIỆU GÓI</button>
+          </div>
         ) : selectedCat === 'LOGIC' ? (
            <div className="logic-editor-box">
              <div className="manager-header">
                <h3>Cấu hình quy tắc hệ thống (Logic Rules)</h3>
              </div>
-             <p className="hint">Chỉnh sửa tệp JSON cấu hình các phân nhánh (Branches) và quy tắc (Rules) tự động của hệ thống.</p>
+             <p className="hint">Chỉnh sửa tệp JSON cấu hình các phân nhánh (Branches/Rules) và tài nguyên Global.</p>
              <textarea 
                className="logic-textarea" 
                defaultValue={JSON.stringify({
@@ -1510,6 +1670,10 @@ function AssetManagerView({ onFeedback, onClose }: { onFeedback: (msg: string) =
                    auto_process_free: true,
                    auto_resize_aspect: "19.5:9",
                    cdn_path: "/assets/production/v2"
+                 },
+                 video_config: {
+                   renderer: "unreal_bridge_v4",
+                   default_res: "4K"
                  }
                }, null, 2)}
              />
@@ -1573,11 +1737,13 @@ function AIStudioContent({ onFeedback }: { onFeedback: (msg: string) => void }) 
 }
 
 // --- ADMIN VIEW ---
-function AdminView({
-  projects, isLoading, onBack, onUpdateProject, onGenerateAiImage
-}: {
-  projects: Project[];
+function AdminView({ 
+  projects, isLoading, systemContent, onSystemContentUpdate, onBack, onUpdateProject, onGenerateAiImage 
+}: { 
+  projects: Project[]; 
   isLoading: boolean;
+  systemContent: any;
+  onSystemContentUpdate: (c: any) => void;
   onBack: () => void;
   onUpdateProject: (id: string, updates: ProjectUpdate) => Promise<Project>;
   onGenerateAiImage: (id: string, payload: any) => Promise<Project>;
@@ -2259,7 +2425,14 @@ function AdminView({
           </div>
         </header>
 
-        {activeTab === 'resources' && <AssetManagerView onFeedback={setActionFeedback} onClose={() => setActiveTab('projects')} />}
+        {activeTab === 'resources' && (
+          <AssetManagerView 
+            systemContent={systemContent} 
+            onSystemContentUpdate={onSystemContentUpdate} 
+            onFeedback={setActionFeedback} 
+            onClose={() => setActiveTab('projects')} 
+          />
+        )}
 
         {activeTab === 'projects' && (
           <>
