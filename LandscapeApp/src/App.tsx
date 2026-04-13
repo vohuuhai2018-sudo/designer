@@ -400,19 +400,19 @@ export default function App() {
       if (view === 'service') setViewNotification("Anh/Chị vui lòng hãy chọn một mẫu thiết kế mà mình ưng ý nhất nhé!");
       return;
     }
-    if (view === 'upload') setView('editor');
+    if (view === 'plan') setView('upload');
+    else if (view === 'upload') setView('editor');
     else if (view === 'editor') setView('service');
-    else if (view === 'service') setView('plan');
-    else if (view === 'plan') setView('submit');
+    else if (view === 'service') setView('submit');
     else if (view === 'submit') handleSubmit();
   };
 
   const handleGlobalBack = () => {
-    if (view === 'upload') setView('welcome');
+    if (view === 'plan') setView('welcome');
+    else if (view === 'upload') setView('plan');
     else if (view === 'editor') setView('upload');
     else if (view === 'service') setView('editor');
-    else if (view === 'plan') setView('service');
-    else if (view === 'submit') setView('plan');
+    else if (view === 'submit') setView('service');
   };
 
   const showGlobalNav = ['upload', 'editor', 'service', 'plan', 'submit'].includes(view);
@@ -448,7 +448,7 @@ export default function App() {
       <div className="container">
         <AnimatePresence mode="wait">
         {view === 'welcome' && (
-          <WelcomeView onStart={() => setView('upload')} onAdmin={() => setView('admin')} />
+          <WelcomeView onStart={() => setView('plan')} onAdmin={() => setView('admin')} />
         )}
         {view === 'upload' && (
           <UploadView 
