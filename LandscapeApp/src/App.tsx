@@ -31,7 +31,8 @@ import {
   Zap,
   Sparkles,
   Video as VideoIcon,
-  Crown
+  Crown,
+  Play
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
