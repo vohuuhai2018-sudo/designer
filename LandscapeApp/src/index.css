@@ -28,6 +28,16 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Ẩn thanh cuộn hoàn toàn để tăng tính thẩm mỹ cao cấp */
+::-webkit-scrollbar {
+  display: none;
+  width: 0 !important;
+}
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
 body {
   font-family: 'Be Vietnam Pro', sans-serif;
   background-color: var(--bg);
@@ -90,6 +100,8 @@ button {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 @media (max-width: 500px) {
