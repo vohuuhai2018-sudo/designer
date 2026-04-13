@@ -529,7 +529,10 @@ export default function App() {
       else setView('upload');
     }
     else if (view === 'basic_selection') setView('upload');
-    else if (view === 'upload') setView('editor');
+    else if (view === 'upload') {
+      if (service === 'Gói Cơ bản') setView('submit');
+      else setView('editor');
+    }
     else if (view === 'editor') setView('service');
     else if (view === 'service') setView('submit');
     else if (view === 'submit') handleSubmit();
@@ -544,7 +547,10 @@ export default function App() {
     }
     else if (view === 'editor') setView('upload');
     else if (view === 'service') setView('editor');
-    else if (view === 'submit') setView('service');
+    else if (view === 'submit') {
+      if (service === 'Gói Cơ bản') setView('upload');
+      else setView('service');
+    }
   };
 
   const showGlobalNav = ['upload', 'editor', 'service', 'plan', 'submit', 'basic_selection'].includes(view);
@@ -561,7 +567,7 @@ export default function App() {
               onClick={handleGlobalNext} 
               className={`btn-nav-glass next-accent ${canGoNext() ? 'ready' : 'locked'}`}
             >
-              Tiếp theo <ArrowRight size={20} />
+              {view === 'submit' ? <><Sparkles size={18} /> Tạo thiết kế</> : <>Tiếp theo <ArrowRight size={20} /></>}
             </button>
           </div>
         </div>
@@ -613,7 +619,7 @@ export default function App() {
             onUpload={handleUpload} 
             extraAssets={extraAssets}
             onExtraAssetsChange={setExtraAssets}
-            onProceed={() => setView('editor')}
+            onProceed={() => service === 'Gói Cơ bản' ? setView('submit') : setView('editor')}
             systemContent={systemContent}
             service={service}
             note={note}
@@ -663,10 +669,7 @@ export default function App() {
             onPhoneChange={setCustomerPhone}
             customerEmail={customerEmail}
             onEmailChange={setCustomerEmail}
-            rawImage={rawImage}
-            annotatedImage={annotatedImage}
-            extraAssets={extraAssets}
-            onExtraAssetsChange={setExtraAssets}
+            onSubmit={handleSubmit}
           />
         )}
         {view === 'success' && (
@@ -1743,33 +1746,14 @@ function PlanSelectionView({ service, onServiceChange, systemContent }: {
 }
 
 function SubmitView({
-  customerName, onNameChange, customerPhone, onPhoneChange, customerEmail, onEmailChange, extraAssets, onExtraAssetsChange
+  customerName, onNameChange, customerPhone, onPhoneChange, customerEmail, onEmailChange, onSubmit
 }: {
   customerName: string; onNameChange: (n: string) => void;
   customerPhone: string; onPhoneChange: (p: string) => void;
   customerEmail: string; onEmailChange: (e: string) => void;
-  rawImage?: string; annotatedImage?: string;
-  extraAssets: string[]; onExtraAssetsChange: (a: string[]) => void;
+  onSubmit: () => void;
 }) {
-  const extraRef = useRef<HTMLInputElement>(null);
-
-  const handleExtraFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    
-    const promises = Array.from(files).map(file => {
-      return new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = ev => resolve(ev.target?.result as string);
-        reader.readAsDataURL(file);
-      });
-    });
-
-    Promise.all(promises).then(results => {
-      onExtraAssetsChange([...extraAssets, ...results]);
-    });
-    e.target.value = '';
-  };
+  const isReady = customerName.trim().length > 0 && customerPhone.trim().length > 0;
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view submit-view">
@@ -1810,36 +1794,40 @@ function SubmitView({
             onChange={e => onEmailChange(e.target.value)} 
           />
         </div>
-
-        <div className="extra-assets-area" style={{ marginTop: '20px' }}>
-          <h4>Hình ảnh/Video bổ sung khác</h4>
-          <p className="sub-hint">Giúp kỹ sư hiểu rõ hơn về góc nhìn xung quanh (không bắt buộc).</p>
-          <div className="upload-area" onClick={() => extraRef.current?.click()}>
-            <Upload size={48} color="var(--accent)" />
-            <span className="upload-prompt">Tải thêm ảnh/video công trình</span>
-            <span className="hint">Kéo thả hoặc bấm để chọn tệp từ thiết bị</span>
-          </div>
-          <input type="file" accept="image/*,video/*" multiple ref={extraRef} onChange={handleExtraFiles} hidden />
-          
-          {extraAssets.length > 0 && (
-            <div className="assets-preview-grid">
-              {extraAssets.map((asset, i) => (
-                <div key={i} className="asset-preview-item">
-                  <img src={asset} alt={`Extra ${i}`} />
-                  <button className="btn-remove-asset" onClick={(e) => { e.stopPropagation(); onExtraAssetsChange(extraAssets.filter((_, idx) => idx !== i)); }}>
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
-      <div className="submit-guidance-card">
-         <div className="guidance-icon"><Zap size={32} /></div>
-         <p>Vui lòng nhấn nút <strong>Tiếp theo</strong> ở phía trên cùng để gửi yêu cầu phác thảo của Anh/Chị về hệ thống.</p>
-      </div>
+      <motion.button
+        onClick={onSubmit}
+        disabled={!isReady}
+        animate={isReady ? { scale: [1, 1.03, 1], boxShadow: ['0 0 0px rgba(226,177,112,0)', '0 0 30px rgba(226,177,112,0.6)', '0 0 20px rgba(226,177,112,0.3)'] } : {}}
+        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+        style={{
+          marginTop: '36px',
+          width: '100%',
+          padding: '20px',
+          background: isReady ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+          color: isReady ? 'var(--primary)' : 'rgba(255,255,255,0.3)',
+          border: 'none',
+          borderRadius: '16px',
+          fontSize: '1.2rem',
+          fontWeight: 900,
+          letterSpacing: '0.05em',
+          cursor: isReady ? 'pointer' : 'not-allowed',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '12px',
+          transition: 'background 0.4s, color 0.4s',
+        }}
+      >
+        <Sparkles size={22} /> TẠO THIẾT KẾ NGAY
+      </motion.button>
+
+      {!isReady && (
+        <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem', marginTop: '12px' }}>
+          Điền Họ tên và Số điện thoại để kích hoạt nút tạo thiết kế.
+        </p>
+      )}
     </motion.div>
   );
 }
