@@ -522,6 +522,7 @@ export default function App() {
             extraAssets={extraAssets}
             onExtraAssetsChange={setExtraAssets}
             onProceed={() => setView('editor')}
+            systemContent={systemContent}
           />
         )}
         {view === 'editor' && (
@@ -634,13 +635,14 @@ function WelcomeView({ onStart, onAdmin }: { onStart: () => void, onAdmin: () =>
 }
 
 function UploadView({ 
-  rawImage, onUpload, extraAssets, onExtraAssetsChange, onProceed
+  rawImage, onUpload, extraAssets, onExtraAssetsChange, onProceed, systemContent
 }: { 
   rawImage: string; 
   onUpload: (img: string) => void;
   extraAssets: string[];
   onExtraAssetsChange: (assets: string[]) => void;
   onProceed: () => void;
+  systemContent: any;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const multiFileRef = useRef<HTMLInputElement>(null);
@@ -1488,10 +1490,6 @@ function SuccessView({ projectId, service, onReset }: { projectId: string; servi
       <button className="btn-primary main-cta" onClick={onReset} style={{ marginTop: '20px' }}>
         Quay lại Trang Chủ
       </button>
-    </motion.div>
-  );
-}
-      </div>
     </motion.div>
   );
 }
