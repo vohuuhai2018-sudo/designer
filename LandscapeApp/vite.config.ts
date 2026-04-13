@@ -13,3 +13,5 @@ export default defineConfig({
     },
   },
 })
+
+// Trigger server auto-restart mechanism (Timestamp: 2026-04-13)

@@ -312,8 +312,8 @@ button {
 /* FULL WIDTH GALLERY */
 .full-width-gallery {
   display: grid;
-  grid-template-columns: 1fr 1fr; /* 2 columns on mobile app */
-  gap: 12px;
+  grid-template-columns: 1fr; /* 1 column as requested */
+  gap: 20px;
   padding-bottom: 40px;
 }
 
@@ -321,7 +321,7 @@ button {
   position: relative;
   border-radius: 20px;
   overflow: hidden;
-  aspect-ratio: 1 / 1.2;
+  aspect-ratio: 16 / 9; /* Cinematic landscape ratio */
   border: 2px solid transparent;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
