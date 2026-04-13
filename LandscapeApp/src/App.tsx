@@ -448,7 +448,7 @@ export default function App() {
         </div>
       )}
 
-      <div className="container">
+      <div className={`container ${view === 'admin' ? 'full-width' : ''}`}>
         <AnimatePresence mode="wait">
         {view === 'welcome' && (
           <WelcomeView onStart={() => setView('plan')} onAdmin={() => setView('admin')} />

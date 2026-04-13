@@ -98,6 +98,11 @@ button {
   }
 }
 
+.container.full-width {
+  max-width: 100% !important;
+  box-shadow: none;
+}
+
 /* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
@@ -126,6 +131,10 @@ button {
   .global-nav-premium {
     max-width: 100%;
   }
+}
+
+.container.full-width .global-nav-premium {
+  max-width: 100% !important;
 }
 
 .nav-inner-luxe {
