@@ -102,11 +102,14 @@ button {
   animation: fadeIn 0.5s ease forwards;
 }
 .global-nav-premium {
-  position: sticky;
+  position: fixed;
   top: 0;
-  width: 100%;
-  height: 70px;
-  z-index: 1500;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  max-width: 46vh; /* Đồng bộ với .container */
+  height: 75px;
+  z-index: 3000;
   background: rgba(2, 6, 23, 0.98);
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
@@ -116,9 +119,14 @@ button {
   box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
 
+@media (max-width: 500px) {
+  .global-nav-premium {
+    max-width: 100%;
+  }
+}
+
 .nav-inner-luxe {
   width: 100%;
-  max-width: 500px;
   height: 100%;
   padding: 8px 12px;
   display: flex;
@@ -132,9 +140,9 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   border-radius: 12px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 800;
   text-transform: uppercase;
   color: var(--text);
@@ -167,8 +175,7 @@ button {
 }
 
 .nav-offset {
-  /* No padding needed if using sticky as first child, but I'll keep a small one for air */
-  padding-top: 10px !important;
+  padding-top: 90px !important;
 }
 
 .notification-overlay {
