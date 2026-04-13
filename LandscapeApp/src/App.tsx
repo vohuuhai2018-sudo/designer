@@ -2174,7 +2174,7 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
                    const newId = `${selectedItem.id}_v${variants.length + 1}`;
                    variants.push({
                      id: newId,
-                     url: "https://images.unsplash.com/photo-1590059132718-502424533173?q=80&w=1200",
+                     url: "https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=600",
                      name: `Biến thể mới ${variants.length + 1}`
                    });
                    catList[pIdx] = { ...catList[pIdx], variants };
@@ -2239,7 +2239,7 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
                 const newItem: any = {
                   id: newId,
                   name: `Mẫu mới ${list.length + 1}`,
-                  url: "https://images.unsplash.com/photo-1590059132718-502424533173?q=80&w=1200"
+                  url: "https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=600"
                 };
 
                 if (currentCat === 'THAC' || currentCat === 'HO') {
