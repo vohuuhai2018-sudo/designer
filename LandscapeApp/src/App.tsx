@@ -1447,26 +1447,42 @@ function SuccessView({ projectId, service, onReset }: { projectId: string; servi
 }
 // --- ASSET MANAGER VIEW ---
 function AssetManagerView({ onFeedback }: { onFeedback: (msg: string) => void }) {
-  const [selectedCat, setSelectedCat] = useState<'THAC' | 'KE' | 'CANH' | 'LOGIC'>('THAC');
-  const catItems = ASSETS[selectedCat as keyof typeof ASSETS] || [];
+  const [selectedCat, setSelectedCat] = useState<'THAC' | 'KE' | 'CANH' | 'LOGIC' | 'AI_STUDIO'>('THAC');
+  const catItems = (selectedCat === 'THAC' || selectedCat === 'KE' || selectedCat === 'CANH') 
+    ? ASSETS[selectedCat as keyof typeof ASSETS] 
+    : [];
 
   return (
-    <div className="asset-manager-premium">
+    <div className="asset-manager-full-screen">
       <div className="manager-sidebar">
         <button className={selectedCat === 'THAC' ? 'active' : ''} onClick={() => setSelectedCat('THAC')}><Layers size={18} /> THÁC ĐÁ</button>
         <button className={selectedCat === 'KE' ? 'active' : ''} onClick={() => setSelectedCat('KE')}><Box size={18} /> KÈ ĐÁ / BỜ</button>
         <button className={selectedCat === 'CANH' ? 'active' : ''} onClick={() => setSelectedCat('CANH')}><Sparkles size={18} /> CẢNH QUAN</button>
+        <div className="sidebar-divider" />
+        <button className={selectedCat === 'AI_STUDIO' ? 'active' : ''} onClick={() => setSelectedCat('AI_STUDIO')}><Zap size={18} /> AI ASSET STUDIO</button>
         <button className={selectedCat === 'LOGIC' ? 'active' : ''} onClick={() => setSelectedCat('LOGIC')}><Bot size={18} /> CẤU HÌNH LOGIC</button>
       </div>
       
       <div className="manager-content">
-        <div className="manager-header">
-          <h3>Quản lý {selectedCat}</h3>
-          <button className="btn-add-asset" onClick={() => onFeedback('Tính năng thêm mới sẽ được cập nhật.')}>+ Thêm mẫu mới</button>
-        </div>
-
-        {selectedCat === 'LOGIC' ? (
+        {selectedCat === 'AI_STUDIO' ? (
+          <div className="ai-studio-integrated">
+            <div className="studio-hero">
+              <h2>AI ASSET STUDIO <Sparkles size={32} /></h2>
+              <p>Mô tả và yêu cầu AI chỉnh sửa, resize hoặc tối ưu hóa hình ảnh tài nguyên.</p>
+            </div>
+            <div className="studio-work-area">
+              <div className="upload-studio-box" onClick={() => onFeedback('Bấm để chọn ảnh cần xử lý')}>
+                <Upload size={64} />
+                <span>Tải ảnh gốc cần Resize / AI Edit</span>
+              </div>
+              <AIStudioContent onFeedback={onFeedback} />
+            </div>
+          </div>
+        ) : selectedCat === 'LOGIC' ? (
            <div className="logic-editor-box">
+             <div className="manager-header">
+               <h3>Cấu hình quy tắc hệ thống (Logic Rules)</h3>
+             </div>
              <p className="hint">Chỉnh sửa tệp JSON cấu hình các phân nhánh (Branches) và quy tắc (Rules) tự động của hệ thống.</p>
              <textarea 
                className="logic-textarea" 
@@ -1482,68 +1498,58 @@ function AssetManagerView({ onFeedback }: { onFeedback: (msg: string) => void })
              <button className="btn-save-logic" onClick={() => onFeedback('Đã lưu cấu hình logic mới.')}>LƯU CẤU HÌNH HỆ THỐNG</button>
            </div>
         ) : (
-          <div className="asset-grid-manager">
-            {catItems.map((item: any) => (
-              <div key={item.id} className="asset-card-admin">
-                <div className="asset-preview-box">
-                  <img src={item.url} alt={item.name} />
-                  <div className="asset-actions-overlay">
-                    <button onClick={() => onFeedback('Đang chuẩn bị thay thế...')}>THAY THẾ ẢNH</button>
+          <>
+            <div className="manager-header">
+              <h3>Quản lý {selectedCat}</h3>
+              <button className="btn-add-asset" onClick={() => onFeedback('Tính năng thêm mới sẽ được cập nhật.')}>+ Thêm mẫu mới</button>
+            </div>
+            <div className="asset-grid-manager">
+              {catItems.map((item: any) => (
+                <div key={item.id} className="asset-card-admin">
+                  <div className="asset-preview-box">
+                    <img src={item.url} alt={item.name} />
+                    <div className="asset-actions-overlay">
+                      <button onClick={() => onFeedback('Đang chuẩn bị thay thế...')}>THAY THẾ ẢNH</button>
+                    </div>
+                  </div>
+                  <div className="asset-meta-box">
+                    <div className="asset-id">{item.id}</div>
+                    <div className="asset-name">{item.name}</div>
+                    <div className="asset-variants-count">{item.variants?.length || 0} biến thể</div>
                   </div>
                 </div>
-                <div className="asset-meta-box">
-                  <div className="asset-id">{item.id}</div>
-                  <div className="asset-name">{item.name}</div>
-                  <div className="asset-variants-count">{item.variants?.length || 0} biến thể</div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>
   );
 }
 
-// --- AI STUDIO VIEW ---
-function AIStudioView({ onFeedback }: { onFeedback: (msg: string) => void }) {
+function AIStudioContent({ onFeedback }: { onFeedback: (msg: string) => void }) {
   const [prompt, setPrompt] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-
   return (
-    <div className="ai-studio-premium">
-      <div className="studio-hero">
-        <h2>AI ASSET STUDIO <Sparkles size={32} /></h2>
-        <p>Mô tả và yêu cầu AI chỉnh sửa, resize hoặc tối ưu hóa hình ảnh tài nguyên.</p>
-      </div>
-
-      <div className="studio-work-area">
-        <div className="upload-studio-box" onClick={() => onFeedback('Bấm để chọn ảnh cần xử lý')}>
-          <Upload size={64} />
-          <span>Tải ảnh gốc cần Resize / AI Edit</span>
-        </div>
-
-        <div className="ai-controls-box">
-          <label>Yêu cầu chỉnh sửa của AI</label>
-          <textarea 
-            placeholder="Ví dụ: Resize lại tấm hình này về tỷ lệ 16:9, làm mờ hậu cảnh và đưa chủ thể vào giữa để cân đối hơn..."
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-          />
-          <button 
-            className={`btn-ai-process ${isProcessing ? 'loading' : ''}`}
-            onClick={() => {
-              setIsProcessing(true);
-              setTimeout(() => {
-                setIsProcessing(false);
-                onFeedback('AI đã hoàn tất xử lý hình ảnh!');
-              }, 3000);
-            }}
-          >
-            {isProcessing ? 'ĐANG XỬ LÝ...' : 'BẮT ĐẦU CHẠY AI'}
-          </button>
-        </div>
-      </div>
+    <div className="ai-controls-box">
+      <label>Yêu cầu chỉnh sửa của AI</label>
+      <textarea 
+        placeholder="Ví dụ: Resize lại tấm hình này về tỷ lệ 16:9, làm mờ hậu cảnh và đưa chủ thể vào giữa để cân đối hơn..."
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+      />
+      <button 
+        className={`btn-ai-process ${isProcessing ? 'loading' : ''}`}
+        onClick={() => {
+          setIsProcessing(true);
+          setTimeout(() => {
+            setIsProcessing(false);
+            onFeedback('AI đã hoàn tất xử lý hình ảnh!');
+          }, 3000);
+        }}
+      >
+        {isProcessing ? 'ĐANG XỬ LÝ...' : 'BẮT ĐẦU CHẠY AI'}
+      </button>
     </div>
   );
 }
@@ -1558,7 +1564,7 @@ function AdminView({
   onUpdateProject: (id: string, updates: ProjectUpdate) => Promise<Project>;
   onGenerateAiImage: (id: string, payload: any) => Promise<Project>;
 }) {
-  const [activeTab, setActiveTab] = useState<'projects' | 'resources' | 'ai_studio'>('projects');
+  const [activeTab, setActiveTab] = useState<'projects' | 'resources'>('projects');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [actionFeedback, setActionFeedback] = useState('');
   const [showDesigner, setShowDesigner] = useState(false);
@@ -2224,7 +2230,6 @@ function AdminView({
             <div className="admin-tabs-luxe">
                <button className={activeTab === 'projects' ? 'active' : ''} onClick={() => setActiveTab('projects')}><Folder size={18} /> QUẢN LÝ DỰ ÁN</button>
                <button className={activeTab === 'resources' ? 'active' : ''} onClick={() => setActiveTab('resources')}><Layers size={18} /> KHO TÀI NGUYÊN & LOGIC</button>
-               <button className={activeTab === 'ai_studio' ? 'active' : ''} onClick={() => setActiveTab('ai_studio')}><Sparkles size={18} /> AI ASSET STUDIO</button>
             </div>
           </div>
           <div className="admin-title-section">
@@ -2237,7 +2242,6 @@ function AdminView({
         </header>
 
         {activeTab === 'resources' && <AssetManagerView onFeedback={setActionFeedback} />}
-        {activeTab === 'ai_studio' && <AIStudioView onFeedback={setActionFeedback} />}
 
         {activeTab === 'projects' && (
           <>

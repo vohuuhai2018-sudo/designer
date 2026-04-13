@@ -3955,6 +3955,12 @@ canvas {
 @media (max-width: 600px) { .view.editor-view { display: flex !important; flex-direction: column !important; height: auto !important; min-height: 100vh !important; overflow-y: auto !important; overflow-x: hidden !important; } .workspace { flex: none !important; width: 100% !important; height: auto !important; min-height: 0 !important; display: block !important; padding: 0 !important; } .workspace canvas { width: 100% !important; height: auto !important; display: block !important; touch-action: none !important; } .brush-controls-container { flex: none !important; margin-top: 0 !important; background: #000 !important; } .btn-zoom-toggle, .pan-mode-btn { display: none !important; } }
 
 /* --- NEW ADMIN CONTROL CENTER STYLES --- */
+.admin-view {
+  max-width: 1920px !important;
+  margin: 0 auto;
+  padding: 0 50px !important;
+}
+
 .admin-tabs-luxe {
   display: flex;
   background: rgba(255, 255, 255, 0.05);
@@ -3964,18 +3970,14 @@ canvas {
 }
 
 .admin-tabs-luxe button {
-  background: none;
-  border: none;
+  background: none; border: none;
   color: rgba(255, 255, 255, 0.5);
-  padding: 10px 20px;
+  padding: 10px 24px;
   border-radius: 10px;
   font-weight: 800;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: all 0.3s;
+  font-size: 0.9rem;
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; transition: all 0.3s;
   letter-spacing: 0.02em;
 }
 
@@ -3985,42 +3987,40 @@ canvas {
   box-shadow: 0 4px 15px rgba(226, 177, 112, 0.3);
 }
 
-.asset-manager-premium {
+.asset-manager-full-screen {
   display: flex;
-  gap: 24px;
-  height: calc(100vh - 250px);
-  margin-top: 24px;
+  gap: 30px;
+  height: calc(100vh - 220px);
+  margin-top: 32px;
+  width: 100%;
 }
 
 .manager-sidebar {
-  width: 280px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  width: 320px;
+  display: flex; flex-direction: column; gap: 8px;
   background: rgba(255, 255, 255, 0.03);
-  padding: 16px;
+  padding: 20px;
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 12px 0;
 }
 
 .manager-sidebar button {
-  width: 100%;
-  text-align: left;
-  padding: 16px;
-  background: none;
-  border: none;
-  color: #fff;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
+  width: 100%; text-align: left; padding: 18px;
+  background: none; border: none;
+  color: #fff; font-weight: 700;
+  display: flex; align-items: center; gap: 12px;
+  border-radius: 12px; cursor: pointer; transition: all 0.2s;
 }
 
 .manager-sidebar button.active {
-  background: rgba(226, 177, 112, 0.1);
+  background: rgba(226, 177, 112, 0.12);
   color: var(--accent);
   box-shadow: inset 4px 0 0 var(--accent);
 }
@@ -4029,158 +4029,97 @@ canvas {
   flex: 1;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 24px;
-  padding: 24px;
+  padding: 32px;
   overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .manager-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 32px;
 }
 
 .manager-header h3 {
-  font-size: 1.5rem;
-  font-weight: 900;
+  font-size: 1.8rem; font-weight: 950;
   color: var(--accent);
 }
 
 .btn-add-asset {
-  background: var(--accent);
-  color: #000;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 99px;
-  font-weight: 800;
-  cursor: pointer;
+  background: var(--accent); color: #000; border: none;
+  padding: 12px 24px; border-radius: 99px; font-weight: 800; cursor: pointer;
 }
 
 .asset-grid-manager {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 30px;
 }
 
 .asset-card-admin {
   background: rgba(255, 255, 255, 0.03);
-  border-radius: 16px;
-  overflow: hidden;
+  border-radius: 20px; overflow: hidden;
   border: 1.5px solid rgba(255, 255, 255, 0.06);
-  transition: transform 0.3s;
+  transition: all 0.3s;
 }
 
 .asset-card-admin:hover {
-  transform: translateY(-5px);
+  transform: translateY(-8px);
   border-color: var(--accent);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 .asset-preview-box {
-  position: relative;
-  aspect-ratio: 1;
-  background: #111;
+  position: relative; aspect-ratio: 1; background: #111;
 }
 
 .asset-preview-box img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  width: 100%; height: 100%; object-fit: cover;
 }
 
 .asset-actions-overlay {
-  position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.3s;
 }
 
-.asset-preview-box:hover .asset-actions-overlay {
-  opacity: 1;
-}
+.asset-preview-box:hover .asset-actions-overlay { opacity: 1; }
 
 .asset-actions-overlay button {
-  background: #fff;
-  color: #000;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-weight: 800;
-  font-size: 0.8rem;
-  cursor: pointer;
+  background: #fff; color: #000; border: none;
+  padding: 10px 20px; border-radius: 8px; font-weight: 800; font-size: 0.9rem; cursor: pointer;
 }
 
-.asset-meta-box {
-  padding: 16px;
-}
+.asset-meta-box { padding: 20px; }
+.asset-id { font-size: 0.75rem; color: var(--text-muted); font-family: monospace; }
+.asset-name { font-weight: 800; margin: 6px 0; color: #fff; font-size: 1.1rem; }
 
-.asset-id {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  font-family: monospace;
-}
-
-.asset-name {
-  font-weight: 800;
-  margin: 4px 0;
-  color: #fff;
-}
-
-.logic-editor-box {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
+.logic-editor-box { display: flex; flex-direction: column; gap: 20px; }
 .logic-textarea {
-  width: 100%;
-  height: 400px;
-  background: #0d0d0d;
-  color: #10b981;
-  font-family: 'Fira Code', monospace;
-  padding: 20px;
-  border-radius: 12px;
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
-  font-size: 0.95rem;
-  line-height: 1.6;
+  width: 100%; height: 500px; background: #0d0d0d; color: #10b981;
+  font-family: 'Fira Code', monospace; padding: 24px;
+  border-radius: 16px; border: 1.5px solid rgba(255, 255, 255, 0.1);
+  font-size: 1rem; line-height: 1.6;
 }
 
 .btn-save-logic {
-  background: var(--accent);
-  color: #000;
-  border: none;
-  padding: 16px;
-  border-radius: 12px;
-  font-weight: 900;
-  cursor: pointer;
-  letter-spacing: 0.1em;
+  background: var(--accent); color: #000; border: none;
+  padding: 18px; border-radius: 12px; font-weight: 950;
+  cursor: pointer; letter-spacing: 0.1em; font-size: 1.1rem;
 }
 
-.ai-studio-premium {
-  padding: 40px;
-  background: rgba(226, 177, 112, 0.05);
-  border-radius: 32px;
-  border: 1.5px dashed rgba(226, 177, 112, 0.2);
-  margin-top: 24px;
+/* AI Studio Integrated */
+.ai-studio-integrated {
+  animation: fadeIn 0.4s ease-out;
 }
 
-.studio-hero {
-  text-align: center;
-  margin-bottom: 40px;
+.ai-studio-integrated .studio-hero {
+  text-align: left; margin-bottom: 40px;
 }
 
-.studio-hero h2 {
-  font-size: 2.5rem;
-  font-weight: 950;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  color: var(--accent);
+.ai-studio-integrated .studio-hero h2 {
+  font-size: 2.2rem; font-weight: 950; color: var(--accent);
+  display: flex; align-items: center; gap: 16px; margin: 0;
 }
 
 .studio-work-area {
@@ -4192,56 +4131,27 @@ canvas {
 .upload-studio-box {
   border: 3px dashed rgba(255, 255, 255, 0.1);
   border-radius: 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 60px;
-  cursor: pointer;
-  transition: all 0.3s;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; padding: 60px; cursor: pointer; transition: all 0.3s;
 }
 
 .upload-studio-box:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.03); border-color: var(--accent);
 }
 
-.ai-controls-box {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.ai-controls-box label {
-  font-weight: 800;
-  color: var(--accent);
-  text-transform: uppercase;
-}
+.ai-controls-box { display: flex; flex-direction: column; gap: 20px; }
+.ai-controls-box label { font-weight: 850; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em; }
 
 .ai-controls-box textarea {
-  width: 100%;
-  height: 200px;
-  background: rgba(0, 0, 0, 0.5);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 20px;
-  color: #fff;
-  font-size: 1.1rem;
+  width: 100%; height: 250px;
+  background: rgba(0, 0, 0, 0.5); border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px; padding: 24px; color: #fff; font-size: 1.15rem; line-height: 1.5;
 }
 
 .btn-ai-process {
   background: linear-gradient(135deg, var(--accent) 0%, #fff 200%);
-  color: #000;
-  border: none;
-  padding: 20px;
-  border-radius: 16px;
-  font-weight: 950;
-  font-size: 1.2rem;
-  cursor: pointer;
+  color: #000; border: none; padding: 22px; border-radius: 16px;
+  font-weight: 950; font-size: 1.3rem; cursor: pointer; box-shadow: 0 10px 25px rgba(226, 177, 112, 0.2);
 }
 
-.btn-ai-process.loading {
-  opacity: 0.6;
-  cursor: wait;
-}
+.btn-ai-process.loading { opacity: 0.6; cursor: wait; }
