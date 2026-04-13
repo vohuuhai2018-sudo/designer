@@ -1446,24 +1446,42 @@ function SuccessView({ projectId, service, onReset }: { projectId: string; servi
   );
 }
 // --- ASSET MANAGER VIEW ---
-function AssetManagerView({ onFeedback }: { onFeedback: (msg: string) => void }) {
+function AssetManagerView({ onFeedback, onClose }: { onFeedback: (msg: string) => void, onClose: () => void }) {
   const [selectedCat, setSelectedCat] = useState<'THAC' | 'KE' | 'CANH' | 'LOGIC' | 'AI_STUDIO'>('THAC');
   const catItems = (selectedCat === 'THAC' || selectedCat === 'KE' || selectedCat === 'CANH') 
     ? ASSETS[selectedCat as keyof typeof ASSETS] 
     : [];
 
   return (
-    <div className="asset-manager-full-screen">
-      <div className="manager-sidebar">
-        <button className={selectedCat === 'THAC' ? 'active' : ''} onClick={() => setSelectedCat('THAC')}><Layers size={18} /> THÁC ĐÁ</button>
-        <button className={selectedCat === 'KE' ? 'active' : ''} onClick={() => setSelectedCat('KE')}><Box size={18} /> KÈ ĐÁ / BỜ</button>
-        <button className={selectedCat === 'CANH' ? 'active' : ''} onClick={() => setSelectedCat('CANH')}><Sparkles size={18} /> CẢNH QUAN</button>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="asset-manager-workspace-fixed">
+      <div className="workspace-sidebar">
+        <div className="sidebar-header-luxe">
+           <button onClick={onClose} className="btn-exit-workspace"><ChevronLeft size={20} /> QUAY LẠI TRANG CHỦ</button>
+           <h3>KHO TÀI NGUYÊN</h3>
+        </div>
+
+        <div className="sidebar-group">
+          <label>DANH MỤC THƯ VIỆN</label>
+          <button className={selectedCat === 'THAC' ? 'active' : ''} onClick={() => setSelectedCat('THAC')}><Layers size={18} /> THÁC ĐÁ</button>
+          <button className={selectedCat === 'KE' ? 'active' : ''} onClick={() => setSelectedCat('KE')}><Box size={18} /> KÈ ĐÁ / BỜ</button>
+          <button className={selectedCat === 'CANH' ? 'active' : ''} onClick={() => setSelectedCat('CANH')}><Sparkles size={18} /> CẢNH QUAN</button>
+        </div>
+
         <div className="sidebar-divider" />
-        <button className={selectedCat === 'AI_STUDIO' ? 'active' : ''} onClick={() => setSelectedCat('AI_STUDIO')}><Zap size={18} /> AI ASSET STUDIO</button>
-        <button className={selectedCat === 'LOGIC' ? 'active' : ''} onClick={() => setSelectedCat('LOGIC')}><Bot size={18} /> CẤU HÌNH LOGIC</button>
+
+        <div className="sidebar-group">
+          <label>CÔNG CỤ HỆ THỐNG</label>
+          <button className={selectedCat === 'AI_STUDIO' ? 'active' : ''} onClick={() => setSelectedCat('AI_STUDIO')}><Zap size={18} /> AI ASSET STUDIO</button>
+          <button className={selectedCat === 'LOGIC' ? 'active' : ''} onClick={() => setSelectedCat('LOGIC')}><Bot size={18} /> CẤU HÌNH LOGIC</button>
+        </div>
+
+        <div className="sidebar-footer-info">
+           <Info size={16} />
+           <p>Giao diện điều hành hệ thống chuyên sâu dành cho Kỹ thuật viên.</p>
+        </div>
       </div>
       
-      <div className="manager-content">
+      <div className="workspace-main-content">
         {selectedCat === 'AI_STUDIO' ? (
           <div className="ai-studio-integrated">
             <div className="studio-hero">
@@ -1523,7 +1541,7 @@ function AssetManagerView({ onFeedback }: { onFeedback: (msg: string) => void })
           </>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -2241,7 +2259,7 @@ function AdminView({
           </div>
         </header>
 
-        {activeTab === 'resources' && <AssetManagerView onFeedback={setActionFeedback} />}
+        {activeTab === 'resources' && <AssetManagerView onFeedback={setActionFeedback} onClose={() => setActiveTab('projects')} />}
 
         {activeTab === 'projects' && (
           <>
