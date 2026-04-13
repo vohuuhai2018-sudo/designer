@@ -480,9 +480,12 @@ export default function App() {
           />
         )}
         {view === 'plan' && (
-          <PlanSelectionView
-            service={service}
-            onServiceChange={setService}
+          <PlanSelectionView 
+            service={service} 
+            onServiceChange={(s) => {
+              setService(s);
+              setView('upload'); // Jump immediately
+            }} 
           />
         )}
         {view === 'submit' && (
@@ -1094,12 +1097,11 @@ function PlanSelectionView({ service, onServiceChange }: {
               <div className="service-content-premium">
                 <div className="service-title-row-premium">
                   <h3>{s.name}</h3>
-                  {s.id === 'pro' && <div className="service-badge-premium" style={{ color: s.color }}>Phổ biến</div>}
                 </div>
                 <p className="service-description-premium">{s.desc}</p>
                 <div className="service-footer-row-premium">
-                  <div className="price-label-premium">Giá chỉ từ: <span className="highlight-price-premium">{s.price}</span></div>
-                  <div className="arrow-icon-premium"><ChevronRight size={24} /></div>
+                  <div className="price-label-premium">Giá trọn gói:</div>
+                  <div className="highlight-price-premium">{s.price}</div>
                 </div>
               </div>
             </div>

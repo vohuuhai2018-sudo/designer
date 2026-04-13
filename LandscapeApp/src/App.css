@@ -3213,80 +3213,87 @@ canvas {
 }
 
 .service-card-premium {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 28px;
   width: 100%;
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   overflow: hidden;
   position: relative;
+  margin-bottom: 8px;
 }
 
 .card-inner-premium {
   display: flex;
-  gap: 16px;
-  padding: 16px;
+  flex-direction: column; /* Vertical for better balance */
+  align-items: center;
+  gap: 20px;
+  padding: 32px 24px;
+  text-align: center;
 }
 
 .service-icon-box-premium {
-  width: 60px;
-  height: 60px;
-  min-width: 60px;
-  border-radius: 16px;
+  width: 70px;
+  height: 70px;
+  min-width: 70px;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
 }
 
 .service-content-premium {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 12px;
 }
 
 .service-title-row-premium {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
+  gap: 8px;
 }
 
 .service-title-row-premium h3 {
-  font-size: 1.15rem;
-  font-weight: 800;
+  font-size: 1.6rem; /* Much Larger */
+  font-weight: 950;
   color: #fff;
   margin: 0;
 }
 
-.service-badge-premium {
-  font-size: 0.75rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 99px;
-}
-
 .service-description-premium {
-  font-size: 0.85rem;
-  color: #94a3b8;
-  line-height: 1.4;
+  font-size: 1.15rem; /* Larger */
+  color: #cbd5e1;
+  line-height: 1.6;
+  max-width: 90%;
 }
 
 .service-footer-row-premium {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  margin-top: 8px;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.price-label-premium {
+  font-size: 0.95rem;
+  color: #94a3b8;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .highlight-price-premium {
-  font-size: 1.2rem;
-  font-weight: 900;
+  font-size: 1.8rem; /* BIG PRICE */
+  font-weight: 950;
   color: var(--accent);
+  text-shadow: 0 0 20px rgba(226, 177, 112, 0.3);
 }
 
 /* Custom Scrollbar for Service View */
