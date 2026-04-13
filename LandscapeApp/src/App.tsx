@@ -329,6 +329,15 @@ export default function App() {
       .catch(err => console.error('Failed to load system content:', err));
   }, []);
 
+  // --- AUTO-SAVE DRAFT TO LOCALSTORAGE ---
+  useEffect(() => {
+    try {
+      localStorage.setItem('sh_system_content', JSON.stringify(systemContent));
+    } catch (e) {
+      console.warn('Auto-save to localStorage failed (limit reached).');
+    }
+  }, [systemContent]);
+
   // --- SAVE SYSTEM CONTENT TO SERVER (MANUAL TRIGGER) ---
   const syncSystemContent = async () => {
     console.log('Syncing system content to:', API_BASE);
