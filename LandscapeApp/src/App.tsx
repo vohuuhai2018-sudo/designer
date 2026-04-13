@@ -1122,21 +1122,36 @@ function PlanSelectionView({ service, onServiceChange }: {
         <div className="samples-modal-overlay">
           <div className="samples-modal-content">
             <button className="btn-close-samples" onClick={() => setShowSamples(false)}>
-              <X size={40} />
+              <X size={44} />
             </button>
             <div className="samples-scroll">
-              <h2 style={{ color: 'var(--accent)', marginBottom: '2rem' }}>Minh Họa Kết Quả Theo Gói</h2>
+              <h2 style={{ color: 'var(--accent)', marginBottom: '1rem', fontSize: '2.4rem', textAlign: 'center' }}>Hành Trình Thiết Kế Mẫu</h2>
               
-              <div className="sample-case">
-                <div className="case-header">1. GÓI MIỄN PHÍ & CƠ BẢN</div>
-                <p className="case-sub">Thiết kế phác thảo nhanh hoặc chuẩn 1 góc nhìn thực tế.</p>
-                <img src="https://images.unsplash.com/photo-1558449028-b53a39d100fc?q=80&w=1200" alt="Sample 1" className="sample-img-large" />
+              <div className="sample-case req-box">
+                <div className="case-header" style={{ color: '#fbbf24' }}>YÊU CẦU KHÁCH HÀNG (HIỆN TRẠNG)</div>
+                <p className="case-sub" style={{ fontSize: '1.3rem', color: '#fff', fontWeight: 600 }}>
+                  "Thiết kế một hồ cá koi thác đá vân mây bên trái có tùng la hán và đèn đá, có hầm lọc tròn và bộ bàn để lên trên đó."
+                </p>
+                <img src="https://images.unsplash.com/photo-1590073242678-70ee3fc28e8e?q=80&w=1200" alt="Hiện trạng" className="sample-img-large" />
               </div>
 
               <div className="sample-case">
-                <div className="case-header">2. GÓI NÂNG CAO (KÈM VIDEO)</div>
-                <p className="case-sub">Thiết kế chuẩn + 1 Video diễn họa 3D xoay góc nhìn.</p>
-                <div className="sample-video-placeholder">
+                <div className="case-header">1. GÓI MIỄN PHÍ</div>
+                <p className="case-sub">Phác thảo nhanh ý tưởng sơ bộ (1 tấm hình gọn gàng).</p>
+                <img src="https://images.unsplash.com/photo-1598902108854-10e335adac99?q=80&w=1200" alt="Miễn phí" className="sample-img-large" />
+              </div>
+
+              <div className="sample-case">
+                <div className="case-header">2. GÓI CƠ BẢN</div>
+                <p className="case-sub">KTS thiết kế 1 bản vẽ 3D chuẩn hóa (1 tấm hình chất lượng cao).</p>
+                <img src="https://images.unsplash.com/photo-1516455590571-18256e5bb4ff?q=80&w=1200" alt="Cơ bản" className="sample-img-large" />
+              </div>
+
+              <div className="sample-case">
+                <div className="case-header">3. GÓI NÂNG CAO</div>
+                <p className="case-sub">1 Bản vẽ thiết kế chuẩn + 1 Video diễn họa 3D sống động.</p>
+                <img src="https://images.unsplash.com/photo-1613545325278-f24b0cae1224?q=80&w=1200" alt="Nâng cao" className="sample-img-large" />
+                <div className="sample-video-placeholder" style={{ marginTop: '20px' }}>
                   <video autoPlay loop muted playsInline className="sample-img-large">
                     <source src="https://assets.mixkit.co/videos/preview/mixkit-residential-house-with-a-pool-and-green-landscaping-12270-large.mp4" type="video/mp4" />
                   </video>
@@ -1144,9 +1159,13 @@ function PlanSelectionView({ service, onServiceChange }: {
               </div>
 
               <div className="sample-case">
-                <div className="case-header">3. GÓI PREMIUM (3D CHUYÊN SÂU)</div>
-                <p className="case-sub">Xuất hồ sơ 3D đầy đủ, Video 4K và phối cảnh toàn công trình.</p>
-                <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=1200" alt="Sample 2" className="sample-img-large" />
+                <div className="case-header">4. GÓI PREMIUM (TRỌN BỘ 3D)</div>
+                <p className="case-sub">Thiết kế 3D toàn diện, xuất 6 góc nhìn đẹp nhất + 1 Video 4K diễn họa chi tiết.</p>
+                <div className="sample-grid-6">
+                  {[...Array(6)].map((_, i) => (
+                    <img key={i} src={`https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=${i}`} alt={`Premium ${i}`} className="sample-img-grid" />
+                  ))}
+                </div>
                 <div className="sample-video-placeholder" style={{ marginTop: '20px' }}>
                    <video autoPlay loop muted playsInline className="sample-img-large">
                     <source src="https://assets.mixkit.co/videos/preview/mixkit-modern-apartment-building-with-green-garden-and-pool-21272-large.mp4" type="video/mp4" />

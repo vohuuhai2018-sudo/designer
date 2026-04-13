@@ -3367,6 +3367,41 @@ canvas {
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
 }
 
+.sample-grid-6 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.sample-img-grid {
+  width: 100%;
+  aspect-ratio: 16/10;
+  object-fit: cover;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: transform 0.3s;
+}
+
+.sample-img-grid:hover {
+  transform: scale(1.02);
+}
+
+.req-box {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 32px !important;
+  border-radius: 32px;
+  border: 1px dashed rgba(251, 191, 36, 0.3) !important;
+}
+
+@media (max-width: 600px) {
+  .sample-grid-6 {
+    grid-template-columns: 1fr;
+  }
+  .req-box {
+    padding: 20px !important;
+  }
+}
+
 @media (max-width: 600px) {
   .card-inner-premium-v2 {
     flex-direction: column;
