@@ -186,10 +186,10 @@ const ASSETS = {
   HO: [
     {
       id: 'ho_koi_standard',
-      url: 'https://images.unsplash.com/photo-1590424765691-8f3f8902636e?q=80&w=1200',
+      url: 'https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=1200',
       name: 'Hồ Koi tiêu chuẩn',
       variants: [
-        { id: 'ho_koi_v1', url: 'https://images.unsplash.com/photo-1590424765691-8f3f8902636e?q=80&w=1200', name: 'Mẫu hồ số 01' }
+        { id: 'ho_koi_v1', url: 'https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=1200', name: 'Mẫu hồ số 01' }
       ]
     }
   ]
@@ -1791,18 +1791,20 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
       } else if (pendingReplace.type === 'library' && pendingReplace.cat && pendingReplace.itemId) {
         const currentLib = systemContent.library || ASSETS;
         const newLib = { ...currentLib };
-        const catList = [...(newLib[pendingReplace.cat as keyof typeof ASSETS] || [])];
+        const cat = pendingReplace.cat as keyof typeof ASSETS;
+        const catList = [...(newLib[cat] || (ASSETS as any)[cat])];
         const idx = catList.findIndex((it: any) => it.id === pendingReplace.itemId);
         if (idx !== -1) {
           catList[idx] = { ...catList[idx], url: result };
-          newLib[pendingReplace.cat as keyof typeof ASSETS] = catList as any;
+          newLib[cat] = catList as any;
           onSystemContentUpdate({ ...systemContent, library: newLib });
           onFeedback(`Đã cập nhật ảnh mẫu cho ${catList[idx].name}.`);
         }
       } else if (pendingReplace.type === 'variant' && pendingReplace.cat && pendingReplace.itemId && pendingReplace.variantId) {
         const currentLib = systemContent.library || ASSETS;
         const newLib = { ...currentLib };
-        const catList = [...(newLib[pendingReplace.cat as keyof typeof ASSETS] || [])];
+        const cat = pendingReplace.cat as keyof typeof ASSETS;
+        const catList = [...(newLib[cat] || (ASSETS as any)[cat])];
         const pIdx = catList.findIndex((it: any) => it.id === pendingReplace.itemId);
         if (pIdx !== -1) {
           const variants = [...(catList[pIdx].variants || [])];
@@ -1810,7 +1812,7 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
           if (vIdx !== -1) {
             variants[vIdx] = { ...variants[vIdx], url: result };
             catList[pIdx] = { ...catList[pIdx], variants };
-            newLib[pendingReplace.cat as keyof typeof ASSETS] = catList as any;
+            newLib[cat] = catList as any;
             onSystemContentUpdate({ ...systemContent, library: newLib });
             onFeedback(`Đã cập nhật ảnh biến thể ${variants[vIdx].name}.`);
             if (selectedItem?.id === pendingReplace.itemId) setSelectedItem(catList[pIdx]);
@@ -2009,8 +2011,10 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
                </button>
                <h3 style={{ marginTop: '15px' }}>Quản lý biến thể: {selectedItem.name}</h3>
                <button className="btn-add-asset" onClick={() => {
-                 const newLib = { ...systemContent.library };
-                 const catList = [...newLib[selectedCat as keyof typeof ASSETS]];
+                 const currentLib = systemContent.library || ASSETS;
+                 const newLib = { ...currentLib };
+                 const cat = selectedCat as keyof typeof ASSETS;
+                 const catList = [...(newLib[cat] || (ASSETS as any)[cat] || [])];
                  const pIdx = catList.findIndex((it: any) => it.id === selectedItem.id);
                  if (pIdx !== -1) {
                    const variants = [...(catList[pIdx].variants || [])];
@@ -2021,7 +2025,7 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
                      name: `Biến thể mới ${variants.length + 1}`
                    });
                    catList[pIdx] = { ...catList[pIdx], variants };
-                   newLib[selectedCat as keyof typeof ASSETS] = catList as any;
+                   newLib[cat] = catList as any;
                    onSystemContentUpdate({ ...systemContent, library: newLib });
                    setSelectedItem(catList[pIdx]);
                    onFeedback('Đã thêm 1 biến thể mới. Anh/Chị hãy nhấn EDIT để thay ảnh nhé!');
@@ -2047,16 +2051,19 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
                        className="variant-name-edit" 
                        value={v.name} 
                        onChange={(e) => {
-                         const newLib = { ...systemContent.library };
-                         const catList = [...newLib[selectedCat as keyof typeof ASSETS]];
-                         const pIdx = catList.findIndex((it: any) => it.id === selectedItem.id);
-                         if (pIdx !== -1) {
-                           const vars = [...catList[pIdx].variants];
-                           vars[vIdx] = { ...vars[vIdx], name: e.target.value };
-                           catList[pIdx] = { ...catList[pIdx], variants: vars };
-                           newLib[selectedCat as keyof typeof ASSETS] = catList as any;
-                           onSystemContentUpdate({ ...systemContent, library: newLib });
-                           setSelectedItem(catList[pIdx]);
+                          const currentLib = systemContent.library || ASSETS;
+                          const newLib = { ...currentLib };
+                          const cat = selectedCat as keyof typeof ASSETS;
+                          const catList = [...(newLib[cat] || (ASSETS as any)[cat])];
+                          const pIdx = catList.findIndex((it: any) => it.id === selectedItem.id);
+                          if (pIdx !== -1) {
+                            const vars = [...catList[pIdx].variants];
+                            vars[vIdx] = { ...vars[vIdx], name: e.target.value };
+                            catList[pIdx] = { ...catList[pIdx], variants: vars };
+                            newLib[cat] = catList as any;
+                            onSystemContentUpdate({ ...systemContent, library: newLib });
+                            setSelectedItem(catList[pIdx]);
+                          }
                          }
                        }} 
                        style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', width: '100%', padding: '4px 8px', borderRadius: '4px', fontSize: '0.9rem' }}
