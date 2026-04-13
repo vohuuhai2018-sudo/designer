@@ -33,7 +33,9 @@ import {
   Video as VideoIcon,
   Crown,
   Play,
-  Box
+  Box,
+  Loader2,
+  Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -306,23 +308,29 @@ export default function App() {
       .catch(err => console.error('Failed to load system content:', err));
   }, []);
 
-  // --- SAVE SYSTEM CONTENT TO SERVER ---
-  useEffect(() => {
-    // 1. Sync to LocalStorage (Immediate cache)
+  // --- SAVE SYSTEM CONTENT TO SERVER (MANUAL TRIGGER) ---
+  const syncSystemContent = async () => {
     try {
+      // 1. Local Cache
       localStorage.setItem('sh_system_content', JSON.stringify(systemContent));
-    } catch(e) { console.warn('LocalStorage limit reached'); }
-
-    // 2. Sync to Server (Persistent global sync)
-    const timeout = setTimeout(() => {
-      apiFetch('/api/system-content', {
+      
+      // 2. Server Sync
+      const res = await apiFetch('/api/system-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(systemContent)
-      }).catch(err => console.error('Failed to sync system content to server:', err));
-    }, 1500); // Throttled sync
+      });
+      if (!res.ok) throw new Error('Server returned error');
+      return true;
+    } catch(e) {
+      console.error('Manual sync failed:', e);
+      return false;
+    }
+  };
 
-    return () => clearTimeout(timeout);
+  useEffect(() => {
+    // Keep local cache in sync silently
+    try { localStorage.setItem('sh_system_content', JSON.stringify(systemContent)); } catch(e){}
   }, [systemContent]);
 
   // Load projects when entering admin view
@@ -593,6 +601,7 @@ export default function App() {
               setProjects(prev => prev.map(p => p.id === id ? { ...p, ...payload } : p));
               return payload as Project;
             }}
+            onSync={syncSystemContent}
             onGenerateAiImage={async (id, payload) => {
               const response = await apiFetch(`/api/projects/${id}/chatgpt-generate`, {
                 method: 'POST',
@@ -1498,8 +1507,8 @@ function SuccessView({ projectId, service, onReset }: { projectId: string; servi
 }
 
 // --- HELPER WRAPPER FOR ASSET MANAGER ---
-function AssetManagerView({ systemContent, onSystemContentUpdate, onFeedback, onClose }: { 
-  systemContent: any, onSystemContentUpdate: (c: any) => void, onFeedback: (msg: string) => void, onClose: () => void 
+function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeedback, onClose }: { 
+  systemContent: any, onSystemContentUpdate: (c: any) => void, onSync: () => Promise<boolean>, onFeedback: (msg: string) => void, onClose: () => void 
 }) {
   const [selectedCat, setSelectedCat] = useState<'THAC' | 'KE' | 'CANH' | 'LOGIC' | 'AI_STUDIO' | 'TIPS' | 'PLANS'>('THAC');
   const catItems = (selectedCat === 'THAC' || selectedCat === 'KE' || selectedCat === 'CANH') 
@@ -1516,6 +1525,19 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onFeedback, on
     itemId?: string,
     variantId?: string 
   } | null>(null);
+
+  const [isSyncing, setIsSyncing] = useState(false);
+  const handleGlobalSync = async () => {
+    setIsSyncing(true);
+    onFeedback('Đang kết nối database và xuất bản dữ liệu...');
+    const success = await onSync();
+    setIsSyncing(false);
+    if (success) {
+      onFeedback('✅ ĐÃ ĐỒNG BỘ THÀNH CÔNG LÊN TOÀN HỆ THỐNG!');
+    } else {
+      onFeedback('❌ LỖI KẾT NỐI! Vui lòng kiểm tra lại Backend/ngrok.');
+    }
+  };
 
   const handleMediaReplace = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1614,9 +1636,36 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onFeedback, on
           <button className={selectedCat === 'LOGIC' ? 'active' : ''} onClick={() => setSelectedCat('LOGIC')}><Monitor size={18} /> CẤU HÌNH LOGIC & VIDEO</button>
         </div>
 
-        <div className="sidebar-footer-info">
+        <div className="sidebar-footer-info" style={{ padding: '0 20px' }}>
            <Info size={16} />
            <p>Giao diện điều hành hệ thống chuyên sâu dành cho Kỹ thuật viên.</p>
+        </div>
+
+        <div className="sidebar-group" style={{ marginTop: 'auto', padding: '10px' }}>
+           <button 
+             className={`btn-sync-global ${isSyncing ? 'loading' : ''}`}
+             onClick={handleGlobalSync}
+             style={{
+               width: '100%',
+               padding: '16px',
+               background: 'linear-gradient(135deg, #ff9d00, #ff5e00)',
+               color: '#fff',
+               border: 'none',
+               borderRadius: '12px',
+               fontWeight: 900,
+               fontSize: '0.9rem',
+               cursor: 'pointer',
+               display: 'flex',
+               alignItems: 'center',
+               justifyContent: 'center',
+               gap: '10px',
+               boxShadow: '0 10px 20px rgba(255,94,0,0.3)',
+               animation: isSyncing ? 'pulse 1s infinite' : 'none'
+             }}
+           >
+             {isSyncing ? <Loader2 className="animate-spin" size={20} /> : <Share2 size={20} />}
+             LƯU & XUẤT BẢN TOÀN HỆ THỐNG
+           </button>
         </div>
       </div>
       
@@ -1859,12 +1908,13 @@ function AIStudioContent({ onFeedback }: { onFeedback: (msg: string) => void }) 
 
 // --- ADMIN VIEW ---
 function AdminView({ 
-  projects, isLoading, systemContent, onSystemContentUpdate, onBack, onUpdateProject, onGenerateAiImage 
+  projects, isLoading, systemContent, onSystemContentUpdate, onSync, onBack, onUpdateProject, onGenerateAiImage 
 }: { 
   projects: Project[]; 
   isLoading: boolean;
   systemContent: any;
   onSystemContentUpdate: (c: any) => void;
+  onSync: () => Promise<boolean>;
   onBack: () => void;
   onUpdateProject: (id: string, updates: ProjectUpdate) => Promise<Project>;
   onGenerateAiImage: (id: string, payload: any) => Promise<Project>;
@@ -2550,6 +2600,7 @@ function AdminView({
           <AssetManagerView 
             systemContent={systemContent} 
             onSystemContentUpdate={onSystemContentUpdate} 
+            onSync={onSync}
             onFeedback={setActionFeedback} 
             onClose={() => setActiveTab('projects')} 
           />
