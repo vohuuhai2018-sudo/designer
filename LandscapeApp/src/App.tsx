@@ -2065,7 +2065,7 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
                             setSelectedItem(catList[pIdx]);
                           }
                          }
-                       }} 
+                       } 
                        style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', width: '100%', padding: '4px 8px', borderRadius: '4px', fontSize: '0.9rem' }}
                      />
                    </div>
