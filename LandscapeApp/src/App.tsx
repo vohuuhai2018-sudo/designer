@@ -310,6 +310,7 @@ export default function App() {
 
   // --- SAVE SYSTEM CONTENT TO SERVER (MANUAL TRIGGER) ---
   const syncSystemContent = async () => {
+    console.log('Syncing system content to:', API_BASE);
     try {
       // 1. Local Cache
       localStorage.setItem('sh_system_content', JSON.stringify(systemContent));
@@ -320,10 +321,23 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(systemContent)
       });
-      if (!res.ok) throw new Error('Server returned error');
+      
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Server error: ${res.status}`);
+      }
+      
+      console.log('✅ Successfully synced system content.');
       return true;
-    } catch(e) {
+    } catch(e: any) {
       console.error('Manual sync failed:', e);
+      // Detailed error for the user
+      const msg = e.message || 'Lỗi không xác định';
+      if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+         alert(`❌ KHÔNG THỂ KẾT NỐI SERVER!\nLink API: ${API_BASE}\n\nAnh vui lòng kiểm tra:\n1. Backend/ngrok trên máy đã bật chưa?\n2. Nếu chạy trên Vercel, link API phải là HTTPS (Ngrok).\n3. Đảm bảo đúng link Ngrok trong file .env`);
+      } else {
+         alert(`❌ LỖI LƯU TRỮ: ${msg}`);
+      }
       return false;
     }
   };
