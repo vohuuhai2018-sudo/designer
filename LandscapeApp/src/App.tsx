@@ -590,7 +590,7 @@ function UploadView({ rawImage, onUpload }: { rawImage: string, onUpload: (img: 
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view upload-view">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view upload-view nav-offset">
       <h2 style={{marginTop: '2rem'}}>Tải ảnh hiện trạng</h2>
       <div className="upload-area" onClick={() => fileRef.current?.click()}>
         {preview ? (
@@ -1141,14 +1141,14 @@ function PlanSelectionView({ service, onServiceChange }: {
 }
 
 function SubmitView({
-  customerName, onNameChange, customerPhone, onPhoneChange, customerEmail, onEmailChange, extraAssets, onExtraAssetsChange, onBack, onSubmit, isSubmitting, submitStatus
+  customerName, onNameChange, customerPhone, onPhoneChange, customerEmail, onEmailChange, extraAssets, onExtraAssetsChange, onSubmit, isSubmitting, submitStatus
 }: {
   customerName: string; onNameChange: (n: string) => void;
   customerPhone: string; onPhoneChange: (p: string) => void;
   customerEmail: string; onEmailChange: (e: string) => void;
   rawImage?: string; annotatedImage?: string;
   extraAssets: string[]; onExtraAssetsChange: (a: string[]) => void;
-  onBack: () => void; onSubmit: () => void; isSubmitting: boolean;
+  onSubmit: () => void; isSubmitting: boolean;
   submitStatus: string;
 }) {
   const extraRef = useRef<HTMLInputElement>(null);

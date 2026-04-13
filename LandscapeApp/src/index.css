@@ -82,7 +82,8 @@ button {
   flex-direction: column;
   background: var(--bg);
   box-shadow: 0 0 100px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 @media (max-width: 500px) {
@@ -168,7 +169,7 @@ button {
 }
 
 .nav-offset {
-  padding-top: 85px !important;
+  padding-top: 100px !important;
 }
 
 .notification-overlay {
