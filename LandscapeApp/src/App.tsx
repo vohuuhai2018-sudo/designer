@@ -429,7 +429,7 @@ export default function App() {
   const showGlobalNav = ['upload', 'editor', 'service', 'plan', 'submit'].includes(view);
 
   return (
-    <div className="container">
+    <>
       {showGlobalNav && (
         <div className="global-nav-premium">
           <div className="nav-inner-luxe">
@@ -456,7 +456,8 @@ export default function App() {
         </div>
       )}
 
-      <AnimatePresence mode="wait">
+      <div className="container">
+        <AnimatePresence mode="wait">
         {view === 'welcome' && (
           <WelcomeView onStart={() => setView('upload')} onAdmin={() => setView('admin')} />
         )}
@@ -542,7 +543,8 @@ export default function App() {
           />
         )}
         </AnimatePresence>
-    </div>
+      </div>
+    </>
   );
 }
 
