@@ -318,10 +318,9 @@ export default function App() {
   };
 
   const handleUpload = async (img: string) => {
-    const compressed = await compressImage(img);
-    setRawImage(compressed);
-    setAnnotatedImage(compressed);
-    setView('editor');
+    const resized = await compressImage(img);
+    setRawImage(resized);
+    setAnnotatedImage(resized);
   };
 
   const handleSubmit = async () => {
@@ -459,6 +458,7 @@ export default function App() {
             onUpload={handleUpload} 
             extraAssets={extraAssets}
             onExtraAssetsChange={setExtraAssets}
+            onProceed={() => setView('editor')}
           />
         )}
         {view === 'editor' && (
@@ -568,12 +568,13 @@ function WelcomeView({ onStart, onAdmin }: { onStart: () => void, onAdmin: () =>
 }
 
 function UploadView({ 
-  rawImage, onUpload, extraAssets, onExtraAssetsChange 
+  rawImage, onUpload, extraAssets, onExtraAssetsChange, onProceed
 }: { 
   rawImage: string; 
   onUpload: (img: string) => void;
   extraAssets: string[];
   onExtraAssetsChange: (assets: string[]) => void;
+  onProceed: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const multiFileRef = useRef<HTMLInputElement>(null);
@@ -618,7 +619,9 @@ function UploadView({
         {preview ? (
           <div style={{ position: 'relative', width: '100%', height: '100%' }}>
             <img src={preview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '28px' }} />
-            <div className="tag-overlay-premium">ẢNH CHÍNH</div>
+            <div className="tag-overlay-premium">
+              <CheckCircle2 size={16} /> ẢNH CHÍNH ĐÃ TẢI
+            </div>
           </div>
         ) : (
           <>
@@ -693,7 +696,7 @@ function UploadView({
       </div>
 
       {preview && (
-        <button className="btn-primary main-cta" onClick={() => onUpload(preview)} style={{ marginTop: '20px' }}>
+        <button className="btn-primary main-cta" onClick={onProceed} style={{ marginTop: '20px', width: '100%' }}>
           Dùng ảnh này để thiết kế <ArrowRight size={20} />
         </button>
       )}
