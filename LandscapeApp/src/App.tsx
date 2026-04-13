@@ -29,7 +29,10 @@ import {
   Mail,
   AlertTriangle,
   MessageCircle,
-  Zap
+  Zap,
+  Sparkles,
+  Video as VideoIcon,
+  Crown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -1067,9 +1070,10 @@ function PlanSelectionView({ service, onServiceChange }: {
   onServiceChange: (s: string) => void;
 }) {
   const services = [
-    { id: 'basic', name: 'Gói Cơ Bản', desc: 'Phác thảo nhanh ý tưởng cơ bản', price: 'Miễn phí', icon: <ImageIcon size={32} />, color: '#94a3b8' },
-    { id: 'pro', name: 'Gói Chuyên Nghiệp', desc: 'Bản vẽ chi tiết, đầy đủ vật liệu', price: '290.000đ', icon: <Palette size={32} />, color: '#e2b170' },
-    { id: 'premium', name: 'Gói Premium', desc: 'Bản vẽ Pro kèm Video 3D mô phỏng', price: '590.000đ', icon: <Camera size={32} />, color: '#a855f7' }
+    { id: 'free', name: 'Gói Miễn phí', desc: 'Giúp bạn phác thảo nhanh ý tưởng', price: 'Miễn phí', icon: <Sparkles size={32} />, color: '#94a3b8' },
+    { id: 'basic', name: 'Gói Cơ bản', desc: 'KTS thiết kế cho bạn 1 tấm ảnh đúng yêu cầu', price: '199.000đ', icon: <ImageIcon size={32} />, color: '#e2b170' },
+    { id: 'advanced', name: 'Gói Nâng cao', desc: '1 bản vẽ chuẩn và thêm 1 video diễn họa', price: '299.000đ', icon: <VideoIcon size={32} />, color: '#6366f1' },
+    { id: 'premium', name: 'Gói Premium', desc: 'KTS thiết kế 3D chuyên sâu cho bạn', price: 'Báo giá Zalo', icon: <Crown size={32} />, color: '#a855f7' }
   ];
 
   return (
