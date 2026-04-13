@@ -1556,6 +1556,8 @@ function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, o
     </motion.div>
   );
 }
+
+function PlanSelectionView({ service, onServiceChange, systemContent }: {
   service: string;
   onServiceChange: (s: string) => void;
   systemContent: any;
