@@ -314,7 +314,8 @@ export default function App() {
             { type: 'video', url: "https://assets.mixkit.co/videos/preview/mixkit-modern-apartment-building-with-green-garden-and-pool-21272-large.mp4" }
           ]
         }
-      ]
+      ],
+      library: ASSETS
     };
   });
 
@@ -1500,11 +1501,11 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onFeedback, on
 }) {
   const [selectedCat, setSelectedCat] = useState<'THAC' | 'KE' | 'CANH' | 'LOGIC' | 'AI_STUDIO' | 'TIPS' | 'PLANS'>('THAC');
   const catItems = (selectedCat === 'THAC' || selectedCat === 'KE' || selectedCat === 'CANH') 
-    ? ASSETS[selectedCat as keyof typeof ASSETS] 
+    ? (systemContent.library?.[selectedCat] || ASSETS[selectedCat as keyof typeof ASSETS]) 
     : [];
   
   const replacerRef = useRef<HTMLInputElement>(null);
-  const [pendingReplace, setPendingReplace] = useState<{ type: 'tip' | 'plan', planIdx?: number, mediaIdx?: number } | null>(null);
+  const [pendingReplace, setPendingReplace] = useState<{ type: 'tip' | 'plan' | 'library', planIdx?: number, mediaIdx?: number, cat?: string, itemId?: string } | null>(null);
 
   const handleMediaReplace = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1520,6 +1521,16 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onFeedback, on
         newPlans[pendingReplace.planIdx].media[pendingReplace.mediaIdx].url = result;
         onSystemContentUpdate({ ...systemContent, plans: newPlans });
         onFeedback('Đã cập nhật tệp mẫu cho gói dịch vụ.');
+      } else if (pendingReplace.type === 'library' && pendingReplace.cat && pendingReplace.itemId) {
+        const newLib = { ...systemContent.library };
+        const catList = [...newLib[pendingReplace.cat as keyof typeof ASSETS]];
+        const idx = catList.findIndex((it: any) => it.id === pendingReplace.itemId);
+        if (idx !== -1) {
+          catList[idx] = { ...catList[idx], url: result };
+          newLib[pendingReplace.cat as keyof typeof ASSETS] = catList as any;
+          onSystemContentUpdate({ ...systemContent, library: newLib });
+          onFeedback(`Đã cập nhật ảnh mẫu cho ${catList[idx].name}.`);
+        }
       }
       setPendingReplace(null);
     };
@@ -1689,7 +1700,10 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onFeedback, on
                   <div className="asset-preview-box">
                     <img src={item.url} alt={item.name} />
                     <div className="asset-actions-overlay">
-                      <button onClick={() => onFeedback('Đang chuẩn bị thay thế...')}>THAY THẾ ẢNH</button>
+                      <button onClick={() => { 
+                        setPendingReplace({ type: 'library', cat: selectedCat, itemId: item.id }); 
+                        replacerRef.current?.click(); 
+                      }}>THAY THẾ ẢNH</button>
                     </div>
                   </div>
                   <div className="asset-meta-box">
@@ -1769,11 +1783,11 @@ function AdminView({
 
   // --- HELPERS ---
   const getAssetInfo = (id: string, category: 'THAC' | 'KE' | 'CANH'): { name: string, url: string } | null => {
-    const list = ASSETS[category];
+    const list = (systemContent.library?.[category] || ASSETS[category]);
     for (const item of list) {
       if (item.id === id) return { name: item.name, url: 'url' in item ? item.url : '' };
       if ('variants' in item && item.variants) {
-        const variant = item.variants.find(v => v.id === id);
+        const variant = (item as any).variants.find((v: any) => v.id === id);
         if (variant) return { name: variant.name, url: variant.url };
       }
     }
