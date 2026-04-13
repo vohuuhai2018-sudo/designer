@@ -457,6 +457,8 @@ export default function App() {
           <UploadView 
             rawImage={rawImage}
             onUpload={handleUpload} 
+            extraAssets={extraAssets}
+            onExtraAssetsChange={setExtraAssets}
           />
         )}
         {view === 'editor' && (
@@ -565,8 +567,16 @@ function WelcomeView({ onStart, onAdmin }: { onStart: () => void, onAdmin: () =>
   );
 }
 
-function UploadView({ rawImage, onUpload }: { rawImage: string, onUpload: (img: string) => void }) {
+function UploadView({ 
+  rawImage, onUpload, extraAssets, onExtraAssetsChange 
+}: { 
+  rawImage: string; 
+  onUpload: (img: string) => void;
+  extraAssets: string[];
+  onExtraAssetsChange: (assets: string[]) => void;
+}) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const multiFileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string>(rawImage || '');
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -581,16 +591,39 @@ function UploadView({ rawImage, onUpload }: { rawImage: string, onUpload: (img: 
     reader.readAsDataURL(file);
   };
 
+  const handleMultiFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const promises = files.map(file => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = ev => resolve(ev.target?.result as string);
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(promises).then(results => {
+      onExtraAssetsChange([...extraAssets, ...results]);
+    });
+    e.target.value = '';
+  };
+
+  const removeExtraAsset = (index: number) => {
+    onExtraAssetsChange(extraAssets.filter((_, i) => i !== index));
+  };
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view upload-view nav-offset">
-      <h2 style={{marginTop: '2rem'}}>Tải ảnh hiện trạng</h2>
-      <div className="upload-area" onClick={() => fileRef.current?.click()}>
+      <h2 style={{marginTop: '2rem'}}>Tải ảnh hiện trạng công trình</h2>
+      <div className="upload-area" onClick={() => fileRef.current?.click()} style={{ border: preview ? 'none' : '3px dashed rgba(226,177,112,0.4)' }}>
         {preview ? (
-          <img src={preview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '28px' }} />
+          <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+            <img src={preview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '28px' }} />
+            <div className="tag-overlay-premium">ẢNH CHÍNH</div>
+          </div>
         ) : (
           <>
             <div className="upload-circle"><Camera size={60} /></div>
-            <span className="upload-prompt">NHẤN ĐỂ CHỌN ẢNH</span>
+            <span className="upload-prompt" style={{ fontWeight: 800 }}>NHẤN ĐỂ CHỌN ẢNH CHÍNH</span>
           </>
         )}
       </div>
@@ -598,9 +631,12 @@ function UploadView({ rawImage, onUpload }: { rawImage: string, onUpload: (img: 
       <input type="file" accept="image/*" ref={fileRef} onChange={handleFile} hidden />
       
       {!preview && (
-        <div className="tips glass-panel">
-          <h3>Mẹo chụp ảnh hiện trạng</h3>
-          <ul>
+        <div className="upload-guide-premium">
+          <div className="guide-header-premium">
+            <Zap size={22} color="var(--accent)" />
+            <span>MẸO CHỤP ẢNH HIỆN TRẠNG</span>
+          </div>
+          <ul className="guide-list-premium">
             <li>Chụp bao quát toàn bộ không gian cần thiết kế.</li>
             <li>Đứng ở góc chính diện, tránh chụp quá nghiêng.</li>
             <li>Đảm bảo ảnh rõ nét, không bị rung hay mờ.</li>
