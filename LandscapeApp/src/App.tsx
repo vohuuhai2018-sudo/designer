@@ -899,13 +899,12 @@ function ServiceView({
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view service-view" style={{paddingTop: '100px'}}>
-      <div className="title-group" style={{textAlign: 'center', marginBottom: '1.5rem'}}>
-        <h2>Chọn Mẫu Thiết Kế</h2>
-        <p>Tùy chỉnh phong cách đá và các hạng mục trang trí cho công trình.</p>
-      </div>
-
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view service-view">
       <div className="selection-panel">
+        <div className="title-group" style={{textAlign: 'center', marginBottom: '2.5rem', marginTop: '160px'}}>
+          <h2 style={{ fontSize: '2.2rem' }}>Chọn Mẫu Thiết Kế</h2>
+          <p style={{ fontSize: '1.1rem' }}>Tùy chỉnh phong cách đá và các hạng mục trang trí cho công trình.</p>
+        </div>
         <section className="asset-group">
           <div className="asset-group-header">
             <h4>1. Chọn Kiểu Thác Nước</h4>
@@ -1059,7 +1058,6 @@ function ServiceView({
           )}
         </section>
       </div>
-
     </motion.div>
   );
 }
@@ -1075,9 +1073,9 @@ function PlanSelectionView({ service, onServiceChange }: {
   ];
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view plan-view nav-offset">
-      <h2 style={{textAlign: 'center', marginBottom: '1.5rem'}}>Chọn Gói Giải Pháp</h2>
-      <p style={{textAlign: 'center', color: 'rgba(255,255,255,0.6)', marginBottom: '2rem'}}>Lựa chọn gói thiết kế phù hợp để hiện thực hóa ý tưởng của bạn.</p>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view plan-view">
+      <h2 style={{textAlign: 'center', marginBottom: '1.5rem', marginTop: '160px', fontSize: '2.2rem'}}>Chọn Gói Giải Pháp</h2>
+      <p style={{textAlign: 'center', color: 'rgba(255,255,255,0.6)', marginBottom: '2rem', fontSize: '1.1rem'}}>Lựa chọn gói thiết kế phù hợp để hiện thực hóa ý tưởng của bạn.</p>
 
       <div className="service-list-premium">
         {services.map(s => (
@@ -1142,9 +1140,9 @@ function SubmitView({
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view submit-view nav-offset">
-      <div className="title-group" style={{textAlign: 'center', marginBottom: '2rem'}}>
-        <h2 style={{ fontSize: '2.5rem' }}>Thông Tin Liên Hệ</h2>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view submit-view">
+      <div className="title-group" style={{textAlign: 'center', marginBottom: '2rem', marginTop: '160px'}}>
+        <h2 style={{ fontSize: '2.2rem' }}>Thông Tin Liên Hệ</h2>
         <p style={{ fontSize: '1.1rem', color: 'var(--accent)', fontWeight: 600, maxWidth: '600px', margin: '0.5rem auto' }}>
           Hệ thống sẽ gửi bản vẽ phác thảo về Zalo và Email của Anh/Chị ngay sau khi hoàn tất.
         </p>
