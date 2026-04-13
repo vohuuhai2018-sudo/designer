@@ -615,6 +615,9 @@ export default function App() {
             onExtraAssetsChange={setExtraAssets}
             onProceed={() => setView('editor')}
             systemContent={systemContent}
+            service={service}
+            note={note}
+            onNoteChange={setNote}
           />
         )}
         {view === 'editor' && (
@@ -797,7 +800,9 @@ function WelcomeView({ onStart, onAdmin }: { onStart: () => void, onAdmin: () =>
 }
 
 function UploadView({ 
-  rawImage, onUpload, extraAssets, onExtraAssetsChange, onProceed, systemContent
+function UploadView({ 
+  rawImage, onUpload, extraAssets, onExtraAssetsChange, onProceed, systemContent,
+  service, note, onNoteChange
 }: { 
   rawImage: string; 
   onUpload: (img: string) => void;
@@ -805,6 +810,9 @@ function UploadView({
   onExtraAssetsChange: (assets: string[]) => void;
   onProceed: () => void;
   systemContent: any;
+  service?: string;
+  note?: string;
+  onNoteChange?: (note: string) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const multiFileRef = useRef<HTMLInputElement>(null);
@@ -842,9 +850,26 @@ function UploadView({
     onExtraAssetsChange(extraAssets.filter((_, i) => i !== index));
   };
 
+  const basicModelUrl = service === 'Gói Cơ bản' && note ? note.match(/\[MẪU ĐÃ CHỌN\]:\s*(http[^\n]+)/)?.[1] : null;
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view upload-view nav-offset">
       <h2 style={{marginTop: '2rem'}}>Tải ảnh hiện trạng công trình</h2>
+      
+      {basicModelUrl && (
+        <div style={{ marginBottom: '25px', display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(226, 177, 112, 0.05)', padding: '15px', borderRadius: '16px', border: '1px solid rgba(226, 177, 112, 0.2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--accent)', fontWeight: 700 }}>
+            <CheckCircle2 size={20} />
+            <span>Mẫu Thiết Kế Bạn Đã Chọn</span>
+          </div>
+          <div style={{ display: 'flex', gap: '15px' }}>
+             <img src={basicModelUrl} style={{ width: '120px', height: '80px', objectFit: 'cover', borderRadius: '8px' }} />
+             <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)', margin: 0, lineHeight: 1.5 }}>
+               💡 <b>Gợi ý:</b> Hãy ráng chụp góc hiện trạng có <b>vị trí và hướng nhìn tương đồng</b> với mẫu này để bề mặt không gian được thiết kế hoàn hảo nhất nhé!
+             </p>
+          </div>
+        </div>
+      )}
       <div className="upload-area" onClick={() => fileRef.current?.click()} style={{ border: preview ? 'none' : '3px dashed rgba(226,177,112,0.4)', borderRadius: '28px', background: '#0f172a' }}>
         {preview ? (
           <div style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -880,48 +905,73 @@ function UploadView({
         </div>
       )}
 
-      {/* NEW SECTION FOR ADDITIONAL ASSETS */}
-      <div className="extra-assets-section-premium">
-        <div className="extra-header-premium">
-          <div className="extra-title-group">
-            <Layers size={26} color="var(--accent)" />
-            <h3>Hình ảnh, video và tài liệu liên quan</h3>
-          </div>
-          <p className="extra-desc-premium">
-            Gửi thêm để KTS hiểu ý bạn hơn: các góc chụp khác, video quay dự án, ảnh phác thảo tay, 
-            ảnh mẫu bạn yêu thích, video bạn mô tả yêu cầu trên giấy...
-          </p>
-        </div>
-
-        <div className="multi-upload-trigger" onClick={() => multiFileRef.current?.click()}>
-          <div className="multi-upload-box-premium">
-            <div className="multi-icon-stack">
-              <ImageIcon size={32} />
-              <Play size={24} />
-              <Folder size={20} />
+      {/* CONDITIONAL SECTION FOR ADDITIONAL ASSETS OR NOTE */}
+      {service === 'Gói Cơ bản' ? (
+        <div className="extra-assets-section-premium" style={{ marginTop: '20px' }}>
+          <div className="extra-header-premium">
+            <div className="extra-title-group">
+              <Layers size={26} color="var(--accent)" />
+              <h3>Bổ sung yêu cầu thiết kế</h3>
             </div>
-            <span>NHẤN ĐỂ CHỌN NHIỀU TÀI LIỆU CÙNG LÚC</span>
+            <p className="extra-desc-premium">
+               Mô tả chi tiết nội dung mà bạn muốn thực hiện để Kiến trúc sư nắm bắt ý tưởng chính xác nhất.
+            </p>
           </div>
+          <textarea 
+            className="luxe-textarea" 
+            placeholder="Ví dụ: tôi có diện tích 8x5m này cần làm hồ cá koi cổ điển đá vân mây, có lối đi rải sỏi, có cây tùng và đèn đá điểm..."
+            value={note ? note.replace(/\[MẪU ĐÃ CHỌN\]:.*?\n/, '') : ''}
+            onChange={(e) => {
+              const modelMatch = note?.match(/\[MẪU ĐÃ CHỌN\]:[^\n]*/);
+              const header = modelMatch ? modelMatch[0] + '\n' : '';
+              if (onNoteChange) onNoteChange(header + e.target.value);
+            }}
+            style={{ width: '100%', height: '120px', background: 'var(--surface)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '16px', marginTop: '15px' }}
+          />
         </div>
-        <input type="file" multiple accept="image/*,video/*" ref={multiFileRef} onChange={handleMultiFiles} hidden />
-
-        {extraAssets.length > 0 && (
-          <div className="extra-preview-grid-premium">
-            {extraAssets.map((asset, idx) => (
-              <div key={idx} className="extra-preview-item" style={{ width: '100px', height: '100px' }}>
-                {asset.startsWith('data:video') ? (
-                  <video src={asset} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <img src={asset} alt={`Extra ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                )}
-                <button className="btn-remove-extra" onClick={(e) => { e.stopPropagation(); removeExtraAsset(idx); }}>
-                  <X size={18} />
-                </button>
-              </div>
-            ))}
+      ) : (
+        <div className="extra-assets-section-premium">
+          <div className="extra-header-premium">
+            <div className="extra-title-group">
+              <Layers size={26} color="var(--accent)" />
+              <h3>Hình ảnh, video và tài liệu liên quan</h3>
+            </div>
+            <p className="extra-desc-premium">
+              Gửi thêm để KTS hiểu ý bạn hơn: các góc chụp khác, video quay dự án, ảnh phác thảo tay, 
+              ảnh mẫu bạn yêu thích, video bạn mô tả yêu cầu trên giấy...
+            </p>
           </div>
-        )}
-      </div>
+
+          <div className="multi-upload-trigger" onClick={() => multiFileRef.current?.click()}>
+            <div className="multi-upload-box-premium">
+              <div className="multi-icon-stack">
+                <ImageIcon size={32} />
+                <Play size={24} />
+                <Folder size={20} />
+              </div>
+              <span>NHẤN ĐỂ CHỌN NHIỀU TÀI LIỆU CÙNG LÚC</span>
+            </div>
+          </div>
+          <input type="file" multiple accept="image/*,video/*" ref={multiFileRef} onChange={handleMultiFiles} hidden />
+
+          {extraAssets.length > 0 && (
+            <div className="extra-preview-grid-premium">
+              {extraAssets.map((asset, idx) => (
+                <div key={idx} className="extra-preview-item" style={{ width: '100px', height: '100px' }}>
+                  {asset.startsWith('data:video') ? (
+                    <video src={asset} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <img src={asset} alt={`Extra ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  )}
+                  <button className="btn-remove-extra" onClick={(e) => { e.stopPropagation(); removeExtraAsset(idx); }}>
+                    <X size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {preview && (
         <button className="btn-primary main-cta" onClick={onProceed} style={{ marginTop: '20px', width: '100%' }}>
