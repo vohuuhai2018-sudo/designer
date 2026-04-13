@@ -243,6 +243,141 @@ button {
   font-weight: 800;
 }
 
+.submit-guidance-card p {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+/* BASIC SELECTION UX */
+.basic-selection-view .selection-panel {
+  padding: 0 16px;
+}
+
+.basic-cat-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.basic-cat-card {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 24px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1.5px solid rgba(255,255,255,0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.basic-cat-card.disabled {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+
+.cat-icon-orb {
+  width: 64px;
+  height: 64px;
+  background: var(--accent);
+  color: var(--primary);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.basic-cat-card h3 {
+  font-size: 1.25rem;
+  text-align: left;
+  flex: 1;
+}
+
+.cat-arrow {
+  color: var(--accent);
+  opacity: 0.3;
+}
+
+.cat-coming-soon {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* FULL WIDTH GALLERY */
+.full-width-gallery {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 2 columns on mobile app */
+  gap: 12px;
+  padding-bottom: 40px;
+}
+
+.gallery-item-luxe {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  aspect-ratio: 1 / 1.2;
+  border: 2px solid transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gallery-item-luxe img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.gallery-item-luxe.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 30px rgba(226, 177, 112, 0.4);
+}
+
+.gallery-item-luxe.active img {
+  transform: scale(1.1);
+}
+
+.gallery-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 15px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.gallery-item-luxe.active .gallery-overlay, .gallery-item-luxe:hover .gallery-overlay {
+  opacity: 1;
+}
+
+.gallery-overlay .check-icon {
+  color: var(--accent);
+  margin-bottom: 8px;
+  transform: translateY(10px);
+  transition: transform 0.3s ease;
+}
+
+.gallery-item-luxe.active .check-icon {
+  transform: translateY(0);
+}
+
+.gallery-overlay span {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05rem;
+  text-align: center;
+}
+
 .submit-guidance-card {
   margin-top: 2rem;
   padding: 24px;

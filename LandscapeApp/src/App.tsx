@@ -59,7 +59,7 @@ function apiFetch(path: string, options?: RequestInit): Promise<Response> {
 }
 
 // --- TYPES ---
-type AppView = 'welcome' | 'upload' | 'editor' | 'service' | 'plan' | 'submit' | 'success' | 'admin' | 'login';
+type AppView = 'welcome' | 'upload' | 'editor' | 'service' | 'plan' | 'submit' | 'success' | 'admin' | 'login' | 'basic_selection';
 type WorkflowBranch = 'manual_design' | 'chatgpt_image';
 
 interface Selection {
@@ -515,7 +515,11 @@ export default function App() {
       if (view === 'service') setViewNotification("Anh/Chị vui lòng hãy chọn một mẫu thiết kế mà mình ưng ý nhất nhé!");
       return;
     }
-    if (view === 'plan') setView('upload');
+    if (view === 'plan') {
+      if (service === 'Gói Cơ bản') setView('basic_selection');
+      else setView('upload');
+    }
+    else if (view === 'basic_selection') setView('upload');
     else if (view === 'upload') setView('editor');
     else if (view === 'editor') setView('service');
     else if (view === 'service') setView('submit');
@@ -524,13 +528,17 @@ export default function App() {
 
   const handleGlobalBack = () => {
     if (view === 'plan') setView('welcome');
-    else if (view === 'upload') setView('plan');
+    else if (view === 'basic_selection') setView('plan');
+    else if (view === 'upload') {
+      if (service === 'Gói Cơ bản') setView('basic_selection');
+      else setView('plan');
+    }
     else if (view === 'editor') setView('upload');
     else if (view === 'service') setView('editor');
     else if (view === 'submit') setView('service');
   };
 
-  const showGlobalNav = ['upload', 'editor', 'service', 'plan', 'submit'].includes(view);
+  const showGlobalNav = ['upload', 'editor', 'service', 'plan', 'submit', 'basic_selection'].includes(view);
 
   return (
     <>
@@ -578,6 +586,16 @@ export default function App() {
               setView('admin');
             }} 
             onBack={() => setView('welcome')} 
+          />
+        )}
+        {view === 'basic_selection' && (
+          <BasicSelectionView 
+            systemContent={systemContent}
+            onSelect={imgUrl => {
+              // Append to note for KTS to see
+              setNote(prev => `[MẪU ĐÃ CHỌN]: ${imgUrl}\n${prev}`);
+              handleGlobalNext();
+            }}
           />
         )}
         {view === 'upload' && (
@@ -1445,7 +1463,99 @@ function ServiceView({
   );
 }
 
-function PlanSelectionView({ service, onServiceChange, systemContent }: {
+function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, onSelect: (url: string) => void }) {
+  const [subStep, setSubStep] = useState<'category' | 'gallery'>('category');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  const categories = [
+    { id: 'ho_co_dien', name: 'HỒ KOI SÂN VƯỜN CỔ ĐIỂN', icon: <Waves size={32} />, active: true },
+    { id: 'ho_hien_dai', name: 'HỒ KOI SÂN VƯỜN HIỆN ĐẠI', icon: <Monitor size={32} />, active: false },
+    { id: 'tuong_da', name: 'TƯỜNG ĐÁ NHÂN TẠO', icon: <Layers size={32} />, active: false }
+  ];
+
+  // Lấy toàn bộ biến thể từ thư viện Hồ Koi (HO)
+  const lib = systemContent.library || ASSETS;
+  const galleryImages: any[] = [];
+  (lib.HO || []).forEach((cat: any) => {
+    (cat.variants || []).forEach((v: any) => {
+      galleryImages.push(v);
+    });
+  });
+
+  const handleImgPick = (url: string) => {
+    setSelectedImage(url);
+    // Tự động chuyển vùng sau 0.8s để user kịp thấy hiệu ứng sáng
+    setTimeout(() => {
+      onSelect(url);
+    }, 800);
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="view basic-selection-view">
+       <div className="selection-panel" style={{ marginTop: '140px' }}>
+          <div className="title-group" style={{ textAlign: 'center', marginBottom: '3rem' }}>
+            <h2 style={{ fontSize: '2.5rem', fontWeight: 900 }}>{subStep === 'category' ? 'Phong Cách Bạn Muốn?' : 'Chọn Mẫu Bạn Ưng Ý Nhất'}</h2>
+            <p style={{ fontSize: '1.2rem', color: 'rgba(255,255,255,0.6)' }}>
+              {subStep === 'category' ? 'Hãy chọn một danh mục để xem các mẫu thiết kế thực tế.' : 'Nhấp vào hình ảnh để chọn mẫu tham khảo cho KTS.'}
+            </p>
+          </div>
+
+          <AnimatePresence mode="wait">
+            {subStep === 'category' ? (
+              <motion.div 
+                key="cats" 
+                initial={{ opacity: 0, scale: 0.95 }} 
+                animate={{ opacity: 1, scale: 1 }} 
+                exit={{ opacity: 0, scale: 1.05 }}
+                className="basic-cat-grid"
+              >
+                {categories.map(cat => (
+                  <button 
+                    key={cat.id} 
+                    className={`basic-cat-card ${!cat.active ? 'disabled' : ''}`}
+                    onClick={() => cat.active && setSubStep('gallery')}
+                  >
+                    <div className="cat-icon-orb">{cat.icon}</div>
+                    <h3>{cat.name}</h3>
+                    {!cat.active && <span className="cat-coming-soon">Sắp ra mắt</span>}
+                    <div className="cat-arrow"><ArrowRight size={24} /></div>
+                  </button>
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="gallery"
+                initial={{ opacity: 0, x: 50 }} 
+                animate={{ opacity: 1, x: 0 }} 
+                exit={{ opacity: 0, x: -50 }}
+                className="basic-gallery-container"
+              >
+                <button className="btn-back-minimal" onClick={() => setSubStep('category')} style={{ marginBottom: '20px', color: 'var(--accent)', fontWeight: 800 }}>
+                  <ChevronLeft size={20} /> QUAY LẠI CHỌN PHONG CÁCH
+                </button>
+                
+                <div className="full-width-gallery">
+                   {galleryImages.map((img, idx) => (
+                     <div 
+                       key={img.id || idx} 
+                       className={`gallery-item-luxe ${selectedImage === img.url ? 'active' : ''}`}
+                       onClick={() => handleImgPick(img.url)}
+                     >
+                       <img src={img.url} alt={img.name} />
+                       <div className="gallery-overlay">
+                          <CheckCircle2 size={40} className="check-icon" />
+                          <span>Mẫu {img.name}</span>
+                       </div>
+                     </div>
+                   ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+       </div>
+    </motion.div>
+  );
+}
   service: string;
   onServiceChange: (s: string) => void;
   systemContent: any;
