@@ -596,6 +596,7 @@ export default function App() {
             onNoteChange={setNote}
             extraAssets={extraAssets}
             onExtraAssetsChange={setExtraAssets}
+            systemContent={systemContent}
           />
         )}
         {view === 'plan' && (
@@ -1112,7 +1113,7 @@ function EditorView({
 }
 
 function ServiceView({
-  selections, onSelectionsChange, note, onNoteChange, extraAssets, onExtraAssetsChange
+  selections, onSelectionsChange, note, onNoteChange, extraAssets, onExtraAssetsChange, systemContent
 }: {
   selections: Selection;
   onSelectionsChange: (s: Selection) => void;
@@ -1120,11 +1121,13 @@ function ServiceView({
   onNoteChange: (n: string) => void;
   extraAssets: string[];
   onExtraAssetsChange: (assets: string[]) => void;
+  systemContent: any;
 }) {
+  const lib = systemContent.library || ASSETS;
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const mediaRef = useRef<HTMLInputElement>(null);
 
-  const selectedCategory = ASSETS.THAC.find(cat => 
+  const selectedCategory = lib.THAC.find(cat => 
     cat.variants?.some(v => v.id === selections.thac)
   );
 
@@ -1189,7 +1192,7 @@ function ServiceView({
                 exit={{ opacity: 0, x: 20 }}
                 className="category-grid"
               >
-                {ASSETS.THAC.map(cat => {
+                {lib.THAC.map(cat => {
                   const isSelectedCat = selectedCategory?.id === cat.id;
                   const hasSelectionGlobal = !!selections.thac;
                   const isLocked = hasSelectionGlobal && !isSelectedCat;
@@ -1232,10 +1235,10 @@ function ServiceView({
                   <button className="btn-back-premium" onClick={() => setActiveCategory(null)}>
                     <ChevronLeft size={16} /> Quay lại chọn kiểu đá
                   </button>
-                  <h5>Mẫu {ASSETS.THAC.find(c => c.id === activeCategory)?.name}</h5>
+                  <h5>Mẫu {lib.THAC.find(c => c.id === activeCategory)?.name}</h5>
                 </div>
                 <div className="category-grid">
-                  {ASSETS.THAC.find(c => c.id === activeCategory)?.variants?.map(v => (
+                  {lib.THAC.find(c => c.id === activeCategory)?.variants?.map(v => (
                     <button 
                       key={v.id} 
                       className={`category-card ${selections.thac === v.id ? 'picked' : ''}`}
@@ -1263,7 +1266,7 @@ function ServiceView({
             <h4>Mẫu Kè Đá</h4>
           </div>
           <div className="checkbox-list">
-            {ASSETS.KE.map(item => (
+            {lib.KE.map(item => (
               <label key={item.id} className={`checkbox-item ${(selections.ke || []).includes(item.id) ? 'active' : ''}`}>
                 <div className="check-box" onClick={() => toggleKe(item.id)}>
                   {(selections.ke || []).includes(item.id) && <CheckCircle2 size={16} />}
@@ -1279,7 +1282,7 @@ function ServiceView({
             <h4>Tiểu Cảnh & Cây Xanh</h4>
           </div>
           <div className="checkbox-list">
-            {ASSETS.CANH.map(item => (
+            {lib.CANH.map(item => (
               <label key={item.id} className={`checkbox-item ${(selections.canh || []).includes(item.id) ? 'active' : ''}`}>
                 <div className="check-box" onClick={() => toggleCanh(item.id)}>
                   {(selections.canh || []).includes(item.id) && <CheckCircle2 size={16} />}
