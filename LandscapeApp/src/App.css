@@ -3260,14 +3260,14 @@ canvas {
 }
 
 .service-title-row-premium h3 {
-  font-size: 1.6rem; /* Much Larger */
+  font-size: 1.85rem; /* Massive */
   font-weight: 950;
   color: #fff;
   margin: 0;
 }
 
 .service-description-premium {
-  font-size: 1.15rem; /* Larger */
+  font-size: 1.3rem; /* Massive */
   color: #cbd5e1;
   line-height: 1.6;
   max-width: 90%;
@@ -3282,7 +3282,7 @@ canvas {
 }
 
 .price-label-premium {
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   color: #94a3b8;
   font-weight: 800;
   text-transform: uppercase;
@@ -3290,10 +3290,10 @@ canvas {
 }
 
 .highlight-price-premium {
-  font-size: 1.8rem; /* BIG PRICE */
+  font-size: 2.2rem; /* ULTRA PRICE */
   font-weight: 950;
   color: var(--accent);
-  text-shadow: 0 0 20px rgba(226, 177, 112, 0.3);
+  text-shadow: 0 0 25px rgba(226, 177, 112, 0.4);
 }
 
 /* Custom Scrollbar for Service View */
