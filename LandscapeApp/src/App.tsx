@@ -256,8 +256,6 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedProjectId, setSubmittedProjectId] = useState<string>('');
 
-  const [submitStatus, setSubmitStatus] = useState('');
-
   // Load projects when entering admin view
   useEffect(() => {
     if (view === 'admin') {
@@ -326,10 +324,8 @@ export default function App() {
   const handleSubmit = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-    setSubmitStatus('Bắt đầu nén dữ liệu...');
 
     // Final compression of annotated image if needed
-    setSubmitStatus('Đang tối ưu hóa hình ảnh...');
     
     const selectedThacVariant = selections.thac 
       ? ASSETS.THAC.flatMap(c => c.variants || []).find(v => v.id === selections.thac)
@@ -355,11 +351,6 @@ export default function App() {
     };
 
     try {
-      setSubmitStatus('Đang xác minh bảo mật...');
-      // Small simulated delay for verification feel
-      await new Promise(r => setTimeout(r, 600));
-      
-      setSubmitStatus('Đang truyền tải dữ liệu...');
       const response = await apiFetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -369,14 +360,12 @@ export default function App() {
       if (!response.ok) throw new Error('Lỗi khi gửi dữ liệu.');
       
       setSubmittedProjectId(projectData.id);
-      setSubmitStatus('Hoàn tất!');
       if (service !== 'Gói Cơ Bản') confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });
       setView('success');
     } catch (error) {
       alert('Không thể gửi dữ liệu. Vui lòng thử lại.');
     } finally {
       setIsSubmitting(false);
-      setSubmitStatus('');
     }
   };
 
@@ -505,9 +494,6 @@ export default function App() {
             annotatedImage={annotatedImage}
             extraAssets={extraAssets}
             onExtraAssetsChange={setExtraAssets}
-            onSubmit={handleSubmit}
-            isSubmitting={isSubmitting}
-            submitStatus={submitStatus}
           />
         )}
         {view === 'success' && (
@@ -743,20 +729,6 @@ function EditorView({
     setIsDrawn(false);
     onAnnotatedChange(canvas.toDataURL('image/png'));
   };
-
-  const canNext = history.length > 1 || note.trim().length > 0;
-
-  const saveAndNext = () => {
-    if (!canNext) {
-      setShowNotification("Anh/Chị vui lòng hãy thực hiện thao tác khoanh vùng trên ảnh hoặc viết mô tả ý tưởng chi tiết để KTS nắm bắt thông tin rõ nhất nhé!");
-      return;
-    }
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    onAnnotatedChange(canvas.toDataURL('image/png'));
-    onNext();
-  };
-
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view editor-view nav-offset">
       <div className="workspace">
@@ -1141,15 +1113,13 @@ function PlanSelectionView({ service, onServiceChange }: {
 }
 
 function SubmitView({
-  customerName, onNameChange, customerPhone, onPhoneChange, customerEmail, onEmailChange, extraAssets, onExtraAssetsChange, onSubmit, isSubmitting, submitStatus
+  customerName, onNameChange, customerPhone, onPhoneChange, customerEmail, onEmailChange, extraAssets, onExtraAssetsChange
 }: {
   customerName: string; onNameChange: (n: string) => void;
   customerPhone: string; onPhoneChange: (p: string) => void;
   customerEmail: string; onEmailChange: (e: string) => void;
   rawImage?: string; annotatedImage?: string;
   extraAssets: string[]; onExtraAssetsChange: (a: string[]) => void;
-  onSubmit: () => void; isSubmitting: boolean;
-  submitStatus: string;
 }) {
   const extraRef = useRef<HTMLInputElement>(null);
 
