@@ -1071,6 +1071,7 @@ function PlanSelectionView({ service, onServiceChange }: {
   service: string;
   onServiceChange: (s: string) => void;
 }) {
+  const [showSamples, setShowSamples] = useState(false);
   const services = [
     { id: 'free', name: 'Gói Miễn phí', desc: 'Giúp bạn phác thảo nhanh ý tưởng', price: 'Miễn phí', icon: <Sparkles size={32} />, color: '#94a3b8' },
     { id: 'basic', name: 'Gói Cơ bản', desc: 'KTS thiết kế cho bạn 1 tấm ảnh đúng yêu cầu', price: '199.000đ', icon: <ImageIcon size={32} />, color: '#e2b170' },
@@ -1089,28 +1090,72 @@ function PlanSelectionView({ service, onServiceChange }: {
             key={s.id}
             className={`service-card-premium ${service === s.name ? 'active' : ''}`}
             onClick={() => onServiceChange(s.name)}
-            style={{ border: service === s.name ? `3px solid ${s.color}` : '1px solid rgba(255,255,255,0.1)' }}
+            style={{ border: service === s.name ? `3.5px solid ${s.color}` : '1.5px solid rgba(255,255,255,0.1)' }}
           >
-            <div className="card-inner-premium">
-              <div className="service-icon-box-premium" style={{ background: s.color }}>{s.icon}</div>
-              <div className="service-content-premium">
-                <div className="service-title-row-premium">
-                  <h3>{s.name}</h3>
+            <div className="card-inner-premium-v2">
+              <div className="service-icon-box-v2" style={{ background: s.color }}>{s.icon}</div>
+              <div className="service-info-v2">
+                <div className="service-header-v2">
+                  <h3 className="service-title-v2">{s.name}</h3>
+                  <div className="service-price-v2">{s.price}</div>
                 </div>
-                <p className="service-description-premium">{s.desc}</p>
-                <div className="service-footer-row-premium">
-                  <div className="price-label-premium">Giá trọn gói:</div>
-                  <div className="highlight-price-premium">{s.price}</div>
-                </div>
+                <p className="service-desc-v2">{s.desc}</p>
               </div>
             </div>
           </button>
         ))}
       </div>
 
-      <div className="plan-hint-bottom">
-        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>* Anh/Chị vui lòng chọn 1 gói để tiếp tục</span>
+      <div style={{ marginTop: '3rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+        <button 
+          className="btn-show-samples"
+          onClick={() => setShowSamples(true)}
+        >
+          <Play size={24} fill="currentColor" />
+          XEM KẾT QUẢ MẪU CỦA CÁC GÓI
+        </button>
+        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '1.1rem', fontWeight: 600 }}>* Vui lòng chọn 1 gói bên trên để tiếp tục</span>
       </div>
+
+      {showSamples && (
+        <div className="samples-modal-overlay">
+          <div className="samples-modal-content">
+            <button className="btn-close-samples" onClick={() => setShowSamples(false)}>
+              <X size={40} />
+            </button>
+            <div className="samples-scroll">
+              <h2 style={{ color: 'var(--accent)', marginBottom: '2rem' }}>Minh Họa Kết Quả Theo Gói</h2>
+              
+              <div className="sample-case">
+                <div className="case-header">1. GÓI MIỄN PHÍ & CƠ BẢN</div>
+                <p className="case-sub">Thiết kế phác thảo nhanh hoặc chuẩn 1 góc nhìn thực tế.</p>
+                <img src="https://images.unsplash.com/photo-1558449028-b53a39d100fc?q=80&w=1200" alt="Sample 1" className="sample-img-large" />
+              </div>
+
+              <div className="sample-case">
+                <div className="case-header">2. GÓI NÂNG CAO (KÈM VIDEO)</div>
+                <p className="case-sub">Thiết kế chuẩn + 1 Video diễn họa 3D xoay góc nhìn.</p>
+                <div className="sample-video-placeholder">
+                  <video autoPlay loop muted playsInline className="sample-img-large">
+                    <source src="https://assets.mixkit.co/videos/preview/mixkit-residential-house-with-a-pool-and-green-landscaping-12270-large.mp4" type="video/mp4" />
+                  </video>
+                </div>
+              </div>
+
+              <div className="sample-case">
+                <div className="case-header">3. GÓI PREMIUM (3D CHUYÊN SÂU)</div>
+                <p className="case-sub">Xuất hồ sơ 3D đầy đủ, Video 4K và phối cảnh toàn công trình.</p>
+                <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=1200" alt="Sample 2" className="sample-img-large" />
+                <div className="sample-video-placeholder" style={{ marginTop: '20px' }}>
+                   <video autoPlay loop muted playsInline className="sample-img-large">
+                    <source src="https://assets.mixkit.co/videos/preview/mixkit-modern-apartment-building-with-green-garden-and-pool-21272-large.mp4" type="video/mp4" />
+                  </video>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
