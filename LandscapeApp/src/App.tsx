@@ -58,7 +58,7 @@ function apiFetch(path: string, options?: RequestInit): Promise<Response> {
 }
 
 // --- TYPES ---
-type AppView = 'welcome' | 'upload' | 'editor' | 'service' | 'plan' | 'submit' | 'success' | 'admin';
+type AppView = 'welcome' | 'upload' | 'editor' | 'service' | 'plan' | 'submit' | 'success' | 'admin' | 'login';
 type WorkflowBranch = 'manual_design' | 'chatgpt_image';
 
 interface Selection {
@@ -246,6 +246,7 @@ const ANNOTATION_COLOR_RULES = [
 // --- MAIN APP ---
 export default function App() {
   const [view, setView] = useState<AppView>('welcome');
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [rawImage, setRawImage] = useState<string>('');
   const [annotatedImage, setAnnotatedImage] = useState<string>('');
   const [selections, setSelections] = useState<Selection>({ ke: [], canh: [] });
@@ -542,7 +543,22 @@ export default function App() {
       <div className={`container ${view === 'admin' ? 'full-width' : ''}`}>
         <AnimatePresence mode="wait">
         {view === 'welcome' && (
-          <WelcomeView onStart={() => setView('plan')} onAdmin={() => setView('admin')} />
+          <WelcomeView 
+            onStart={() => setView('plan')} 
+            onAdmin={() => {
+               if (isAdminAuthenticated) setView('admin');
+               else setView('login' as any);
+            }} 
+          />
+        )}
+        {(view as any) === 'login' && (
+          <LoginView 
+            onSuccess={() => {
+              setIsAdminAuthenticated(true);
+              setView('admin');
+            }} 
+            onBack={() => setView('welcome')} 
+          />
         )}
         {view === 'upload' && (
           <UploadView 
@@ -639,16 +655,83 @@ export default function App() {
   );
 }
 
+  );
+}
+
+// --- LOGIN VIEW ---
+function LoginView({ onSuccess, onBack }: { onSuccess: () => void, onBack: () => void }) {
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState(false);
+
+  const handleLogin = () => {
+    if (pin === '2024') { // Mã PIN mặc định cho anh Hải
+      onSuccess();
+    } else {
+      setError(true);
+      setTimeout(() => setError(false), 500);
+      setPin('');
+    }
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="view login-view">
+      <div className="login-card glass-panel" style={{ padding: '40px', maxWidth: '400px', width: '90%', textAlign: 'center' }}>
+        <ShieldCheck size={48} color="var(--accent)" style={{ marginBottom: '20px' }} />
+        <h2>Xác thực Quản trị viên</h2>
+        <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)', marginBottom: '30px' }}>
+          Mục này chứa tài nguyên và cấu hình hệ thống chuyên môn. Vui lòng nhập mã PIN để tiếp tục.
+        </p>
+        <input 
+          type="password" 
+          value={pin} 
+          onChange={(e) => setPin(e.target.value)}
+          placeholder="Nhập mã PIN..."
+          style={{
+            width: '100%',
+            padding: '16px',
+            borderRadius: '12px',
+            background: 'rgba(255,255,255,0.05)',
+            border: error ? '2px solid #ff4d4f' : '1px solid rgba(255,255,255,0.1)',
+            color: '#fff',
+            fontSize: '18px',
+            textAlign: 'center',
+            letterSpacing: '10px',
+            marginBottom: '20px',
+            transition: 'all 0.3s'
+          }}
+          onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+          autoFocus
+        />
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button className="btn-secondary" style={{ flex: 1 }} onClick={onBack}>Hủy</button>
+          <button className="btn-primary" style={{ flex: 1 }} onClick={handleLogin}>Vào Portal</button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 // --- SUB-VIEWS ---
 
 function WelcomeView({ onStart, onAdmin }: { onStart: () => void, onAdmin: () => void }) {
+  const [clickCount, setClickCount] = useState(0);
+
+  const handleLogoClick = () => {
+    const newCount = clickCount + 1;
+    if (newCount >= 5) {
+      onAdmin();
+      setClickCount(0);
+    } else {
+      setClickCount(newCount);
+      // Reset count after 2s of inactivity
+      setTimeout(() => setClickCount(0), 2000);
+    }
+  };
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view welcome-view">
-      <button className="btn-admin-access" onClick={onAdmin} title="Quản trị hệ thống">
-        <ShieldCheck size={24} />
-      </button>
       <div className="hero-content">
-        <div className="logo-badge">SƠN HẢI</div>
+        <div className="logo-badge" onClick={handleLogoClick} style={{ cursor: 'pointer', userSelect: 'none' }}>SƠN HẢI</div>
         <h1>Kiến Tạo<br/><span className="gradient-text">Không Gian Sống</span></h1>
         <p>Ứng dụng phác thảo cảnh quan chuyên nghiệp. Biến công trình thô thành tuyệt tác chỉ trong vài bước.</p>
         <div className="features-grid">
