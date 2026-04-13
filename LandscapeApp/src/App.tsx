@@ -635,7 +635,11 @@ export default function App() {
             systemContent={systemContent}
             onServiceChange={(s) => {
               setService(s);
-              setView('upload'); // Jump immediately
+              if (s === 'Gói Cơ bản') {
+                setView('basic_selection');
+              } else {
+                setView('upload'); // Jump immediately
+              }
             }} 
           />
         )}
