@@ -35,7 +35,8 @@ import {
   Play,
   Box,
   Loader2,
-  Share2
+  Share2,
+  Waves
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -63,6 +64,7 @@ type WorkflowBranch = 'manual_design' | 'chatgpt_image';
 
 interface Selection {
   thac?: string;
+  ho?: string;
   ke?: string[];
   canh?: string[];
 }
@@ -180,6 +182,16 @@ const ASSETS = {
     { id: 'canh_shade_tree', name: 'Thêm cây bóng mát' },
     { id: 'canh_gravel', name: 'Thêm rải sỏi' },
     { id: 'canh_stepping_stone', name: 'Thêm đá bước dạo' }
+  ],
+  HO: [
+    {
+      id: 'ho_koi_standard',
+      url: 'https://images.unsplash.com/photo-1590424765691-8f3f8902636e?q=80&w=1200',
+      name: 'Hồ Koi tiêu chuẩn',
+      variants: [
+        { id: 'ho_koi_v1', url: 'https://images.unsplash.com/photo-1590424765691-8f3f8902636e?q=80&w=1200', name: 'Mẫu hồ số 01' }
+      ]
+    }
   ]
 };
 
@@ -1125,6 +1137,7 @@ function ServiceView({
 }) {
   const lib = systemContent.library || ASSETS;
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [hoActiveCategory, setHoActiveCategory] = useState<string | null>(null);
   const mediaRef = useRef<HTMLInputElement>(null);
 
   const selectedCategory = lib.THAC.find((cat: any) => 
@@ -1139,6 +1152,20 @@ function ServiceView({
   const handleResetThac = (e: React.MouseEvent) => {
     e.stopPropagation();
     onSelectionsChange({ ...selections, thac: undefined });
+  };
+
+  const selectedHoCategory = (lib.HO || []).find((cat: any) => 
+    cat.variants?.some((v: any) => v.id === selections.ho)
+  );
+
+  const handleHoSelect = (variantId: string) => {
+    onSelectionsChange({ ...selections, ho: variantId });
+    setHoActiveCategory(null);
+  };
+
+  const handleResetHo = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelectionsChange({ ...selections, ho: undefined });
   };
 
   const toggleKe = (id: string) => {
@@ -1263,7 +1290,90 @@ function ServiceView({
 
         <section className="asset-group">
           <div className="asset-group-header">
-            <h4>Mẫu Kè Đá</h4>
+            <h4>2. Chọn Kiểu Hồ Koi (Mẫu hồ)</h4>
+          </div>
+
+          <AnimatePresence mode="wait">
+            {!hoActiveCategory ? (
+              <motion.div 
+                key="ho-cats"
+                initial={{ opacity: 0, x: -20 }} 
+                animate={{ opacity: 1, x: 0 }} 
+                exit={{ opacity: 0, x: 20 }}
+                className="category-grid"
+              >
+                {(lib.HO || []).map((cat: any) => {
+                  const isSelectedCat = selectedHoCategory?.id === cat.id;
+                  const hasSelectionGlobal = !!selections.ho;
+                  const isLocked = hasSelectionGlobal && !isSelectedCat;
+                  const displayImg = isSelectedCat 
+                    ? cat.variants?.find((v: any) => v.id === selections.ho)?.url 
+                    : cat.url;
+
+                  return (
+                    <button 
+                      key={cat.id} 
+                      className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`}
+                      onClick={() => !isLocked && setHoActiveCategory(cat.id)}
+                      disabled={isLocked}
+                    >
+                      <div className="cat-img">
+                        <img src={displayImg} alt={cat.name} />
+                        {isSelectedCat && (
+                          <div className="change-badge" onClick={handleResetHo}>
+                            <RefreshCcw size={12} /> Thay đổi
+                          </div>
+                        )}
+                      </div>
+                      <div className="picked-label-container">
+                        <span>{isSelectedCat ? cat.variants?.find((v: any) => v.id === selections.ho)?.name : cat.name}</span>
+                        {isSelectedCat && <div className="picked-status-mini"><CheckCircle2 size={14} /> Đã chọn</div>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="ho-vars"
+                initial={{ opacity: 0, x: 20 }} 
+                animate={{ opacity: 1, x: 0 }} 
+                exit={{ opacity: 0, x: -20 }}
+                className="variant-selection-inline"
+              >
+                <div className="inline-header">
+                  <button className="btn-back-premium" onClick={() => setHoActiveCategory(null)}>
+                    <ChevronLeft size={16} /> Quay lại chọn kiểu hồ
+                  </button>
+                  <h5>Mẫu {(lib.HO || []).find((c: any) => c.id === hoActiveCategory)?.name}</h5>
+                </div>
+                <div className="category-grid">
+                  {(lib.HO || []).find((c: any) => c.id === hoActiveCategory)?.variants?.map((v: any) => (
+                    <button 
+                      key={v.id} 
+                      className={`category-card ${selections.ho === v.id ? 'picked' : ''}`}
+                      onClick={() => handleHoSelect(v.id)}
+                    >
+                      <div className="cat-img">
+                        <img src={v.url} alt={v.name} />
+                        {selections.ho === v.id && (
+                          <div className="check-badge-inline">
+                            <CheckCircle2 size={16} />
+                          </div>
+                        )}
+                      </div>
+                      <span>{v.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
+
+        <section className="asset-group">
+          <div className="asset-group-header">
+            <h4>3. Mẫu Kè Đá (Bờ hồ)</h4>
           </div>
           <div className="checkbox-list">
             {lib.KE.map((item: any) => (
@@ -1279,7 +1389,7 @@ function ServiceView({
 
         <section className="asset-group">
           <div className="asset-group-header">
-            <h4>Tiểu Cảnh & Cây Xanh</h4>
+            <h4>4. Tiểu Cảnh & Cây Xanh</h4>
           </div>
           <div className="checkbox-list">
             {lib.CANH.map((item: any) => (
@@ -1295,7 +1405,7 @@ function ServiceView({
 
         <section className="asset-group" style={{ marginTop: '20px' }}>
           <div className="asset-group-header">
-            <h4>2. Mô tả ý tưởng chi tiết (Khuyến nghị)</h4>
+            <h4>5. Mô tả ý tưởng chi tiết (Khuyến nghị)</h4>
           </div>
           <div className="customer-request-area-v2">
             <textarea 
@@ -1308,7 +1418,7 @@ function ServiceView({
 
         <section className="asset-group">
           <div className="asset-group-header-stacked">
-            <h4>3. Gửi hình ảnh/video thực tế</h4>
+            <h4>6. Gửi hình ảnh/video thực tế</h4>
             <div className="section-hint">
               Hãy đính kèm video/hình ảnh hiện trạng. <strong>Lưu ý:</strong> Anh/Chị hãy viết thêm yêu cầu cụ thể vào ô <strong>Mô tả chi tiết</strong> bên trên để KTS nắm rõ nhất ý tưởng của mình.
             </div>
@@ -1619,9 +1729,9 @@ function SuccessView({ projectId, service, onReset }: { projectId: string; servi
 function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeedback, onClose }: { 
   systemContent: any, onSystemContentUpdate: (c: any) => void, onSync: () => Promise<boolean>, onFeedback: (msg: string) => void, onClose: () => void 
 }) {
-  const [selectedCat, setSelectedCat] = useState<'THAC' | 'KE' | 'CANH' | 'LOGIC' | 'AI_STUDIO' | 'TIPS' | 'PLANS'>('THAC');
-  const catItems = (selectedCat === 'THAC' || selectedCat === 'KE' || selectedCat === 'CANH') 
-    ? (systemContent.library?.[selectedCat] || ASSETS[selectedCat as keyof typeof ASSETS]) 
+  const [selectedCat, setSelectedCat] = useState<'THAC' | 'KE' | 'CANH' | 'HO' | 'LOGIC' | 'AI_STUDIO' | 'TIPS' | 'PLANS'>('THAC');
+  const catItems = (selectedCat === 'THAC' || selectedCat === 'KE' || selectedCat === 'CANH' || selectedCat === 'HO') 
+    ? (systemContent.library?.[selectedCat] || (ASSETS as any)[selectedCat as keyof typeof ASSETS]) 
     : [];
   
   const replacerRef = useRef<HTMLInputElement>(null);
@@ -1727,6 +1837,7 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
           <button className={selectedCat === 'THAC' ? 'active' : ''} onClick={() => { setSelectedCat('THAC'); setSelectedItem(null); }}><Layers size={18} /> THÁC ĐÁ</button>
           <button className={selectedCat === 'KE' ? 'active' : ''} onClick={() => { setSelectedCat('KE'); setSelectedItem(null); }}><Box size={18} /> KÈ ĐÁ / BỜ</button>
           <button className={selectedCat === 'CANH' ? 'active' : ''} onClick={() => { setSelectedCat('CANH'); setSelectedItem(null); }}><Sparkles size={18} /> CẢNH QUAN</button>
+          <button className={selectedCat === 'HO' ? 'active' : ''} onClick={() => { setSelectedCat('HO'); setSelectedItem(null); }}><Waves size={18} /> MẪU HỒ KOI</button>
         </div>
 
         <div className="sidebar-divider" />
@@ -1959,7 +2070,29 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
           <>
             <div className="manager-header">
               <h3>Quản lý {selectedCat}</h3>
-              <button className="btn-add-asset" onClick={() => onFeedback('Tính năng thêm mẫu chính sẽ được cập nhật.')}>+ Thêm mẫu mới</button>
+              <button className="btn-add-asset" onClick={() => {
+                const newLib = { ...systemContent.library };
+                const currentCat = selectedCat as 'THAC' | 'KE' | 'CANH' | 'HO';
+                const list = [...(newLib[currentCat] || (ASSETS as any)[currentCat])];
+                const newId = `${currentCat.toLowerCase()}_new_${list.length + 1}`;
+                
+                const newItem: any = {
+                  id: newId,
+                  name: `Mẫu mới ${list.length + 1}`,
+                  url: "https://images.unsplash.com/photo-1590059132718-502424533173?q=80&w=1200"
+                };
+
+                if (currentCat === 'THAC' || currentCat === 'HO') {
+                   newItem.variants = [
+                     { id: `${newId}_v1`, name: "Biến thể mặc định", url: newItem.url }
+                   ];
+                }
+
+                list.push(newItem);
+                newLib[currentCat] = list as any;
+                onSystemContentUpdate({ ...systemContent, library: newLib });
+                onFeedback(`Đã thêm mẫu ${newItem.name} vào hệ thống.`);
+              }}>+ Thêm mẫu mới</button>
             </div>
             <div className="asset-grid-manager">
               {catItems.map((item: any) => (
@@ -2050,8 +2183,8 @@ function AdminView({
   useEffect(() => { if (actionFeedback) { const t = setTimeout(() => setActionFeedback(''), 4000); return () => clearTimeout(t); } }, [actionFeedback]);
 
   // --- HELPERS ---
-  const getAssetInfo = (id: string, category: 'THAC' | 'KE' | 'CANH'): { name: string, url: string } | null => {
-    const list = (systemContent.library?.[category] || ASSETS[category]);
+  const getAssetInfo = (id: string, category: 'THAC' | 'KE' | 'CANH' | 'HO'): { name: string, url: string } | null => {
+    const list = (systemContent.library?.[category] || (ASSETS as any)[category]);
     for (const item of list) {
       if (item.id === id) return { name: item.name, url: 'url' in item ? item.url : '' };
       if ('variants' in item && item.variants) {
@@ -2062,7 +2195,7 @@ function AdminView({
     return null;
   };
 
-  const getAssetName = (id: string, category: 'THAC' | 'KE' | 'CANH') => {
+  const getAssetName = (id: string, category: 'THAC' | 'KE' | 'CANH' | 'HO') => {
     const info = getAssetInfo(id, category);
     return info ? info.name : id;
   };
@@ -2225,6 +2358,7 @@ function AdminView({
   const buildSelectionLines = (project: Project) => {
     const lines: string[] = [];
     if (project.selections.thac) lines.push(`- Thác nước: ${getAssetName(project.selections.thac, 'THAC')}`);
+    if (project.selections.ho) lines.push(`- Hồ Koi: ${getAssetName(project.selections.ho, 'HO')}`);
     if (project.selections.ke?.length) lines.push(`- Kè đá: ${project.selections.ke.map(id => getAssetName(id, 'KE')).join(', ')}`);
     if (project.selections.canh?.length) lines.push(`- Cảnh quan: ${project.selections.canh.map(id => getAssetName(id, 'CANH')).join(', ')}`);
     return lines.length > 0 ? lines : ['- Chưa có mẫu chọn cụ thể'];
@@ -2802,6 +2936,12 @@ function AdminView({
                         <span>{getAssetName(id, 'KE')} (Kè đá)</span>
                       </div>
                     ))}
+                    {selectedProject.selections.ho && (
+                      <div className="asset-luxe-pill">
+                        <img src={getAssetInfo(selectedProject.selections.ho, 'HO')?.url} alt="" />
+                        <span>{getAssetName(selectedProject.selections.ho, 'HO')} (Kiểu hồ)</span>
+                      </div>
+                    )}
                     {(selectedProject.selections.canh || []).map(id => (
                       <div key={id} className="asset-luxe-pill">
                         <img src={getAssetInfo(id, 'CANH')?.url} alt="" />
