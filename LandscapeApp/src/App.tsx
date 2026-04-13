@@ -262,65 +262,44 @@ export default function App() {
 
   // --- SYSTEM DYNAMIC CONTENT ---
   const [systemContent, setSystemContent] = useState(() => {
-    const saved = localStorage.getItem('sh_system_content');
-    if (saved) return JSON.parse(saved);
-    return {
+    const defaults = {
       tips: {
         title: "MẸO CHỤP ẢNH",
-        items: [
-          "Bao quát toàn bộ không gian.",
-          "Đứng chính diện, tránh nghiêng.",
-          "Ảnh rõ nét, không rung mờ."
-        ],
+        items: ["Bao quát toàn bộ không gian.", "Đứng chính diện, tránh nghiêng.", "Ảnh rõ nét, không rung mờ."],
         sampleImage: "/assets/sample_angle.jpg"
       },
       plans: [
-        {
-          id: "free",
-          name: "Gói Miễn phí",
-          header: "1. GÓI MIỄN PHÍ",
-          sub: "Phác thảo nhanh ý tưởng sơ bộ (1 tấm hình gọn gàng).",
-          media: [{ type: 'image', url: "https://images.unsplash.com/photo-1598902108854-10e335adac99?q=80&w=1200" }]
-        },
-        {
-          id: "basic",
-          name: "Gói Cơ bản",
-          header: "2. GÓI CƠ BẢN",
-          sub: "KTS thiết kế 1 bản vẽ 3D chuẩn hóa (1 tấm hình chất lượng cao).",
-          media: [{ type: 'image', url: "https://images.unsplash.com/photo-1516455590571-18256e5bb4ff?q=80&w=1200" }]
-        },
-        {
-          id: "advanced",
-          name: "Gói Nâng cao",
-          header: "3. GÓI NÂNG CAO",
-          sub: "1 Bản vẽ thiết kế chuẩn + 1 Video diễn họa 3D sống động.",
-          media: [
-            { type: 'image', url: "https://images.unsplash.com/photo-1613545325278-f24b0cae1224?q=80&w=1200" },
-            { type: 'video', url: "https://assets.mixkit.co/videos/preview/mixkit-residential-house-with-a-pool-and-green-landscaping-12270-large.mp4" }
-          ]
-        },
-        {
-          id: "premium",
-          name: "Gói Premium",
-          header: "4. GÓI PREMIUM (TRỌN BỘ 3D)",
-          sub: "Thiết kế 3D toàn diện, xuất 6 góc nhìn đẹp nhất + 1 Video 4K diễn họa chi tiết.",
-          media: [
-            { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=1" },
-            { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=2" },
-            { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=3" },
-            { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=4" },
-            { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=5" },
-            { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=6" },
-            { type: 'video', url: "https://assets.mixkit.co/videos/preview/mixkit-modern-apartment-building-with-green-garden-and-pool-21272-large.mp4" }
-          ]
-        }
+        { id: "free", name: "Gói Miễn phí", header: "1. GÓI MIỄN PHÍ", sub: "Phác thảo nhanh ý tưởng sơ bộ (1 tấm hình gọn gàng).", media: [{ type: 'image', url: "https://images.unsplash.com/photo-1598902108854-10e335adac99?q=80&w=1200" }] },
+        { id: "basic", name: "Gói Cơ bản", header: "2. GÓI CƠ BẢN", sub: "KTS thiết kế 1 bản vẽ 3D chuẩn hóa (1 tấm hình chất lượng cao).", media: [{ type: 'image', url: "https://images.unsplash.com/photo-1516455590571-18256e5bb4ff?q=80&w=1200" }] },
+        { id: "advanced", name: "Gói Nâng cao", header: "3. GÓI NÂNG CAO", sub: "1 Bản vẽ thiết kế chuẩn + 1 Video diễn họa 3D sống động.", media: [{ type: 'image', url: "https://images.unsplash.com/photo-1613545325278-f24b0cae1224?q=80&w=1200" }, { type: 'video', url: "https://assets.mixkit.co/videos/preview/mixkit-residential-house-with-a-pool-and-green-landscaping-12270-large.mp4" }] },
+        { id: "premium", name: "Gói Premium", header: "4. GÓI PREMIUM (TRỌN BỘ 3D)", sub: "Thiết kế 3D toàn diện, xuất 6 góc nhìn đẹp nhất + 1 Video 4K diễn họa chi tiết.", media: [
+          { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=1" },
+          { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=2" },
+          { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=3" },
+          { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=4" },
+          { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=5" },
+          { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=6" },
+          { type: 'video', url: "https://assets.mixkit.co/videos/preview/mixkit-modern-apartment-building-with-green-garden-and-pool-21272-large.mp4" }
+        ]}
       ],
       library: ASSETS
     };
+    const saved = localStorage.getItem('sh_system_content');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return { ...defaults, ...parsed };
+      } catch(e) { return defaults; }
+    }
+    return defaults;
   });
 
   useEffect(() => {
-    localStorage.setItem('sh_system_content', JSON.stringify(systemContent));
+    try {
+      localStorage.setItem('sh_system_content', JSON.stringify(systemContent));
+    } catch(e) {
+      console.error('Storage full or error:', e);
+    }
   }, [systemContent]);
 
   // Load projects when entering admin view
@@ -1530,8 +1509,9 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onFeedback, on
         onSystemContentUpdate({ ...systemContent, plans: newPlans });
         onFeedback('Đã cập nhật tệp mẫu cho gói dịch vụ.');
       } else if (pendingReplace.type === 'library' && pendingReplace.cat && pendingReplace.itemId) {
-        const newLib = { ...systemContent.library };
-        const catList = [...newLib[pendingReplace.cat as keyof typeof ASSETS]];
+        const currentLib = systemContent.library || ASSETS;
+        const newLib = { ...currentLib };
+        const catList = [...(newLib[pendingReplace.cat as keyof typeof ASSETS] || [])];
         const idx = catList.findIndex((it: any) => it.id === pendingReplace.itemId);
         if (idx !== -1) {
           catList[idx] = { ...catList[idx], url: result };
@@ -1540,8 +1520,9 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onFeedback, on
           onFeedback(`Đã cập nhật ảnh mẫu cho ${catList[idx].name}.`);
         }
       } else if (pendingReplace.type === 'variant' && pendingReplace.cat && pendingReplace.itemId && pendingReplace.variantId) {
-        const newLib = { ...systemContent.library };
-        const catList = [...newLib[pendingReplace.cat as keyof typeof ASSETS]];
+        const currentLib = systemContent.library || ASSETS;
+        const newLib = { ...currentLib };
+        const catList = [...(newLib[pendingReplace.cat as keyof typeof ASSETS] || [])];
         const pIdx = catList.findIndex((it: any) => it.id === pendingReplace.itemId);
         if (pIdx !== -1) {
           const variants = [...(catList[pIdx].variants || [])];
