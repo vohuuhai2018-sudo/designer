@@ -655,9 +655,6 @@ export default function App() {
   );
 }
 
-  );
-}
-
 // --- LOGIN VIEW ---
 function LoginView({ onSuccess, onBack }: { onSuccess: () => void, onBack: () => void }) {
   const [pin, setPin] = useState('');
