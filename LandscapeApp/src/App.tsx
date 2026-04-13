@@ -2567,8 +2567,164 @@ function AdminView({
 
   const buildChatGptPrompt = (project: Project) => {
     const hasNote = !!project.note?.trim();
-    const hasExtraAssets = (project.extraAssets?.length ?? 0) > 0;
+    const isBasic = project.service === 'Gói Cơ bản';
 
+    // Extract model URL and custom description from note (format: "[MẪU ĐÃ CHỌN]: url\ncustom text")
+    const modelMatch = project.note?.match(/\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:\s*(https?:\/\/[^\n]+)/i)
+      ?? project.note?.match(/https?:\/\/[^\s\n]+/);
+    const modelUrl = modelMatch ? modelMatch[1] ?? modelMatch[0] : null;
+    const customNote = project.note?.replace(/\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?/i, '').trim();
+
+    if (isBasic) {
+      // =============================================
+      // NEW MASTER PROMPT — BASIC PACKAGE (Image-to-Image)
+      // =============================================
+      return [
+        'ROLE: Landscape visualization expert (STRICT image-to-image transformation)',
+        '',
+        '====================================================',
+        'OBJECTIVE',
+        '====================================================',
+        '',
+        'Transform the real site (Image 1) into a built landscape design',
+        'inspired by the reference model (Image 2).',
+        '',
+        'IMPORTANT:',
+        '- Image 1 = ONLY base image (camera angle, walls, space must remain EXACT)',
+        '- Image 2 = DESIGN REFERENCE ONLY (style, material, composition language)',
+        '- DO NOT copy layout or scale from Image 2',
+        '',
+        '====================================================',
+        `PROJECT DATA — ${project.customerName} | ${project.service}`,
+        '====================================================',
+        '',
+        ...(customNote ? [
+          'CUSTOMER REQUEST:',
+          `"${customNote}"`,
+          '',
+        ] : []),
+        ...(modelUrl ? [
+          `REFERENCE MODEL (Image 2): ${modelUrl}`,
+          '',
+        ] : []),
+        '====================================================',
+        'CORE DESIGN TRANSLATION (CRITICAL)',
+        '====================================================',
+        '',
+        'From Image 2, extract ONLY:',
+        '',
+        '- Natural layered stone composition',
+        '- Waterfall flowing across multiple small levels',
+        '- Integration between stone + plants',
+        '- High-end garden feeling',
+        '',
+        'DO NOT copy:',
+        '- Full size or full layout',
+        '- Large mountain scale',
+        '',
+        '====================================================',
+        'SITE ADAPTATION (VERY IMPORTANT)',
+        '====================================================',
+        '',
+        'Adapt the design from Image 2 to fit the REAL residential yard in Image 1.',
+        '',
+        '- Scale DOWN all elements to match the real space',
+        '- Keep proportions realistic to this yard size',
+        '- Ensure the design feels buildable and not oversized',
+        '',
+        '====================================================',
+        'MAIN FEATURE — WATERFALL',
+        '====================================================',
+        '',
+        '- Place waterfall at wall corner (like Image 1 geometry)',
+        '- Inspired by layered stone from Image 2',
+        '',
+        'REQUIRED:',
+        '- Compact multi-layer stone waterfall',
+        '- Built into wall (not freestanding mountain)',
+        '- Flow naturally down into pond',
+        '',
+        'FORBIDDEN:',
+        '- DO NOT create large rock mountain',
+        '- DO NOT copy full waterfall from Image 2',
+        '- DO NOT let waterfall occupy entire width',
+        '',
+        '====================================================',
+        'POND',
+        '====================================================',
+        '',
+        '- Natural curved koi pond in front of waterfall',
+        '- Proportional to yard size',
+        '- Clean edge, elegant',
+        '',
+        '====================================================',
+        'LANDSCAPE',
+        '====================================================',
+        '',
+        '- Use planting style from Image 2:',
+        '  - bonsai trees',
+        '  - shrubs',
+        '  - layered greenery',
+        '',
+        'BUT:',
+        '- Reduce density',
+        '- Keep clean, breathable layout',
+        '',
+        '====================================================',
+        'STONE LANGUAGE',
+        '====================================================',
+        '',
+        '- Use stone type from Image 2:',
+        '  - layered, natural, slightly warm tone',
+        '- Apply consistently to waterfall and accents',
+        '',
+        '====================================================',
+        'PATHWAY',
+        '====================================================',
+        '',
+        '- Add stepping stones (inspired by Image 2)',
+        '- Natural spacing',
+        '- Soft garden path, not hard paving',
+        '',
+        '====================================================',
+        'OVERALL HARMONY',
+        '====================================================',
+        '',
+        '- High-end residential garden',
+        '- Balanced composition',
+        '- Not crowded',
+        '- Clear focal point at waterfall',
+        '',
+        '====================================================',
+        'REALISM',
+        '====================================================',
+        '',
+        '- Photorealistic, built project look',
+        '- Correct scale, believable materials',
+        '- NO CGI look',
+        '- NO oversized elements',
+        '- NO copy-paste composition',
+        '',
+        '====================================================',
+        'FINAL INTENT',
+        '====================================================',
+        '',
+        'A realistic garden built on this exact site,',
+        'inspired by the style of Image 2,',
+        'but fully adapted to the real scale and layout of Image 1.',
+        '',
+        '====================================================',
+        'ATTACHED FILES',
+        '====================================================',
+        '',
+        ...buildAiAssetLines(project),
+      ].join('\n');
+    }
+
+    // =============================================
+    // ORIGINAL PROMPT — OTHER PACKAGES (Annotation-based)
+    // =============================================
+    const hasExtraAssets = (project.extraAssets?.length ?? 0) > 0;
     return [
       'Bạn là chuyên gia concept cảnh quan. Nhiệm vụ của bạn là tạo ra 1 hình ảnh phối cảnh photorealistic bám sát dữ liệu thực tế tôi cung cấp — không sáng tạo tuỳ tiện.',
       '',
@@ -2620,6 +2776,7 @@ function AdminView({
       ...buildAiAssetLines(project),
     ].join('\n');
   };
+
 
   const buildChatGptPackageFromPrompt = (project: Project, prompt: string, options?: { absoluteUrls?: boolean }) => {
     const links = getAiUploadAssets(project).map((asset, i) => {
