@@ -899,7 +899,7 @@ function ServiceView({
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view service-view nav-offset">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view service-view" style={{paddingTop: '100px'}}>
       <div className="title-group" style={{textAlign: 'center', marginBottom: '1.5rem'}}>
         <h2>Chọn Mẫu Thiết Kế</h2>
         <p>Tùy chỉnh phong cách đá và các hạng mục trang trí cho công trình.</p>
