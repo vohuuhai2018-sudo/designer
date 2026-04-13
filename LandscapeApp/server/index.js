@@ -215,8 +215,14 @@ const ProjectSchema = new mongoose.Schema({
   finalImage: String,
   aiResults: [String]
 });
-
 const Project = mongoose.model('Project', ProjectSchema);
+
+const SystemContentSchema = new mongoose.Schema({
+  key: { type: String, default: 'main', unique: true },
+  data: mongoose.Schema.Types.Mixed
+}, { timestamps: true });
+const SystemContent = mongoose.model('SystemContent', SystemContentSchema);
+
 global._projectModelReady = true; // Cho phép resumePendingProjects chạy
 
 // Helper: Upload to Cloudinary
@@ -492,6 +498,41 @@ app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
   }
 });
 
+
+// SYSTEM CONTENT API
+app.get('/api/system-content', async (req, res) => {
+  try {
+    const content = await SystemContent.findOne({ key: 'main' });
+    if (!content) return res.json(null);
+    res.json(content.data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/system-content', async (req, res) => {
+  try {
+    const updated = await SystemContent.findOneAndUpdate(
+      { key: 'main' },
+      { $set: { data: req.body } },
+      { upsert: true, new: true }
+    );
+    res.json(updated.data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/upload', async (req, res) => {
+  try {
+    const { file } = req.body;
+    if (!file) return res.status(400).json({ error: 'No file provided' });
+    const url = await uploadToCloudinary(file);
+    res.json({ url });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

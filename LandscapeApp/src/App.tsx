@@ -294,12 +294,35 @@ export default function App() {
     return defaults;
   });
 
+  // --- LOAD SYSTEM CONTENT FROM SERVER ---
   useEffect(() => {
+    apiFetch('/api/system-content')
+      .then(res => res.json())
+      .then(data => {
+        if (data) {
+          setSystemContent((prev: any) => ({ ...prev, ...data }));
+        }
+      })
+      .catch(err => console.error('Failed to load system content:', err));
+  }, []);
+
+  // --- SAVE SYSTEM CONTENT TO SERVER ---
+  useEffect(() => {
+    // 1. Sync to LocalStorage (Immediate cache)
     try {
       localStorage.setItem('sh_system_content', JSON.stringify(systemContent));
-    } catch(e) {
-      console.error('Storage full or error:', e);
-    }
+    } catch(e) { console.warn('LocalStorage limit reached'); }
+
+    // 2. Sync to Server (Persistent global sync)
+    const timeout = setTimeout(() => {
+      apiFetch('/api/system-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(systemContent)
+      }).catch(err => console.error('Failed to sync system content to server:', err));
+    }, 1500); // Throttled sync
+
+    return () => clearTimeout(timeout);
   }, [systemContent]);
 
   // Load projects when entering admin view
@@ -1494,12 +1517,28 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onFeedback, on
     variantId?: string 
   } | null>(null);
 
-  const handleMediaReplace = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaReplace = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !pendingReplace) return;
+    
+    onFeedback('Đang xử lý và tải lên máy chủ...');
     const reader = new FileReader();
-    reader.onload = ev => {
-      const result = ev.target?.result as string;
+    reader.onload = async ev => {
+      let result = ev.target?.result as string;
+      
+      // Upload to Cloudinary if possible
+      try {
+        const uploadRes = await apiFetch('/api/upload', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ file: result })
+        });
+        const uploadData = await uploadRes.json();
+        if (uploadData.url) result = uploadData.url;
+      } catch (err) {
+        console.warn('Backend upload failed, using local result:', err);
+      }
+
       if (pendingReplace.type === 'tip') {
         onSystemContentUpdate({ ...systemContent, tips: { ...systemContent.tips, sampleImage: result } });
         onFeedback('Đã cập nhật ảnh minh họa mẹo chụp.');
