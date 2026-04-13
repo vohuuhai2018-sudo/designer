@@ -321,15 +321,16 @@ button {
   position: relative;
   border-radius: 20px;
   overflow: hidden;
-  aspect-ratio: 16 / 9; /* Cinematic landscape ratio */
   border: 2px solid transparent;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: block;
 }
 
 .gallery-item-luxe img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
+  display: block;
+  object-fit: contain;
   transition: transform 0.5s ease;
 }
 
