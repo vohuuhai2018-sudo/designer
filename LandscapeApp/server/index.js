@@ -123,7 +123,7 @@ mongoose.connect(process.env.MONGO_URI, {
   .then(async () => {
     console.log('✅ [DATABASE] Đã kết nối MongoDB Atlas');
     // Khôi phục các project bị bỏ dở sau khi restart server
-    setTimeout(resumePendingProjects, 5000);
+    // setTimeout(resumePendingProjects, 5000); // ⛔ Tạm dừng khôi phục ChatGPT cũ theo yêu cầu khách hàng
   })
   .catch(err => console.error('MongoDB connection error:', err));
 

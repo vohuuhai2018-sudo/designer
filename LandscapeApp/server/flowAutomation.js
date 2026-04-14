@@ -198,57 +198,69 @@ async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
     for (let i = 0; i < 4; i++) {
         console.log(`[Flow] Đang xử lý nâng cấp 2K cho ảnh ${i+1}/4...`);
         try {
-            // Setup promise chờ file tải xuống (việc nâng cấp tốn khoảng 15-30s)
-            const downloadPromise = page.waitForEvent('download', { timeout: 90000 });
-            
-            // Nhúng mã JS để hover và bấm nút 3 chấm
             await page.evaluate(async (imgIndex) => {
-                const imgs = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
-                const targets = imgs.slice(-4);
-                if (targets[imgIndex]) {
-                    const targetImg = targets[imgIndex];
-                    // Giả lập đưa chuột vào ảnh để menu xuất hiện
-                    targetImg.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-                    targetImg.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-                    await new Promise(r => setTimeout(r, 800));
+                const containers = Array.from(document.querySelectorAll('div[role="listitem"], .image-container, div.relative.group')).filter(el => el.querySelector('img, canvas'));
+                // Lấy 4 item cuối (là 4 kết quả mới nhất)
+                const target = containers.slice(-4)[imgIndex];
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    target.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+                    await new Promise(r => setTimeout(r, 1000));
                     
-                    // Tìm và bấm nút Tùy chọn (3 chấm)
-                    const parent = targetImg.closest('div[role="button"]') || targetImg.parentElement.parentElement;
-                    if (parent) {
-                        const buttons = Array.from(parent.querySelectorAll('button'));
-                        const menuBtn = buttons[buttons.length - 1]; // Nút cuối thường là menu
-                        if (menuBtn) menuBtn.click();
+                    // Tìm nút menu 3 chấm (more_vert)
+                    const menuBtn = target.querySelector('button[aria-label*="More"], button[aria-label*="Thêm"], .more-icon, i:contains("more")');
+                    if (menuBtn) menuBtn.click();
+                    else {
+                        // Thử click vào góc trên bên phải của container nếu không tìm thấy selector cứng
+                        const rect = target.getBoundingClientRect();
+                        const clickEvent = new MouseEvent('click', {
+                            clientX: rect.right - 20,
+                            clientY: rect.top + 20,
+                            bubbles: true
+                        });
+                        target.dispatchEvent(clickEvent);
                     }
                 }
             }, i);
 
-            await delay(2000); // Đợi menu mọc ra
+            await delay(1500);
 
-            // Rà chuột vào chữ "Tải xuống"
-            const btnDownload = page.locator('text=/Tải xuống|Download/i').last();
-            if (await btnDownload.count() > 0) {
-                await btnDownload.hover();
-                await delay(2000); // Đợi menu phụ mọc ra
+            // Bấm vào mục "Tải xuống" để mở menu phụ (Hình 2 anh gửi)
+            const downloadMenu = page.locator('div[role="menuitem"], li').filter({ hasText: /Tải xuống|Download/i }).last();
+            if (await downloadMenu.count() > 0) {
+                await downloadMenu.click();
+                await delay(1000);
+
+                // Setup promise chờ download
+                const downloadPromise = page.waitForEvent('download', { timeout: 120000 });
+
+                // Tìm hàng có chữ "2K" và nút "Nâng cấp" (Hình 2)
+                const row2K = page.locator('div, li').filter({ hasText: /^2K$/ }).last();
+                const upgradeBtn = row2K.locator('button').filter({ hasText: /Nâng cấp|Upgrade/i });
                 
-                // Bấm nút "Nâng cấp" kế bên "2K", hoặc bấm thẳng vào chữ 2K
-                const upscaleBtn = page.locator('button').filter({ hasText: /Nâng cấp/i }).first();
-                if (await upscaleBtn.count() > 0 && await upscaleBtn.isVisible()) {
-                    await upscaleBtn.click();
-                    console.log(`[Flow] Đã bấm nút "Nâng cấp" 2K. Đang chờ quá trình nâng cấp và tải xuống tự động...`);
+                if (await upgradeBtn.count() > 0) {
+                    console.log(`[Flow] Click nút "Nâng cấp" 2K cho ảnh ${i+1}...`);
+                    await upgradeBtn.click();
+                    // Chờ download tự động sau khi nâng cấp xong
+                    const download = await downloadPromise;
+                    pendingDownloads.push(download);
                 } else {
-                    const txt2K = page.locator('text=2K').last();
-                    if (await txt2K.count() > 0) await txt2K.click();
+                    // Nếu đã nâng cấp rồi thì bấm thẳng vào 2K để tải
+                    console.log(`[Flow] Ảnh ${i+1} đã có 2K, tiến hành tải xuống...`);
+                    await row2K.click();
+                    const download = await downloadPromise;
+                    pendingDownloads.push(download);
                 }
-                
-                // Đợi tự động download 
-                const processDownload = await downloadPromise;
-                pendingDownloads.push(processDownload);
-                console.log(`[Flow] Tải xuống thành công ảnh 2K số ${i+1}!`);
-            } else {
-               console.log(`[Flow] Không tìm thấy tuỳ chọn tải xuống cho ảnh ${i+1}.`);
+                console.log(`[Flow] ✅ Đã hoàn thành tác vụ 2K cho ảnh ${i+1}`);
             }
+            
+            // Nhấn Escape để đóng menu cho ảnh tiếp theo
+            await page.keyboard.press('Escape');
+            await delay(500);
+
         } catch (err) {
-            console.log(`[Flow] Bỏ qua lỗi ảnh ${i+1}:`, err.message);
+            console.log(`[Flow] Lỗi khi xử lý ảnh ${i+1}: ${err.message}`);
+            await page.keyboard.press('Escape');
         }
     }
 
