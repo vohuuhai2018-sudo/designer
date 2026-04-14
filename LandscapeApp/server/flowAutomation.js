@@ -67,12 +67,26 @@ async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
         pendingDownloads.push(download);
     });
 
-    // 1. Phải truy cập trang project ID cụ thể của Flow
-    const projectUrl = 'https://labs.google/fx/vi/tools/flow/project/04886b36-e1dc-4244-bd0e-21e750bab491';
-    console.log(`[Flow] Truy cập: ${projectUrl}`);
-    await page.goto(projectUrl, { waitUntil: 'domcontentloaded' });
-    
+    // 1. Phải truy cập trang chủ Flow và tạo Dự án mới do link trực tiếp trả về "Đã xảy ra lỗi"
+    console.log(`[Flow] Truy cập trang chủ Flow...`);
+    await page.goto('https://labs.google/fx/vi/tools/flow', { waitUntil: 'domcontentloaded' });
     await delay(3000);
+
+    // Kích vào tạo dự án mới (hoặc quay lại nếu gặp lỗi)
+    try {
+        const errorBackBtn = page.locator('button:has-text("Quay lại dự án")');
+        if (await errorBackBtn.count() > 0) {
+            await errorBackBtn.click();
+            await delay(2000);
+        }
+        const newProjBtn = page.locator('button, div').filter({ hasText: /Dự án mới|Nouveau projet/i }).last();
+        if (await newProjBtn.count() > 0 && await newProjBtn.isVisible()) {
+            await newProjBtn.click();
+            await delay(3000);
+        }
+    } catch (e) {
+        console.log(`[Flow] Không tìm thấy nút tạo dự án, thử tiếp tục...`);
+    }
 
     // 2. Upload hình ảnh vào Flow
     console.log(`[Flow] Chuẩn bị up hình...`);
