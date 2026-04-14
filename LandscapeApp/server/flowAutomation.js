@@ -204,76 +204,107 @@ async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
             const allBigImages = page.locator('img').filter({ has: page.locator(':scope') });
             const bigImgCount = await allBigImages.count();
             
-            // Lọc ảnh lớn bằng evaluate
-            const imgIndex = await page.evaluate((idx) => {
+            // Lọc ảnh lớn bằng evaluate và lấy full data
+            const imgInfo = await page.evaluate((idx) => {
                 const imgs = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
                 const targets = imgs.slice(-4);
                 if (targets[idx]) {
                     targets[idx].scrollIntoView({ block: 'center' });
-                    // Trả về boundingRect để Playwright hover đúng vị trí
                     const rect = targets[idx].getBoundingClientRect();
-                    return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, w: rect.width, h: rect.height };
+                    return { 
+                        x: rect.x + rect.width / 2, 
+                        y: rect.y + rect.height / 2, 
+                        w: rect.width, 
+                        h: rect.height,
+                        src: targets[idx].src // Bắt trực tiếp full đường dẫn
+                    };
                 }
                 return null;
             }, i);
 
-            if (!imgIndex) {
+            if (!imgInfo) {
                 console.log(`[Flow] Không tìm thấy ảnh ${i+1}, bỏ qua.`);
                 continue;
             }
 
-            // Hover thật vào vị trí ảnh để hiện nút chức năng
-            await page.mouse.move(imgIndex.x, imgIndex.y);
+            console.log(`[Flow] Ảnh ${i+1} Info - w:${imgInfo.w}, h:${imgInfo.h}, src bắt đầu bằng: ${imgInfo.src.substring(0, 40)}...`);
+
+            // --- GIẢI PHÁP TẢI TRỰC TIẾP TỪ SRC BỎ QUA CLICK ---
+            if (imgInfo.src) {
+                try {
+                    const outputPath = path.join(tempDir, `flow_result_${Date.now()}_${i}.png`);
+                    if (imgInfo.src.startsWith('data:image')) {
+                        const content = imgInfo.src.split('base64,')[1];
+                        require('fs').writeFileSync(outputPath, Buffer.from(content, 'base64'));
+                    } else if (imgInfo.src.startsWith('blob:')) {
+                        const base64Data = await page.evaluate(async (blobUrl) => {
+                            const resp = await fetch(blobUrl);
+                            const blob = await resp.blob();
+                            return new Promise((r) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => r(reader.result);
+                                reader.readAsDataURL(blob);
+                            });
+                        }, imgInfo.src);
+                        const content = base64Data.split('base64,')[1];
+                        require('fs').writeFileSync(outputPath, Buffer.from(content, 'base64'));
+                    } else {
+                        // Bất kỳ https hay URL rác gì
+                        const arrayBuffer = await page.evaluate(async (url) => {
+                            const res = await fetch(url);
+                            const buffer = await res.arrayBuffer();
+                            return Array.from(new Uint8Array(buffer));
+                        }, imgInfo.src);
+                        require('fs').writeFileSync(outputPath, Buffer.from(arrayBuffer));
+                    }
+                    
+                    console.log(`[Flow] ✅ Đã tải trực tiếp thành công ảnh ${i+1} (Source Extraction)`);
+
+                    if (typeof onImageReady === 'function') {
+                        await onImageReady(outputPath);
+                        console.log(`[Flow] ✅ Đã upload ảnh ${i+1} lên hệ thống qua luồng Source Extraction!`);
+                    }
+                    processedCount++;
+                    continue; // Xử lý trực tiếp xong thì bỏ dòng click UI bên dưới
+                } catch (e) {
+                    console.log(`[Flow] Tải trực tiếp lỗi (${e.message}), thử backup bằng click UI...`);
+                }
+            }
+
+            // --- GIẢI PHÁP BACKUP BẰNG UI CLICK ---
+            await page.mouse.move(imgInfo.x, imgInfo.y);
             await delay(1500);
 
-            // Tìm nút 3 chấm (tooltip "Khác" hoặc icon more_vert)
-            // Nút này xuất hiện ở góc phải trên của ảnh khi hover
             const moreBtn = page.locator('button[aria-label="Khác"], button:has-text("more_vert")').first();
             if (await moreBtn.count() > 0 && await moreBtn.isVisible()) {
                 await moreBtn.click();
-                console.log(`[Flow] Đã mở menu 3 chấm cho ảnh ${i+1}`);
             } else {
-                // Fallback: click vào góc phải trên của ảnh
-                await page.mouse.click(imgIndex.x + imgIndex.w / 2 - 10, imgIndex.y - imgIndex.h / 2 + 20);
-                console.log(`[Flow] Click fallback cho ảnh ${i+1}`);
+                await page.mouse.click(imgInfo.x + imgInfo.w / 2 - 10, imgInfo.y - imgInfo.h / 2 + 20);
             }
             await delay(1000);
 
-            // Tìm mục "Tải xuống" trong menu
             const dlItem = page.locator('[role="menuitem"]').filter({ hasText: /Tải xuống|Download/i });
             if (await dlItem.count() > 0) {
-                // Hover vào "Tải xuống" để mở submenu
                 await dlItem.first().hover();
                 await delay(1200);
 
-                // Setup download listener trước khi click
                 const downloadPromise = page.waitForEvent('download', { timeout: 60000 });
-
-                // Click mục "1K" (Kích thước gốc) 
                 const item1K = page.locator('[role="menuitem"]').filter({ hasText: '1K' }).first();
                 if (await item1K.count() > 0 && await item1K.isVisible()) {
                     await item1K.click();
-                    console.log(`[Flow] Đã click 1K, đang chờ tải xuống...`);
-                    
                     const download = await downloadPromise;
-                    const outputPath = path.join(tempDir, `flow_result_${Date.now()}_${i}.png`);
+                    const outputPath = path.join(tempDir, `flow_result_ui_${Date.now()}_${i}.png`);
                     await download.saveAs(outputPath);
                     console.log(`[Flow] ✅ Đã tải xong ảnh ${i+1} vào: ${outputPath}`);
                     
-                    // Upload lên hệ thống NGAY LẬP TỨC
                     if (typeof onImageReady === 'function') {
                         await onImageReady(outputPath);
                         console.log(`[Flow] ✅ Đã upload ảnh ${i+1} lên hệ thống!`);
                     }
                     processedCount++;
-                } else {
-                    console.log(`[Flow] Không thấy mục 1K, bỏ qua ảnh ${i+1}`);
                 }
-            } else {
-                console.log(`[Flow] Không thấy menu Tải xuống, bỏ qua ảnh ${i+1}`);
             }
 
-            // Đóng menu
             await page.keyboard.press('Escape');
             await delay(800);
 
