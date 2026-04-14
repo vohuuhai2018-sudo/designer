@@ -567,7 +567,11 @@ export default function App() {
               onClick={handleGlobalNext} 
               className={`btn-nav-glass next-accent ${canGoNext() ? 'ready' : 'locked'}`}
             >
-              {view === 'submit' ? <><Sparkles size={18} /> Tạo thiết kế</> : <>Tiếp theo <ArrowRight size={20} /></>}
+              {view === 'submit' ? (
+                <>{isSubmitting ? <span className="generating-spinner" style={{width:18, height:18, borderTopColor: 'currentColor'}} /> : <Sparkles size={18} />} {isSubmitting ? 'ĐANG GỬI...' : 'Tạo thiết kế'}</>
+              ) : (
+                <>Tiếp theo <ArrowRight size={20} /></>
+              )}
             </button>
           </div>
         </div>
@@ -670,6 +674,7 @@ export default function App() {
             customerEmail={customerEmail}
             onEmailChange={setCustomerEmail}
             onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
           />
         )}
         {view === 'success' && (
@@ -1746,12 +1751,13 @@ function PlanSelectionView({ service, onServiceChange, systemContent }: {
 }
 
 function SubmitView({
-  customerName, onNameChange, customerPhone, onPhoneChange, customerEmail, onEmailChange, onSubmit
+  customerName, onNameChange, customerPhone, onPhoneChange, customerEmail, onEmailChange, onSubmit, isSubmitting
 }: {
   customerName: string; onNameChange: (n: string) => void;
   customerPhone: string; onPhoneChange: (p: string) => void;
   customerEmail: string; onEmailChange: (e: string) => void;
   onSubmit: () => void;
+  isSubmitting?: boolean;
 }) {
   const isReady = customerName.trim().length > 0 && customerPhone.trim().length > 0;
 
@@ -1798,8 +1804,8 @@ function SubmitView({
 
       <motion.button
         onClick={onSubmit}
-        disabled={!isReady}
-        animate={isReady ? { scale: [1, 1.03, 1], boxShadow: ['0 0 0px rgba(226,177,112,0)', '0 0 30px rgba(226,177,112,0.6)', '0 0 20px rgba(226,177,112,0.3)'] } : {}}
+        disabled={!isReady || isSubmitting}
+        animate={isSubmitting ? { scale: [1, 0.98, 1], opacity: [1, 0.7, 1] } : (isReady ? { scale: [1, 1.03, 1], boxShadow: ['0 0 0px rgba(226,177,112,0)', '0 0 30px rgba(226,177,112,0.6)', '0 0 20px rgba(226,177,112,0.3)'] } : {})}
         transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
         style={{
           marginTop: '36px',
@@ -1812,7 +1818,7 @@ function SubmitView({
           fontSize: '1.2rem',
           fontWeight: 900,
           letterSpacing: '0.05em',
-          cursor: isReady ? 'pointer' : 'not-allowed',
+          cursor: (isReady && !isSubmitting) ? 'pointer' : 'not-allowed',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -1820,7 +1826,11 @@ function SubmitView({
           transition: 'background 0.4s, color 0.4s',
         }}
       >
-        <Sparkles size={22} /> TẠO THIẾT KẾ NGAY
+        {isSubmitting ? (
+          <><span className="generating-spinner" style={{width: 22, height: 22, borderTopColor: 'currentColor'}} /> ĐANG GỬI TÀI LIỆU LÊN TRẠM VẼ AI...</>
+        ) : (
+          <><Sparkles size={22} /> TẠO THIẾT KẾ NGAY</>
+        )}
       </motion.button>
 
       {!isReady && (
