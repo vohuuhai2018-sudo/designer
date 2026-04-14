@@ -120,35 +120,30 @@ async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
         console.log(`[Flow] Cảnh báo: Quá thời gian chờ diện diện thumbnail, tiếp tục thực thi...`);
     }
 
-    // 3. Nạp tài nguyên vào ô lệnh (Explicit Attach)
-    console.log(`[Flow] Tiến hành gắn 2 tài nguyên vừa up vào ô lệnh...`);
+    // --- BƯỚC 1: Click dấu + và chọn hình hiện trạng (Image 1) ---
+    console.log(`[Flow] Bước 1: Mở bảng và chọn Ảnh Hiện Trạng...`);
     try {
         const addBtn = page.locator('button').filter({ hasText: 'add' }).last();
         if (await addBtn.count() > 0) {
             await addBtn.click();
+            await delay(1500); // Đợi panel mở hẳn
             
-            // Chờ bảng tài nguyên nạp đủ ít nhất 2 ảnh (bỏ qua avatar)
-            const assetContainerSelector = 'div[role="dialog"], div[role="menu"], .asset-panel, body';
-            await page.waitForFunction(() => {
-                const imgs = Array.from(document.querySelectorAll('img')).filter(img => !img.src.includes('avatar') && img.width > 20);
-                return imgs.length >= 2;
-            }, { timeout: 15000 });
-
-            const assetImgs = page.locator('img').filter({ hasNotText: /avatar/i });
-            console.log(`[Flow] Đã thấy tài nguyên nạp sẵn. Click chọn siêu tốc 2 ảnh...`);
-            
-            // Click lần lượt 2 ảnh đầu tiên trong danh sách (thường là mới nhất)
-            await assetImgs.nth(0).click();
-            await delay(500);
-            await assetImgs.nth(1).click();
-            await delay(500);
-            
-            // Đóng bảng để text prompt không bị đè
-            await page.keyboard.press('Escape');
-            await delay(300);
+            // Tìm mục "image.png" đầu tiên trong danh sách bên trái (như hình 4 anh gửi)
+            const firstAssetItem = page.locator('div[role="dialog"] div, div[role="menu"] div, .asset-panel div')
+                .filter({ hasText: 'image.png' })
+                .first();
+                
+            if (await firstAssetItem.count() > 0) {
+                await firstAssetItem.click();
+                console.log(`[Flow] Đã hoàn thành Bước 1: Chọn Ảnh hiện trạng vào Prompt.`);
+                await delay(1000);
+            } else {
+                // Sơ cua nếu không thấy chữ image.png thì click cái img đầu tiên
+                await page.locator('div[role="dialog"] img, .asset-panel img').first().click();
+            }
         }
     } catch (e) {
-        console.log(`[Flow] Thao tác gắn ảnh chậm hoặc lỗi: ${e.message}. Vẫn tiếp tục điền Prompt...`);
+        console.log(`[Flow] Lỗi Bước 1: ${e.message}`);
     }
 
     // 4. Nhập Prompt
