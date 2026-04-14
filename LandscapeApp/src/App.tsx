@@ -2827,11 +2827,11 @@ function AdminView({
     return new URL(url, window.location.origin).toString();
   };
 
-  const handleRunChatGptAutomation = async () => {
+  const handleRunAiAutomation = async () => {
     if (!selectedProject || isGeneratingAi) return;
     try {
       setIsGeneratingAi(true);
-      setAiStudioStatus('Đang mở ChatGPT, nạp tài nguyên và gửi prompt tạo ảnh...');
+      setAiStudioStatus('Đang mở Google Flow, nạp 2 hình tài nguyên và gửi cấu hình...');
       const assets = getAiUploadAssets(selectedProject).map(asset => ({ ...asset, url: toAbsoluteAssetUrl(asset.url) }));
       let prompt = aiGeneratedPrompt.trim();
       if (!prompt) prompt = buildChatGptPrompt(selectedProject);
@@ -2839,9 +2839,9 @@ function AdminView({
       const payload = { prompt, assets };
       const updatedProject = await onGenerateAiImage(selectedProject.id, payload);
       setSelectedProject(updatedProject);
-      setAiStudioStatus('Đã nhận ảnh từ ChatGPT và nạp lại vào gói tài nguyên AI.');
+      setAiStudioStatus(`Đã nhận ảnh kết quả từ Google Flow và nạp lại vào CSDL hệ thống.`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Không thể chạy tự động ChatGPT.';
+      const message = error instanceof Error ? error.message : 'Không thể chạy tự động Flow.';
       setAiStudioStatus(message);
     } finally {
       setIsGeneratingAi(false);
@@ -2976,19 +2976,10 @@ function AdminView({
           </div>
 
           <div className="studio-automation-box">
-             <button className="btn-open-chatgpt" onClick={handleRunChatGptAutomation} disabled={isGeneratingAi}>
-               <Bot size={22} /> {isGeneratingAi ? 'Đang gửi Prompt...' : 'Khởi chạy ChatGPT'}
+             <button className="btn-open-chatgpt" onClick={handleRunAiAutomation} disabled={isGeneratingAi}>
+               <Bot size={22} /> {isGeneratingAi ? 'Đang gửi Lệnh vẽ lên Flow...' : 'Khởi chạy tự động Google Flow'}
              </button>
              {aiStudioStatus && <div className="studio-status-inline">{aiStudioStatus}</div>}
-             <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-               <strong style={{ color: '#f59e0b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                 <AlertTriangle size={14} /> Khắc phục lỗi tải ảnh ChatGPT:
-               </strong>
-               <p style={{ color: '#fcd34d', fontSize: '0.8rem', marginTop: '6px', lineHeight: '1.4' }}>
-                 Nếu ChatGPT hiển thị báo lỗi màu đỏ <em>"Tối đa 0 lần tải lên..."</em>, nguyên nhân do anh đang dùng nhánh <strong>DALL-E GPT</strong> (Nó không cho phép gửi file).<br/>
-                 👉 Hãy mở giao diện ChatGPT, chuyển về <strong>GPT-4o</strong> (mặc định), sau đó tải lại ảnh. GPT-4o sẽ phân tích ảnh và tự động điều khiển DALL-E vẽ kết quả.
-               </p>
-             </div>
           </div>
         </aside>
 

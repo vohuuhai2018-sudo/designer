@@ -471,7 +471,6 @@ app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
     let firstUrl = null;
     let uploadCount = 0;
 
-    // Callback: mỗi khi một ảnh tải xong thì upload + push vào DB ngay
     const onImageReady = async (outputPath) => {
       try {
         const url = await uploadToCloudinary(outputPath);
@@ -492,7 +491,7 @@ app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
       }
     };
 
-    const automationResult = await runChatGptAutomation({ prompt: resolvedPrompt, assets, onImageReady });
+    const automationResult = await runFlowAutomation({ prompt: resolvedPrompt, assets, onImageReady });
 
     const updated = await Project.findOneAndUpdate(
       { id: req.params.id },

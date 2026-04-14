@@ -60,61 +60,67 @@ async function downloadAssetToFile(asset, targetDir, index) {
   return { filePath, mimeType: response.headers.get('content-type') || 'image/png' };
 }
 
-async function runFlowVariant(page, prompt, filePaths, tempDir, variantNumber, onImageReady) {
+async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
   try {
-    // 1. Phải truy cập trang New Project của Flow
-    await page.goto('https://labs.google/fx/vi/tools/flow', { waitUntil: 'domcontentloaded' });
-    
-    // Bấm nút "Dự án mới" (hoặc + icon)
-    console.log(`[Flow - Tab ${variantNumber}] Bắt đầu Dự án mới...`);
-    const newProjectBtn = page.locator('button:has-text("Dự án mới"), button[aria-label="Tạo dự án mới"]').first();
-    if (await newProjectBtn.count() > 0 && await newProjectBtn.isVisible()) {
-        await newProjectBtn.click();
-    }
+    const pendingDownloads = [];
+    page.on('download', download => {
+        pendingDownloads.push(download);
+    });
+
+    // 1. Phải truy cập trang project ID cụ thể của Flow
+    const projectUrl = 'https://labs.google/fx/vi/tools/flow/project/04886b36-e1dc-4244-bd0e-21e750bab491';
+    console.log(`[Flow] Truy cập: ${projectUrl}`);
+    await page.goto(projectUrl, { waitUntil: 'domcontentloaded' });
     
     await delay(3000);
 
     // 2. Upload hình ảnh vào Flow
-    console.log(`[Flow - Tab ${variantNumber}] Chuẩn bị up hình...`);
-    
-    // Tìm nút [+] upload bên trái ô nhập
-    const addBtn = page.locator('button').filter({ hasText: 'add' }).last(); 
-    if (await addBtn.count() > 0) {
-        // Đôi khi có thể phải dùng page.locator('[aria-label="Thêm thành phần"]') ...
-        try {
+    console.log(`[Flow] Chuẩn bị up hình...`);
+    // Thường upload nút nằm dưới cùng, Flow layout thay đổi
+    const fileInput = page.locator('input[type="file"]').first();
+    if (await fileInput.count() > 0) {
+        await fileInput.setInputFiles(filePaths);
+        await delay(3000);
+    } else {
+        const addBtn = page.locator('button').filter({ hasText: 'add' }).last(); 
+        if (await addBtn.count() > 0) {
             await addBtn.click();
             await delay(1000);
-            
-            // Flow dùng input type=file ẩn
             const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 10000 });
             await page.locator('button:has-text("Tải hình ảnh lên")').first().click();
             const fileChooser = await fileChooserPromise;
             await fileChooser.setFiles(filePaths);
-            await delay(3000); // Chờ ảnh load
-        } catch (e) {
-            console.log(`[Flow - Tab ${variantNumber}] Gặp lỗi khi dùng UI bấm tải lên, thử dùng hidden input...`);
-            const fileInput = page.locator('input[type="file"]').first();
-            if (await fileInput.count() > 0) {
-                await fileInput.setInputFiles(filePaths);
-                await delay(3000);
-            }
-        }
-    } else {
-        // Dự phòng
-        const fileInput = page.locator('input[type="file"]').first();
-        if (await fileInput.count() > 0) {
-            await fileInput.setInputFiles(filePaths);
-            await delay(3000);
+            await delay(3000); 
         }
     }
 
     // 3. Nhập Prompt
-    console.log(`[Flow - Tab ${variantNumber}] Đang gửi Prompt...`);
+    console.log(`[Flow] Đang gửi Prompt...`);
     const promptBox = page.locator('textarea, [contenteditable="true"], div[role="textbox"]').first();
     await promptBox.click();
     await promptBox.fill(prompt);
+    await delay(1000);
     
-    // 4. Bấm Gửi (Nút mũi tên phải / enter)
+    // 4. Mở cài đặt (chọn x4 ảnh)
+    console.log(`[Flow] Cấu hình tạo 4 ảnh...`);
+    try {
+        const configBtn = page.locator('button').filter({ hasText: /Nano Banana|x/ }).first();
+        if (await configBtn.count() > 0) {
+            await configBtn.click();
+            await delay(1000);
+            // Bấm chọn x4
+            const x4Btn = page.locator('button').filter({ hasText: /^x4$/ }).first();
+            if (await x4Btn.count() > 0) {
+                await x4Btn.click();
+                await delay(500);
+            }
+            await promptBox.click(); // close popup
+        }
+    } catch (e) {
+        console.log(`[Flow] Bỏ qua lỗi chọn ảnh x4.`);
+    }
+
+    // 5. Bấm Gửi
     const sendBtn = page.locator('button:has-text("arrow_forward"), button[aria-label*="Gửi"], button[aria-label*="Send"], button[aria-label*="Tạo"]').first();
     if (await sendBtn.count() > 0 && await sendBtn.isVisible()) {
         await sendBtn.click();
@@ -122,61 +128,68 @@ async function runFlowVariant(page, prompt, filePaths, tempDir, variantNumber, o
         await page.keyboard.press('Enter');
     }
 
-    console.log(`[Flow - Tab ${variantNumber}] Đang chờ Google Flow sinh ảnh...`);
+    console.log(`[Flow] Đang chờ Google Flow sinh 4 kết quả ảnh... (Thời gian đợi có thể lên tới 2-3 phút)`);
 
-    // 5. Chờ kết quả
-    // Flow tải ảnh vào canvas hoặc img card. Ta chờ thẻ ảnh xuất hiện, trừ ảnh thumbnail mình up.
+    // 6. Chờ kết quả (Chờ tới khi có thêm ít nhất 4 ảnh so với lúc đầu)
     await page.waitForFunction((numUploads) => {
-        const images = Array.from(document.querySelectorAll('img, canvas'));
-        return images.length > numUploads + 1; // Nhiều hơn số lượng ảnh đã up + logo
-    }, filePaths.length, { timeout: 180000 }); // Chờ tối đa 3 phút
+        const images = Array.from(document.querySelectorAll('img, canvas')).filter(img => img.width > 200 && !img.src.includes('avatar'));
+        return images.length >= numUploads + 4; 
+    }, filePaths.length, { timeout: 240000 }); 
 
-    await delay(5000);
+    await delay(8000);
 
-    // 6. Lấy kết quả lưu xuống
-    console.log(`[Flow - Tab ${variantNumber}] Lấy hình ảnh từ Flow...`);
-    const outputPath = path.join(tempDir, `flow_result_${Date.now()}_tab${variantNumber}.png`);
-
-    // Lấy link ảnh từ src (thường là blob) hoặc chụp màn hình canvas tuỳ cơ chế của Flow
+    // 7. Click Download 4 ảnh
+    console.log(`[Flow] Xác định được các ảnh mới, tiến hành lấy ảnh về...`);
+    
     await page.evaluate(async () => {
-        // Tìm img được tạo ra (bỏ qua các thẻ avatar)
         const images = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
-        if (images.length === 0) throw new Error('Không tìm thấy thẻ ảnh trả về của Flow.');
-        
-        const targetImg = images[images.length - 1]; // Lấy ảnh cuối cùng (mới nhất)
-        const src = targetImg.src;
-        
-        const a = document.createElement('a');
-        if (src.startsWith('blob:')) {
-            a.href = src;
-        } else {
-            const res = await fetch(src);
-            const blob = await res.blob();
-            a.href = window.URL.createObjectURL(blob);
+        if (images.length === 0) return;
+        const targets = images.slice(-4);
+        for (let i = 0; i < targets.length; i++) {
+            const targetImg = targets[i];
+            const src = targetImg.src;
+            const a = document.createElement('a');
+            a.download = `flow_result_${i+1}.png`; 
+            if (src.startsWith('blob:')) {
+                a.href = src;
+            } else {
+                try {
+                    const res = await fetch(src);
+                    const blob = await res.blob();
+                    a.href = window.URL.createObjectURL(blob);
+                } catch(e) { continue; }
+            }
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            await new Promise(r => setTimeout(r, 1000));
         }
-        a.download = 'flow_result.png';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
     });
 
-    const [downloadHandle] = await Promise.all([
-        page.waitForEvent('download', { timeout: 15000 }),
-    ]);
-    await downloadHandle.saveAs(outputPath);
+    console.log(`[Flow] Đã đẩy lệnh lưu ảnh, đang chờ trình duyệt tải xuống...`);
+    await delay(10000); // Wait for downloads to buffer
 
-    console.log(`[Flow - Tab ${variantNumber}] Đã tiếp nhận và tải ảnh thành công!`);
-    
-    if (typeof onImageReady === 'function') {
-      await onImageReady(outputPath);
+    const finalOutputPaths = [];
+    for (let i = 0; i < pendingDownloads.length; i++) {
+        // Chỉ lưu 4 download cuối cùng nếu có nhiều hơn
+        if (pendingDownloads.length > 4 && i < pendingDownloads.length - 4) continue;
+
+        const outputPath = path.join(tempDir, `flow_result_${Date.now()}_${i}.png`);
+        await pendingDownloads[i].saveAs(outputPath);
+        finalOutputPaths.push(outputPath);
+
+        if (typeof onImageReady === 'function') {
+            await onImageReady(outputPath);
+        }
     }
-    
+
+    console.log(`[Flow] Đã tiếp nhận và tải ${finalOutputPaths.length} ảnh thành công!`);
     await page.close().catch(() => null);
-    return outputPath;
+    return finalOutputPaths;
   } catch (error) {
-    console.error(`[Flow - Tab ${variantNumber}] Lỗi:`, error);
+    console.error(`[Flow] Lỗi:`, error);
     await page.close().catch(() => null);
-    return null;
+    return [];
   }
 }
 
@@ -200,25 +213,19 @@ async function runFlowAutomation({ prompt, assets, onImageReady }) {
       args: ['--disable-blink-features=AutomationControlled']
     });
 
-    let outputPaths = [];
     const filePaths = inputFiles.map(file => file.filePath);
-    const defaultPage = browser.pages()[0];
+    const defaultPage = browser.pages()[0] || await browser.newPage();
 
-    // Chạy 2 biến thể song song cho Flow
-    const promises = [1, 2].map(async (variantNumber) => {
-      console.log(`[AUTO-FLOW] Đang khởi động tiến trình #${variantNumber}...`);
-      const targetPage = variantNumber === 1 && defaultPage ? defaultPage : await browser.newPage();
-      
-      const result = await runFlowVariant(targetPage, prompt, filePaths, tempDir, variantNumber, onImageReady);
-      if (result) outputPaths.push(result);
-    });
+    console.log(`[AUTO-FLOW] Đang khởi động Google Labs Flow...`);
+    
+    const outputPaths = await runFlowVariant(defaultPage, prompt, filePaths, tempDir, onImageReady);
 
-    await Promise.allSettled(promises);
-
-    console.log(`[AUTO-FLOW] Hoàn tất. Lấy được ${outputPaths.length}/2 ảnh.`);
-    return { outputPaths, chatUrl: 'https://labs.google/fx/vi/tools/flow' };
+    console.log(`[AUTO-FLOW] Hoàn tất. Lấy được ${outputPaths.length}/4 ảnh.`);
+    return { outputPaths, chatUrl: 'https://labs.google/fx/vi/tools/flow/project/04886b36-e1dc-4244-bd0e-21e750bab491' };
   } finally {
     if (browser) {
+      // Giữ khoảng thời gian nhỏ trước khi tắt để đảm bảo onImageReady xử lý xong (nước cuối)
+      await delay(3000);
       await browser.close().catch(() => null);
     }
     await Promise.all(inputFiles.map(file => fs.unlink(file.filePath).catch(() => null)));
