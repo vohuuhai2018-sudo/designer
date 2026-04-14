@@ -3024,7 +3024,7 @@ function AdminView({
 
           <section className="studio-result-center">
             <div className="prompt-header-row" style={{ justifyContent: 'space-between', marginBottom: '16px' }}>
-              <div className="prompt-title"><ImageIcon size={24} /> <h3>KẾT QUẢ AI DESIGN (DALL-E 3)</h3></div>
+              <div className="prompt-title"><ImageIcon size={24} /> <h3>KẾT QUẢ AI DESIGN (GOOGLE FLOW)</h3></div>
               {aiResultImages.length > 0 && (
                  <button 
                     className="btn-luxe-admin outline" 
@@ -3042,7 +3042,7 @@ function AdminView({
             </div>
             {aiResultImages.length === 0 ? (
               <div className="ai-result-empty">
-                Chưa có ảnh kết quả. Sau khi ChatGPT tạo xong, hãy tải ảnh lên nhánh "AI Results" của dự án để hiển thị ở đây.
+                Chưa có ảnh kết quả. Sau khi Google Flow tạo xong, hệ thống sẽ tự động tải lên và hiển thị ở đây.
               </div>
             ) : (
               <div className="ai-result-grid">
