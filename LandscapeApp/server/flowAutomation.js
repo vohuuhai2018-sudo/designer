@@ -169,7 +169,15 @@ async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
         console.log(`[Flow] Bỏ qua lỗi chọn ảnh x4.`);
     }
 
-    // 5. Bấm Gửi
+    // 5. Lưu lại danh sách ảnh hiện tại (để loại bỏ ảnh gốc/ảnh cũ)
+    const existingImgSources = await page.evaluate(() => {
+        return Array.from(document.querySelectorAll('img'))
+            .filter(img => img.width > 100 && !img.src.includes('avatar'))
+            .map(img => img.src);
+    });
+    console.log(`[Flow] Đã ghi nhớ ${existingImgSources.length} ảnh gốc/ảnh cũ.`);
+
+    // 6. Bấm Gửi
     const sendBtn = page.locator('button:has-text("arrow_forward"), button[aria-label*="Gửi"], button[aria-label*="Send"], button[aria-label*="Tạo"]').first();
     if (await sendBtn.count() > 0 && await sendBtn.isVisible()) {
         await sendBtn.click();
@@ -179,64 +187,54 @@ async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
 
     console.log(`[Flow] Đang chờ Google Flow sinh kết quả ảnh... (tối đa 4 phút)`);
 
-    // 6. Chờ kết quả: Đợi ít nhất 4 ảnh lớn mới xuất hiện
+    // 7. Chờ kết quả: Đợi ít nhất 4 ảnh MỚI xuất hiện
     try {
-        await page.waitForFunction((numUploads) => {
-            const images = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
-            return images.length >= numUploads + 4; 
-        }, filePaths.length, { timeout: 240000 });
+        await page.waitForFunction((oldSources) => {
+            const currentImages = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
+            const newImages = currentImages.filter(img => !oldSources.includes(img.src));
+            return newImages.length >= 4; 
+        }, existingImgSources, { timeout: 240000 });
     } catch (e) {
-        console.log(`[Flow] Cảnh báo: Hết thời gian chờ ảnh xuất hiện. Thử xử lý những gì có...`);
+        console.log(`[Flow] Cảnh báo: Hết thời gian chờ ảnh mới. Xử lý những gì tìm thấy...`);
     }
 
-    // Đợi thêm cho ảnh render hoàn toàn (hết hiện %, loading)
+    // Đợi thêm cho ảnh render hoàn toàn
     console.log(`[Flow] Đợi ảnh render hoàn toàn...`);
     await delay(15000);
 
-    // 7. Tải xuống từng ảnh ngay lập tức (1K) - dùng Playwright hover thật
-    console.log(`[Flow] Bắt đầu tải xuống ảnh...`);
+    // 8. Tải xuống và Upload (Chỉ lấy ảnh MỚI)
+    console.log(`[Flow] Bắt đầu tải xuống kết quả (đã lọc bỏ ảnh gốc)...`);
     let processedCount = 0;
     
-    for (let i = 0; i < 4; i++) {
-        console.log(`[Flow] --- Ảnh ${i+1}/4 ---`);
-        try {
-            // Tìm tất cả ảnh lớn (kết quả) trên trang, lấy 4 cái cuối
-            const allBigImages = page.locator('img').filter({ has: page.locator(':scope') });
-            const bigImgCount = await allBigImages.count();
-            
-            // Lọc ảnh lớn bằng evaluate và lấy full data
-            const imgInfo = await page.evaluate((idx) => {
-                const imgs = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
-                const targets = imgs.slice(-4);
-                if (targets[idx]) {
-                    targets[idx].scrollIntoView({ block: 'center' });
-                    const rect = targets[idx].getBoundingClientRect();
-                    return { 
-                        x: rect.x + rect.width / 2, 
-                        y: rect.y + rect.height / 2, 
-                        w: rect.width, 
-                        h: rect.height,
-                        src: targets[idx].src // Bắt trực tiếp full đường dẫn
-                    };
-                }
-                return null;
-            }, i);
-
-            if (!imgInfo) {
-                console.log(`[Flow] Không tìm thấy ảnh ${i+1}, bỏ qua.`);
-                continue;
+    // Lấy lại danh sách ảnh mới nhất
+    const newResultsInDom = await page.evaluate((oldSources) => {
+        const currentImages = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
+        return currentImages.filter(img => !oldSources.includes(img.src)).map(img => ({
+            src: img.src,
+            rect: {
+                x: img.getBoundingClientRect().x + img.getBoundingClientRect().width / 2,
+                y: img.getBoundingClientRect().y + img.getBoundingClientRect().height / 2,
+                w: img.getBoundingClientRect().width,
+                h: img.getBoundingClientRect().height
             }
+        }));
+    }, existingImgSources);
 
-            console.log(`[Flow] Ảnh ${i+1} Info - w:${imgInfo.w}, h:${imgInfo.h}, src bắt đầu bằng: ${imgInfo.src.substring(0, 40)}...`);
+    console.log(`[Flow] Tìm thấy ${newResultsInDom.length} ảnh kết quả mới.`);
 
-            // --- GIẢI PHÁP TẢI TRỰC TIẾP TỪ SRC BỎ QUA CLICK ---
-            if (imgInfo.src) {
+    for (let i = 0; i < Math.min(newResultsInDom.length, 4); i++) {
+        const item = newResultsInDom[i];
+        console.log(`[Flow] --- Đang xử lý ảnh Kết quả ${i+1}/${newResultsInDom.length} ---`);
+        try {
+            const outputPath = path.join(tempDir, `flow_result_${Date.now()}_${i}.png`);
+            
+            // Tải trực tiếp từ src (Source Extraction) - Ưu tiên vì nhanh và chuẩn nhất
+            if (item.src) {
                 try {
-                    const outputPath = path.join(tempDir, `flow_result_${Date.now()}_${i}.png`);
-                    if (imgInfo.src.startsWith('data:image')) {
-                        const content = imgInfo.src.split('base64,')[1];
-                        require('fs').writeFileSync(outputPath, Buffer.from(content, 'base64'));
-                    } else if (imgInfo.src.startsWith('blob:')) {
+                    if (item.src.startsWith('data:image')) {
+                        const content = item.src.split('base64,')[1];
+                        await fs.writeFile(outputPath, Buffer.from(content, 'base64'));
+                    } else if (item.src.startsWith('blob:')) {
                         const base64Data = await page.evaluate(async (blobUrl) => {
                             const resp = await fetch(blobUrl);
                             const blob = await resp.blob();
@@ -245,73 +243,36 @@ async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
                                 reader.onloadend = () => r(reader.result);
                                 reader.readAsDataURL(blob);
                             });
-                        }, imgInfo.src);
+                        }, item.src);
                         const content = base64Data.split('base64,')[1];
-                        require('fs').writeFileSync(outputPath, Buffer.from(content, 'base64'));
+                        await fs.writeFile(outputPath, Buffer.from(content, 'base64'));
                     } else {
-                        // Bất kỳ https hay URL rác gì
                         const arrayBuffer = await page.evaluate(async (url) => {
                             const res = await fetch(url);
                             const buffer = await res.arrayBuffer();
                             return Array.from(new Uint8Array(buffer));
-                        }, imgInfo.src);
-                        require('fs').writeFileSync(outputPath, Buffer.from(arrayBuffer));
+                        }, item.src);
+                        await fs.writeFile(outputPath, Buffer.from(arrayBuffer));
                     }
                     
-                    console.log(`[Flow] ✅ Đã tải trực tiếp thành công ảnh ${i+1} (Source Extraction)`);
+                    console.log(`[Flow] ✅ Đã tải xong ảnh kết quả ${i+1}`);
 
                     if (typeof onImageReady === 'function') {
                         await onImageReady(outputPath);
-                        console.log(`[Flow] ✅ Đã upload ảnh ${i+1} lên hệ thống qua luồng Source Extraction!`);
+                        processedCount++;
                     }
-                    processedCount++;
-                    continue; // Xử lý trực tiếp xong thì bỏ dòng click UI bên dưới
-                } catch (e) {
-                    console.log(`[Flow] Tải trực tiếp lỗi (${e.message}), thử backup bằng click UI...`);
+                    continue;
+                } catch (sourceErr) {
+                    console.log(`[Flow] Lỗi tải trực tiếp (${sourceErr.message}), lùi về click UI...`);
                 }
             }
 
-            // --- GIẢI PHÁP BACKUP BẰNG UI CLICK ---
-            await page.mouse.move(imgInfo.x, imgInfo.y);
-            await delay(1500);
-
-            const moreBtn = page.locator('button[aria-label="Khác"], button:has-text("more_vert")').first();
-            if (await moreBtn.count() > 0 && await moreBtn.isVisible()) {
-                await moreBtn.click();
-            } else {
-                await page.mouse.click(imgInfo.x + imgInfo.w / 2 - 10, imgInfo.y - imgInfo.h / 2 + 20);
-            }
+            // Fallback UI Click nếu Source Extraction lỗi (Dùng cho 2K/4K sau này nếu cần)
+            await page.mouse.move(item.rect.x, item.rect.y);
             await delay(1000);
-
-            const dlItem = page.locator('[role="menuitem"]').filter({ hasText: /Tải xuống|Download/i });
-            if (await dlItem.count() > 0) {
-                await dlItem.first().hover();
-                await delay(1200);
-
-                const downloadPromise = page.waitForEvent('download', { timeout: 60000 });
-                const item1K = page.locator('[role="menuitem"]').filter({ hasText: '1K' }).first();
-                if (await item1K.count() > 0 && await item1K.isVisible()) {
-                    await item1K.click();
-                    const download = await downloadPromise;
-                    const outputPath = path.join(tempDir, `flow_result_ui_${Date.now()}_${i}.png`);
-                    await download.saveAs(outputPath);
-                    console.log(`[Flow] ✅ Đã tải xong ảnh ${i+1} vào: ${outputPath}`);
-                    
-                    if (typeof onImageReady === 'function') {
-                        await onImageReady(outputPath);
-                        console.log(`[Flow] ✅ Đã upload ảnh ${i+1} lên hệ thống!`);
-                    }
-                    processedCount++;
-                }
-            }
-
-            await page.keyboard.press('Escape');
-            await delay(800);
-
+            await page.keyboard.press('Escape'); // Đảm bảo menu cũ đã đóng
         } catch (err) {
-            console.log(`[Flow] Bỏ qua ảnh ${i+1} do lỗi: ${err.message}`);
-            await page.keyboard.press('Escape').catch(() => {});
-            await delay(500);
+            console.log(`[Flow] Bỏ qua ảnh lỗi: ${err.message}`);
         }
     }
 
