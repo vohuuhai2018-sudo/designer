@@ -120,14 +120,53 @@ async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
         console.log(`[Flow] Cảnh báo: Quá thời gian chờ diện diện thumbnail, tiếp tục thực thi...`);
     }
 
-    // 3. Nhập Prompt
+    // 3. Nạp tài nguyên vào ô lệnh (Explicit Attach)
+    console.log(`[Flow] Tiến hành gắn 2 tài nguyên vừa up vào ô lệnh...`);
+    try {
+        const addBtn = page.locator('button').filter({ hasText: 'add' }).last();
+        if (await addBtn.count() > 0) {
+            await addBtn.click();
+            await delay(2000); // Đợi panel mở ra
+            
+            // Tìm các ảnh trong panel tài nguyên. Thường là các thẻ img trong div có role="dialog" hoặc tương tự
+            // Ta click vào 2 cái đầu tiên (mới nhất vừa up)
+            const assetImgs = page.locator('div[role="dialog"] img, div[role="menu"] img, .asset-panel img').filter({ hasNotText: /avatar/i });
+            const count = await assetImgs.count();
+            if (count >= 2) {
+                console.log(`[Flow] Đã thấy ${count} ảnh trong kho. Đang nạp Ảnh 1 và Ảnh 2...`);
+                // Click ảnh 1
+                await assetImgs.nth(0).click();
+                await delay(1000);
+                // Click ảnh 2
+                await assetImgs.nth(1).click();
+                await delay(1000);
+            } else {
+                // Thử selector rộng hơn nếu không tìm thấy
+                const recentImgs = page.locator('img').filter({ hasNotText: /avatar/i });
+                // Giả sử 2 ảnh vừa up nằm ở vị trí đầu tiên/cuối cùng tuỳ UI. 
+                // Thường Flow hiện Recent lên đầu. Click 2 phát.
+                await recentImgs.nth(0).click();
+                await delay(800);
+                await recentImgs.nth(1).click();
+                await delay(800);
+            }
+            
+            // Đóng panel bằng cách nhấn Escape hoặc click ra ngoài (textarea)
+            await page.keyboard.press('Escape');
+            await delay(500);
+        }
+    } catch (e) {
+        console.log(`[Flow] Gặp khó khăn khi gắn tài nguyên thủ công, thử tiếp tục với prompt...`);
+    }
+
+    // 4. Nhập Prompt
     console.log(`[Flow] Đang gửi Prompt...`);
     const promptBox = page.locator('textarea, [contenteditable="true"], div[role="textbox"]').first();
     await promptBox.click();
     await promptBox.fill(prompt);
     await delay(1000);
     
-    // 4. Mở cài đặt (chọn x4 ảnh)
+    // 5. Mở cài đặt (chọn x4 ảnh)
     console.log(`[Flow] Cấu hình tạo 4 ảnh...`);
     try {
         const configBtn = page.locator('button').filter({ hasText: /Nano Banana|x/ }).first();
