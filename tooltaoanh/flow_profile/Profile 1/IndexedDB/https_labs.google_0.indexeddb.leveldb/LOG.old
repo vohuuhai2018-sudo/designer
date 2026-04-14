@@ -1,13 +1,14 @@
-2026/04/14-15:57:14.225 8578 Reusing MANIFEST D:\4. DỰ ÁN SƠN HẢI\1. WEB\APP VẼ\tooltaoanh\flow_profile\Profile 1\IndexedDB\https_labs.google_0.indexeddb.leveldb/MANIFEST-000001
-2026/04/14-15:57:14.225 8578 Recovering log #113
-2026/04/14-15:57:14.225 8578 Reusing old log D:\4. DỰ ÁN SƠN HẢI\1. WEB\APP VẼ\tooltaoanh\flow_profile\Profile 1\IndexedDB\https_labs.google_0.indexeddb.leveldb/000113.log 
-2026/04/14-15:57:14.243 6bd8 Level-0 table #118: started
-2026/04/14-15:57:14.247 6bd8 Level-0 table #118: 1517 bytes OK
-2026/04/14-15:57:14.249 6bd8 Delete type=0 #113
-2026/04/14-15:57:14.250 8578 Manual compaction at level-0 from '\x00+\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00,\x00\x00\x00' @ 0 : 0; will stop at '\x00+\x00\x00\x05' @ 1648 : 1
-2026/04/14-15:57:14.250 8578 Compacting 1@0 + 1@1 files
-2026/04/14-15:57:14.252 8578 Generated table #119@0: 189 keys, 3893 bytes
-2026/04/14-15:57:14.252 8578 Compacted 1@0 + 1@1 files => 3893 bytes
-2026/04/14-15:57:14.254 8578 compacted to: files[ 0 1 1 0 0 0 0 ]
-2026/04/14-15:57:14.254 8578 Delete type=2 #118
-2026/04/14-15:57:14.254 8578 Manual compaction at level-0 from '\x00+\x00\x00\x05' @ 1648 : 1 .. '\x00,\x00\x00\x00' @ 0 : 0; will stop at (end)
+2026/04/14-23:13:58.658 78f8 Reusing MANIFEST D:\4. DỰ ÁN SƠN HẢI\1. WEB\APP VẼ\tooltaoanh\flow_profile\Profile 1\IndexedDB\https_labs.google_0.indexeddb.leveldb/MANIFEST-000001
+2026/04/14-23:13:58.658 78f8 Recovering log #205
+2026/04/14-23:13:58.658 78f8 Reusing old log D:\4. DỰ ÁN SƠN HẢI\1. WEB\APP VẼ\tooltaoanh\flow_profile\Profile 1\IndexedDB\https_labs.google_0.indexeddb.leveldb/000205.log 
+2026/04/14-23:13:58.659 78f8 Delete type=2 #204
+2026/04/14-23:13:58.675 88a8 Level-0 table #210: started
+2026/04/14-23:13:58.677 88a8 Level-0 table #210: 1186 bytes OK
+2026/04/14-23:13:58.679 88a8 Delete type=0 #205
+2026/04/14-23:13:58.680 3490 Manual compaction at level-0 from '\x00U\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00V\x00\x00\x00' @ 0 : 0; will stop at '\x00U\x00\x00\x05' @ 2950 : 1
+2026/04/14-23:13:58.680 3490 Compacting 1@0 + 1@1 files
+2026/04/14-23:13:58.683 3490 Generated table #211@0: 190 keys, 3904 bytes
+2026/04/14-23:13:58.683 3490 Compacted 1@0 + 1@1 files => 3904 bytes
+2026/04/14-23:13:58.685 3490 compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/04/14-23:13:58.685 3490 Delete type=2 #210
+2026/04/14-23:13:58.685 3490 Manual compaction at level-0 from '\x00U\x00\x00\x05' @ 2950 : 1 .. '\x00V\x00\x00\x00' @ 0 : 0; will stop at (end)

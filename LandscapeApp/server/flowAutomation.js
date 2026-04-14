@@ -84,68 +84,47 @@ async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
     } catch (e) {
         console.log(`[Flow] Không tìm thấy nút tạo dự án, thử tiếp tục...`);
     }
+ 
+    // 2. Nạp ảnh bằng phương thức Paste (Dán) để hiển thị như Hình 2
+    console.log(`[Flow] Bắt đầu nạp ${filePaths.length} ảnh bằng phương thức Paste...`);
+    const promptBox = page.locator('textarea, [contenteditable="true"], div[role="textbox"]').first();
+    await promptBox.click();
 
-    // 2. Upload hình ảnh vào Flow
-    console.log(`[Flow] Chuẩn bị up hình...`);
-    const fileInput = page.locator('input[type="file"]').first();
-    if (await fileInput.count() > 0) {
-        await fileInput.setInputFiles(filePaths);
-    } else {
-        const addBtn = page.locator('button').filter({ hasText: 'add' }).last(); 
-        if (await addBtn.count() > 0) {
-            await addBtn.click();
-            await delay(1000);
-            const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 10000 });
-            await page.locator('button:has-text("Tải hình ảnh lên")').first().click();
-            const fileChooser = await fileChooserPromise;
-            await fileChooser.setFiles(filePaths);
-        }
-    }
-    console.log(`[Flow] Bắt đầu nhận diện chờ ${filePaths.length} ảnh tải lên hoàn tất...`);
-    // Chờ màn hình xuất hiện đủ 2 cái ảnh thumbnail nhỏ xinh trong ô Prompt
-    try {
-        await page.waitForFunction((expected) => {
-            // Tìm tất cả các thẻ img (trừ thẻ avatar của tài khoản Google)
-            // Thumbnail thường nhỏ, không phải ảnh to đùng ở giữa màn hình
-            const imgs = Array.from(document.querySelectorAll('img')).filter(img => !img.src.includes('avatar'));
-            const thumbnails = imgs.filter(img => img.width > 10 && img.width < 250);
-            return thumbnails.length >= expected;
-        }, filePaths.length, { timeout: 60000 });
-        console.log(`[Flow] Tuyệt vời! Đã thấy đủ ${filePaths.length} ảnh thumbnail nhỏ hiển thị.`);
-        await delay(2000); // Đợi UI lắng đọng thêm 1 chút cho chắc ăn
-    } catch (e) {
-        console.log(`[Flow] Cảnh báo: Quá thời gian chờ diện diện thumbnail, tiếp tục thực thi...`);
-    }
-
-    // --- BƯỚC 1: Click dấu + và chọn hình hiện trạng (Image 1) ---
-    console.log(`[Flow] Bước 1: Mở bảng và chọn Ảnh Hiện Trạng...`);
-    try {
-        const addBtn = page.locator('button').filter({ hasText: 'add' }).last();
-        if (await addBtn.count() > 0) {
-            await addBtn.click();
-            await delay(1500); // Đợi panel mở hẳn
+    for (let i = 0; i < filePaths.length; i++) {
+        console.log(`[Flow] Đang dán ảnh ${i + 1}/${filePaths.length}...`);
+        const imageBuffer = await require('fs/promises').readFile(filePaths[i]);
+        const base64Image = imageBuffer.toString('base64');
+        
+        await page.evaluate(async ({ base64, index }) => {
+            const resp = await fetch(`data:image/png;base64,${base64}`);
+            const blob = await resp.blob();
+            const file = new File([blob], `image_${index}.png`, { type: 'image/png' });
             
-            // Tìm mục "image.png" đầu tiên trong danh sách bên trái (như hình 4 anh gửi)
-            const firstAssetItem = page.locator('div[role="dialog"] div, div[role="menu"] div, .asset-panel div')
-                .filter({ hasText: 'image.png' })
-                .first();
-                
-            if (await firstAssetItem.count() > 0) {
-                await firstAssetItem.click();
-                console.log(`[Flow] Đã hoàn thành Bước 1: Chọn Ảnh hiện trạng vào Prompt.`);
-                await delay(1000);
-            } else {
-                // Sơ cua nếu không thấy chữ image.png thì click cái img đầu tiên
-                await page.locator('div[role="dialog"] img, .asset-panel img').first().click();
-            }
-        }
-    } catch (e) {
-        console.log(`[Flow] Lỗi Bước 1: ${e.message}`);
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            
+            const target = document.querySelector('textarea, [contenteditable="true"], div[role="textbox"]');
+            const pasteEvent = new ClipboardEvent('paste', {
+                clipboardData: dataTransfer,
+                bubbles: true,
+                cancelable: true
+            });
+            target.dispatchEvent(pasteEvent);
+        }, { base64: base64Image, index: i });
+        
+        await delay(3000); // Đợi Google nhận diện từng ảnh sau khi dán
     }
+
+    console.log(`[Flow] Chờ Google xử lý đồng bộ ảnh (10 giây)...`);
+    await delay(10000);
+
+    // --- BƯỚC 1: Click dấu + và chọn hình tham khảo nếu cần (Double Check) ---
+    // Ghi chú: Kỹ thuật Paste thường đã tự gắn ảnh vào Prompt rồi, 
+    // nhưng nếu cần mở Asset Panel để kiểm tra thì vẫn giữ lại logic này.
+    console.log(`[Flow] Dán ảnh xong, chuyển sang nhập Prompt...`);
 
     // 4. Nhập Prompt
     console.log(`[Flow] Đang gửi Prompt...`);
-    const promptBox = page.locator('textarea, [contenteditable="true"], div[role="textbox"]').first();
     await promptBox.click();
     await promptBox.fill(prompt);
     await delay(1000);
@@ -306,6 +285,7 @@ async function runFlowAutomation({ prompt, assets, onImageReady }) {
       headless: false,
       viewport: { width: 1440, height: 900 },
       acceptDownloads: true,
+      permissions: ['clipboard-read', 'clipboard-write'],
       args: ['--disable-blink-features=AutomationControlled']
     });
 
