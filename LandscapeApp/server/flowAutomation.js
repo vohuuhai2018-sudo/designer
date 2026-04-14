@@ -192,65 +192,84 @@ async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
 
     await delay(10000);
 
-    // 7. Loop qua 4 ảnh và tải về bản 1K (Kích thước gốc)
-    console.log(`[Flow] Bắt đầu tải xuống 4 ảnh kết quả (bản 1K)...`);
+    // 7. Theo dõi và tải xuống ảnh 4K ngay khi có thể
+    console.log(`[Flow] Bắt đầu rà soát và Nâng cấp 4K cho từng ảnh...`);
+    
+    // Đếm số lượng ảnh đã xử lý thành công
+    let processedCount = 0;
     
     for (let i = 0; i < 4; i++) {
-        console.log(`[Flow] Đang tải ảnh ${i+1}/4...`);
+        console.log(`[Flow] Đang xử lý ảnh thứ ${i+1}...`);
         try {
             await page.evaluate(async (imgIndex) => {
-                // Tìm container chứa ảnh
-                const containers = Array.from(document.querySelectorAll('div[role="listitem"], .image-container, div.relative.group')).filter(el => el.querySelector('img, canvas'));
+                const containers = Array.from(document.querySelectorAll('div[role="listitem"], .image-container, div.relative.group')).filter(el => {
+                    const img = el.querySelector('img, canvas');
+                    return img && img.width > 100;
+                });
+                
                 const target = containers.slice(-4)[imgIndex];
                 if (target) {
                     target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    // Di chuột vào để hiện nút chức năng
                     target.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-                    await new Promise(r => setTimeout(r, 800));
+                    await new Promise(r => setTimeout(r, 1000));
                     
-                    // Tìm nút 3 chấm (more_vert) - Thường là nút button cuối cùng trong cùng level với ảnh
-                    const buttons = Array.from(target.querySelectorAll('button'));
-                    const menuBtn = buttons.find(b => b.innerText.includes('more') || b.getAttribute('aria-label')?.includes('More') || b.getAttribute('aria-label')?.includes('Thêm'));
+                    // Tìm nút 3 chấm (trong ảnh anh gửi hiện chữ "Khác" khi rê vào)
+                    const menuBtn = target.querySelector('button[aria-label*="Khác"], button[aria-label*="More"], button[aria-label*="Thêm"]');
                     if (menuBtn) {
                         menuBtn.click();
                     } else {
-                        // Cấu fallback: click vào vùng chứa icon 3 chấm nếu không tìm thấy nút chuẩn
-                        const rect = target.getBoundingClientRect();
-                        document.elementFromPoint(rect.right - 20, rect.top + 20)?.click();
+                        // Tìm theo icon hoặc vị trí nếu không thấy label
+                        const allBtns = Array.from(target.querySelectorAll('button'));
+                        const lastBtn = allBtns[allBtns.length - 1];
+                        if (lastBtn) lastBtn.click();
                     }
                 }
             }, i);
 
-            await delay(1200);
+            await delay(1500);
 
-            // Tìm và click "Tải xuống"
+            // Click vào mục Tải xuống
             const downloadMenu = page.locator('div[role="menuitem"], li').filter({ hasText: /Tải xuống|Download/i }).last();
             if (await downloadMenu.count() > 0) {
                 await downloadMenu.click();
-                await delay(800);
+                await delay(1200);
 
-                // Chờ sự kiện tải xuống
-                const downloadPromise = page.waitForEvent('download', { timeout: 30000 });
+                // Setup promise chờ download bản 4K (Nâng cấp)
+                const downloadPromise = page.waitForEvent('download', { timeout: 150000 });
 
-                // Click chọn "1K" (Kích thước gốc)
-                const btn1K = page.locator('div[role="menuitem"], li, button').filter({ hasText: /^1K$/i }).first();
-                if (await btn1K.count() > 0) {
-                    await btn1K.click();
+                // Tìm hàng 4K và nhấn nút "Nâng cấp" (Hình anh gửi)
+                const row4K = page.locator('div, li').filter({ hasText: /^4K$/i }).last();
+                const upgradeBtn = row4K.locator('button').filter({ hasText: /Nâng cấp|Upgrade/i });
+                
+                if (await upgradeBtn.count() > 0) {
+                    console.log(`[Flow] Đang tiến hành Nâng cấp 4K cho ảnh ${i+1}...`);
+                    await upgradeBtn.click();
                     const download = await downloadPromise;
                     pendingDownloads.push(download);
-                    console.log(`[Flow] ✅ Đã tải xong bản 1K cho ảnh ${i+1}`);
+                    console.log(`[Flow] ✅ Đã tải xong bản 4K của ảnh ${i+1}`);
+                    processedCount++;
+                } else {
+                    // Nếu không thấy 4K nâng cấp, tải bản 1K tạm thời để không bị trống
+                    console.log(`[Flow] Không thấy nút 4K, tải bản gốc (1K)...`);
+                    const btn1K = page.locator('div[role="menuitem"], li').filter({ hasText: /^1K$/i }).first();
+                    if (await btn1K.count() > 0) {
+                        await btn1K.click();
+                        const download = await downloadPromise;
+                        pendingDownloads.push(download);
+                        processedCount++;
+                    }
                 }
             }
             
-            // Đóng menu nếu còn sót
             await page.keyboard.press('Escape');
-            await delay(500);
+            await delay(800);
 
         } catch (err) {
-            console.log(`[Flow] Lỗi tải ảnh ${i+1}: ${err.message}`);
+            console.log(`[Flow] Bỏ qua ảnh ${i+1} do lỗi: ${err.message}`);
             await page.keyboard.press('Escape');
         }
     }
+    console.log(`[Flow] Hoàn tất quá trình xử lý. Tổng cộng: ${processedCount}/4 ảnh thành công.`);
 
     console.log(`[Flow] Đã đẩy lệnh lưu ảnh, đang chờ trình duyệt tải xuống...`);
     await delay(10000); // Wait for downloads to buffer
