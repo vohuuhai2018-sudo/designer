@@ -62,10 +62,7 @@ async function downloadAssetToFile(asset, targetDir, index) {
 
 async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
   try {
-    const pendingDownloads = [];
-    page.on('download', download => {
-        pendingDownloads.push(download);
-    });
+    const pendingDownloads = []; // giữ lại để tương thích nhưng không dùng tập trung nữa
 
     // 1. Phải truy cập trang chủ Flow và tạo Dự án mới do link trực tiếp trả về "Đã xảy ra lỗi"
     console.log(`[Flow] Truy cập trang chủ Flow...`);
@@ -180,119 +177,121 @@ async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
         await page.keyboard.press('Enter');
     }
 
-    console.log(`[Flow] Đang chờ Google Flow sinh 4 kết quả ảnh... (Thời gian đợi có thể lên tới 2-3 phút)`);
+    console.log(`[Flow] Đang chờ Google Flow sinh kết quả ảnh... (tối đa 4 phút)`);
 
-    // 6. Chờ kết quả (Chờ tới khi có thêm ít nhất 4 ảnh so với lúc đầu)
-    await page.waitForFunction((numUploads) => {
-        const images = Array.from(document.querySelectorAll('img, canvas')).filter(img => img.width > 200 && !img.src.includes('avatar'));
-        return images.length >= numUploads + 4; 
-    }, filePaths.length, { timeout: 240000 }); 
+    // 6. Chờ kết quả: Đợi ít nhất 4 ảnh lớn mới xuất hiện
+    try {
+        await page.waitForFunction((numUploads) => {
+            const images = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
+            return images.length >= numUploads + 4; 
+        }, filePaths.length, { timeout: 240000 });
+    } catch (e) {
+        console.log(`[Flow] Cảnh báo: Hết thời gian chờ ảnh xuất hiện. Thử xử lý những gì có...`);
+    }
 
-    await delay(8000);
+    // Đợi thêm cho ảnh render hoàn toàn (hết hiện %, loading)
+    console.log(`[Flow] Đợi ảnh render hoàn toàn...`);
+    await delay(15000);
 
-    await delay(10000);
-
-    // 7. Theo dõi và tải xuống ảnh 4K ngay khi có thể
-    console.log(`[Flow] Bắt đầu rà soát và Nâng cấp 4K cho từng ảnh...`);
-    
-    // Đếm số lượng ảnh đã xử lý thành công
+    // 7. Tải xuống từng ảnh ngay lập tức (1K) - dùng Playwright hover thật
+    console.log(`[Flow] Bắt đầu tải xuống ảnh...`);
     let processedCount = 0;
     
     for (let i = 0; i < 4; i++) {
-        console.log(`[Flow] Đang xử lý ảnh thứ ${i+1}...`);
+        console.log(`[Flow] --- Ảnh ${i+1}/4 ---`);
         try {
-            await page.evaluate(async (imgIndex) => {
-                const containers = Array.from(document.querySelectorAll('div[role="listitem"], .image-container, div.relative.group')).filter(el => {
-                    const img = el.querySelector('img, canvas');
-                    return img && img.width > 100;
-                });
-                
-                const target = containers.slice(-4)[imgIndex];
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    target.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-                    await new Promise(r => setTimeout(r, 1000));
-                    
-                    // Tìm nút 3 chấm (trong ảnh anh gửi hiện chữ "Khác" khi rê vào)
-                    const menuBtn = target.querySelector('button[aria-label*="Khác"], button[aria-label*="More"], button[aria-label*="Thêm"]');
-                    if (menuBtn) {
-                        menuBtn.click();
-                    } else {
-                        // Tìm theo icon hoặc vị trí nếu không thấy label
-                        const allBtns = Array.from(target.querySelectorAll('button'));
-                        const lastBtn = allBtns[allBtns.length - 1];
-                        if (lastBtn) lastBtn.click();
-                    }
+            // Tìm tất cả ảnh lớn (kết quả) trên trang, lấy 4 cái cuối
+            const allBigImages = page.locator('img').filter({ has: page.locator(':scope') });
+            const bigImgCount = await allBigImages.count();
+            
+            // Lọc ảnh lớn bằng evaluate
+            const imgIndex = await page.evaluate((idx) => {
+                const imgs = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
+                const targets = imgs.slice(-4);
+                if (targets[idx]) {
+                    targets[idx].scrollIntoView({ block: 'center' });
+                    // Trả về boundingRect để Playwright hover đúng vị trí
+                    const rect = targets[idx].getBoundingClientRect();
+                    return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, w: rect.width, h: rect.height };
                 }
+                return null;
             }, i);
 
+            if (!imgIndex) {
+                console.log(`[Flow] Không tìm thấy ảnh ${i+1}, bỏ qua.`);
+                continue;
+            }
+
+            // Hover thật vào vị trí ảnh để hiện nút chức năng
+            await page.mouse.move(imgIndex.x, imgIndex.y);
             await delay(1500);
 
-            // Click vào mục Tải xuống
-            const downloadMenu = page.locator('div[role="menuitem"], li').filter({ hasText: /Tải xuống|Download/i }).last();
-            if (await downloadMenu.count() > 0) {
-                await downloadMenu.click();
+            // Tìm nút 3 chấm (tooltip "Khác" hoặc icon more_vert)
+            // Nút này xuất hiện ở góc phải trên của ảnh khi hover
+            const moreBtn = page.locator('button[aria-label="Khác"], button:has-text("more_vert")').first();
+            if (await moreBtn.count() > 0 && await moreBtn.isVisible()) {
+                await moreBtn.click();
+                console.log(`[Flow] Đã mở menu 3 chấm cho ảnh ${i+1}`);
+            } else {
+                // Fallback: click vào góc phải trên của ảnh
+                await page.mouse.click(imgIndex.x + imgIndex.w / 2 - 10, imgIndex.y - imgIndex.h / 2 + 20);
+                console.log(`[Flow] Click fallback cho ảnh ${i+1}`);
+            }
+            await delay(1000);
+
+            // Tìm mục "Tải xuống" trong menu
+            const dlItem = page.locator('[role="menuitem"]').filter({ hasText: /Tải xuống|Download/i });
+            if (await dlItem.count() > 0) {
+                // Hover vào "Tải xuống" để mở submenu
+                await dlItem.first().hover();
                 await delay(1200);
 
-                // Setup promise chờ download bản 4K (Nâng cấp)
-                const downloadPromise = page.waitForEvent('download', { timeout: 150000 });
+                // Setup download listener trước khi click
+                const downloadPromise = page.waitForEvent('download', { timeout: 60000 });
 
-                // Tìm hàng 4K và nhấn nút "Nâng cấp" (Hình anh gửi)
-                const row4K = page.locator('div, li').filter({ hasText: /^4K$/i }).last();
-                const upgradeBtn = row4K.locator('button').filter({ hasText: /Nâng cấp|Upgrade/i });
-                
-                if (await upgradeBtn.count() > 0) {
-                    console.log(`[Flow] Đang tiến hành Nâng cấp 4K cho ảnh ${i+1}...`);
-                    await upgradeBtn.click();
+                // Click mục "1K" (Kích thước gốc) 
+                const item1K = page.locator('[role="menuitem"]').filter({ hasText: '1K' }).first();
+                if (await item1K.count() > 0 && await item1K.isVisible()) {
+                    await item1K.click();
+                    console.log(`[Flow] Đã click 1K, đang chờ tải xuống...`);
+                    
                     const download = await downloadPromise;
-                    pendingDownloads.push(download);
-                    console.log(`[Flow] ✅ Đã tải xong bản 4K của ảnh ${i+1}`);
+                    const outputPath = path.join(tempDir, `flow_result_${Date.now()}_${i}.png`);
+                    await download.saveAs(outputPath);
+                    console.log(`[Flow] ✅ Đã tải xong ảnh ${i+1} vào: ${outputPath}`);
+                    
+                    // Upload lên hệ thống NGAY LẬP TỨC
+                    if (typeof onImageReady === 'function') {
+                        await onImageReady(outputPath);
+                        console.log(`[Flow] ✅ Đã upload ảnh ${i+1} lên hệ thống!`);
+                    }
                     processedCount++;
                 } else {
-                    // Nếu không thấy 4K nâng cấp, tải bản 1K tạm thời để không bị trống
-                    console.log(`[Flow] Không thấy nút 4K, tải bản gốc (1K)...`);
-                    const btn1K = page.locator('div[role="menuitem"], li').filter({ hasText: /^1K$/i }).first();
-                    if (await btn1K.count() > 0) {
-                        await btn1K.click();
-                        const download = await downloadPromise;
-                        pendingDownloads.push(download);
-                        processedCount++;
-                    }
+                    console.log(`[Flow] Không thấy mục 1K, bỏ qua ảnh ${i+1}`);
                 }
+            } else {
+                console.log(`[Flow] Không thấy menu Tải xuống, bỏ qua ảnh ${i+1}`);
             }
-            
+
+            // Đóng menu
             await page.keyboard.press('Escape');
             await delay(800);
 
         } catch (err) {
             console.log(`[Flow] Bỏ qua ảnh ${i+1} do lỗi: ${err.message}`);
-            await page.keyboard.press('Escape');
-        }
-    }
-    console.log(`[Flow] Hoàn tất quá trình xử lý. Tổng cộng: ${processedCount}/4 ảnh thành công.`);
-
-    console.log(`[Flow] Đã đẩy lệnh lưu ảnh, đang chờ trình duyệt tải xuống...`);
-    await delay(10000); // Wait for downloads to buffer
-
-    const finalOutputPaths = [];
-    for (let i = 0; i < pendingDownloads.length; i++) {
-        // Chỉ lưu 4 download cuối cùng nếu có nhiều hơn
-        if (pendingDownloads.length > 4 && i < pendingDownloads.length - 4) continue;
-
-        const outputPath = path.join(tempDir, `flow_result_${Date.now()}_${i}.png`);
-        await pendingDownloads[i].saveAs(outputPath);
-        finalOutputPaths.push(outputPath);
-
-        if (typeof onImageReady === 'function') {
-            await onImageReady(outputPath);
+            await page.keyboard.press('Escape').catch(() => {});
+            await delay(500);
         }
     }
 
-    console.log(`[Flow] Đã tiếp nhận và tải ${finalOutputPaths.length} ảnh thành công!`);
+    console.log(`[Flow] ========================================`);
+    console.log(`[Flow] HOÀN TẤT: ${processedCount}/4 ảnh đã tải và upload thành công!`);
+    console.log(`[Flow] ========================================`);
+
     await page.close().catch(() => null);
-    return finalOutputPaths;
+    return [];
   } catch (error) {
-    console.error(`[Flow] Lỗi:`, error);
+    console.error(`[Flow] Lỗi nghiêm trọng:`, error);
     await page.close().catch(() => null);
     return [];
   }
