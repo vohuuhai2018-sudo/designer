@@ -518,6 +518,18 @@ app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
 
 
 // SYSTEM CONTENT API
+app.post('/api/upload', async (req, res) => {
+  try {
+    const { file } = req.body;
+    if (!file) return res.status(400).json({ error: 'No file provided' });
+    const url = await uploadToCloudinary(file);
+    res.json({ url });
+  } catch (err) {
+    console.error('Upload API error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/system-content', async (req, res) => {
   try {
     const content = await SystemContent.findOne({ key: 'main' });
