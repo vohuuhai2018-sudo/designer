@@ -126,37 +126,29 @@ async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
         const addBtn = page.locator('button').filter({ hasText: 'add' }).last();
         if (await addBtn.count() > 0) {
             await addBtn.click();
-            await delay(2000); // Đợi panel mở ra
             
-            // Tìm các ảnh trong panel tài nguyên. Thường là các thẻ img trong div có role="dialog" hoặc tương tự
-            // Ta click vào 2 cái đầu tiên (mới nhất vừa up)
-            const assetImgs = page.locator('div[role="dialog"] img, div[role="menu"] img, .asset-panel img').filter({ hasNotText: /avatar/i });
-            const count = await assetImgs.count();
-            if (count >= 2) {
-                console.log(`[Flow] Đã thấy ${count} ảnh trong kho. Đang nạp Ảnh 1 và Ảnh 2...`);
-                // Click ảnh 1
-                await assetImgs.nth(0).click();
-                await delay(1000);
-                // Click ảnh 2
-                await assetImgs.nth(1).click();
-                await delay(1000);
-            } else {
-                // Thử selector rộng hơn nếu không tìm thấy
-                const recentImgs = page.locator('img').filter({ hasNotText: /avatar/i });
-                // Giả sử 2 ảnh vừa up nằm ở vị trí đầu tiên/cuối cùng tuỳ UI. 
-                // Thường Flow hiện Recent lên đầu. Click 2 phát.
-                await recentImgs.nth(0).click();
-                await delay(800);
-                await recentImgs.nth(1).click();
-                await delay(800);
-            }
+            // Chờ bảng tài nguyên nạp đủ ít nhất 2 ảnh (bỏ qua avatar)
+            const assetContainerSelector = 'div[role="dialog"], div[role="menu"], .asset-panel, body';
+            await page.waitForFunction(() => {
+                const imgs = Array.from(document.querySelectorAll('img')).filter(img => !img.src.includes('avatar') && img.width > 20);
+                return imgs.length >= 2;
+            }, { timeout: 15000 });
+
+            const assetImgs = page.locator('img').filter({ hasNotText: /avatar/i });
+            console.log(`[Flow] Đã thấy tài nguyên nạp sẵn. Click chọn siêu tốc 2 ảnh...`);
             
-            // Đóng panel bằng cách nhấn Escape hoặc click ra ngoài (textarea)
-            await page.keyboard.press('Escape');
+            // Click lần lượt 2 ảnh đầu tiên trong danh sách (thường là mới nhất)
+            await assetImgs.nth(0).click();
             await delay(500);
+            await assetImgs.nth(1).click();
+            await delay(500);
+            
+            // Đóng bảng để text prompt không bị đè
+            await page.keyboard.press('Escape');
+            await delay(300);
         }
     } catch (e) {
-        console.log(`[Flow] Gặp khó khăn khi gắn tài nguyên thủ công, thử tiếp tục với prompt...`);
+        console.log(`[Flow] Thao tác gắn ảnh chậm hoặc lỗi: ${e.message}. Vẫn tiếp tục điền Prompt...`);
     }
 
     // 4. Nhập Prompt
