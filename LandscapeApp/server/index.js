@@ -6,6 +6,7 @@ const cloudinary = require('cloudinary').v2;
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { runChatGptAutomation } = require('./chatgptAutomation');
+const { runFlowAutomation } = require('./flowAutomation');
 const { generateLandscapePrompt } = require('./geminiPromptService');
 
 // Helper để tìm Link ảnh mẫu nếu FrontEnd chỉ gửi ID (hoặc fix cho các ca cũ)
@@ -179,7 +180,16 @@ async function resumePendingProjects() {
             } catch (e) { console.error('[RESUME] Lỗi upload:', e.message); }
           };
 
-          await runChatGptAutomation({ prompt: resolvedPrompt, assets, onImageReady });
+          console.log(`[AUTO] Đang bắt đầu xử lý ảnh qua Google Labs Flow cho "${project.customerName}"...`);
+          await runFlowAutomation({ prompt: resolvedPrompt, assets, onImageReady }).catch(err => {
+              console.error('[AUTO] Lỗi Google Flow:', err.message);
+          });
+
+          console.log(`[AUTO] Đang chuyển sang xử lý ảnh qua ChatGPT cho "${project.customerName}"...`);
+          await runChatGptAutomation({ prompt: resolvedPrompt, assets, onImageReady }).catch(err => {
+              console.error('[AUTO] Lỗi ChatGPT:', err.message);
+          });
+
           await Project.findOneAndUpdate({ id: project.id }, { $set: { status: 'done' } });
           console.log(`[RESUME] ✅ Hoàn thành "${project.customerName}"`);
         } catch (e) {
@@ -353,7 +363,15 @@ app.post('/api/projects', async (req, res) => {
             }
           };
 
-          await runChatGptAutomation({ prompt: resolvedPrompt, assets, onImageReady });
+          console.log(`[AUTO] Đang bắt đầu xử lý ảnh qua Google Labs Flow cho "${data.customerName}"...`);
+          await runFlowAutomation({ prompt: resolvedPrompt, assets, onImageReady }).catch(err => {
+              console.error('[AUTO] Lỗi Google Flow:', err.message);
+          });
+
+          console.log(`[AUTO] Đang chuyển sang xử lý ảnh qua ChatGPT cho "${data.customerName}"...`);
+          await runChatGptAutomation({ prompt: resolvedPrompt, assets, onImageReady }).catch(err => {
+              console.error('[AUTO] Lỗi ChatGPT:', err.message);
+          });
 
           if (autoCount > 0) {
             await Project.findOneAndUpdate({ id: newProject.id }, { $set: { status: 'done' } });

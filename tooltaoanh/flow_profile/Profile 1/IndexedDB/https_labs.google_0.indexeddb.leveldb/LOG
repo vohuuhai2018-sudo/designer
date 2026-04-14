@@ -1,0 +1,11 @@
+2026/04/14-01:07:57.908 63fc Creating DB D:\4. DỰ ÁN SƠN HẢI\1. WEB\APP VẼ\tooltaoanh\flow_profile\Profile 1\IndexedDB\https_labs.google_0.indexeddb.leveldb since it was missing.
+2026/04/14-01:07:57.917 63fc Reusing MANIFEST D:\4. DỰ ÁN SƠN HẢI\1. WEB\APP VẼ\tooltaoanh\flow_profile\Profile 1\IndexedDB\https_labs.google_0.indexeddb.leveldb/MANIFEST-000001
+2026/04/14-01:07:57.994 7fe4 Level-0 table #5: started
+2026/04/14-01:07:57.998 7fe4 Level-0 table #5: 1317 bytes OK
+2026/04/14-01:07:58.004 7fe4 Delete type=0 #3
+2026/04/14-01:07:58.005 7fe4 Manual compaction at level-0 from '\x00\x01\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x02\x00\x00\x00' @ 0 : 0; will stop at (end)
+2026/04/14-01:08:21.037 55c0 Manual compaction at level-0 from '\x00\x05\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x06\x00\x00\x00' @ 0 : 0; will stop at (end)
+2026/04/14-01:08:29.256 7fe4 Level-0 table #7: started
+2026/04/14-01:08:29.260 7fe4 Level-0 table #7: 8392 bytes OK
+2026/04/14-01:08:29.264 7fe4 Delete type=0 #4
+2026/04/14-01:08:29.264 7374 Manual compaction at level-0 from '\x00\x06\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x07\x00\x00\x00' @ 0 : 0; will stop at (end)
