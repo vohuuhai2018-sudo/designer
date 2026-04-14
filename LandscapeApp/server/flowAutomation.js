@@ -90,11 +90,9 @@ async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
 
     // 2. Upload hình ảnh vào Flow
     console.log(`[Flow] Chuẩn bị up hình...`);
-    // Thường upload nút nằm dưới cùng, Flow layout thay đổi
     const fileInput = page.locator('input[type="file"]').first();
     if (await fileInput.count() > 0) {
         await fileInput.setInputFiles(filePaths);
-        await delay(3000);
     } else {
         const addBtn = page.locator('button').filter({ hasText: 'add' }).last(); 
         if (await addBtn.count() > 0) {
@@ -104,8 +102,22 @@ async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
             await page.locator('button:has-text("Tải hình ảnh lên")').first().click();
             const fileChooser = await fileChooserPromise;
             await fileChooser.setFiles(filePaths);
-            await delay(3000); 
         }
+    }
+    console.log(`[Flow] Bắt đầu nhận diện chờ ${filePaths.length} ảnh tải lên hoàn tất...`);
+    // Chờ màn hình xuất hiện đủ 2 cái ảnh thumbnail nhỏ xinh trong ô Prompt
+    try {
+        await page.waitForFunction((expected) => {
+            // Tìm tất cả các thẻ img (trừ thẻ avatar của tài khoản Google)
+            // Thumbnail thường nhỏ, không phải ảnh to đùng ở giữa màn hình
+            const imgs = Array.from(document.querySelectorAll('img')).filter(img => !img.src.includes('avatar'));
+            const thumbnails = imgs.filter(img => img.width > 10 && img.width < 250);
+            return thumbnails.length >= expected;
+        }, filePaths.length, { timeout: 60000 });
+        console.log(`[Flow] Tuyệt vời! Đã thấy đủ ${filePaths.length} ảnh thumbnail nhỏ hiển thị.`);
+        await delay(2000); // Đợi UI lắng đọng thêm 1 chút cho chắc ăn
+    } catch (e) {
+        console.log(`[Flow] Cảnh báo: Quá thời gian chờ diện diện thumbnail, tiếp tục thực thi...`);
     }
 
     // 3. Nhập Prompt
@@ -152,33 +164,67 @@ async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
 
     await delay(8000);
 
-    // 7. Click Download 4 ảnh
-    console.log(`[Flow] Xác định được các ảnh mới, tiến hành lấy ảnh về...`);
+    await delay(10000);
+
+    // 7. Loop qua 4 ảnh, nâng cấp 2K và tải về
+    console.log(`[Flow] Đã thấy 4 ảnh kết quả, tiến hành thao tác Nâng cấp 2K...`);
     
-    await page.evaluate(async () => {
-        const images = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
-        if (images.length === 0) return;
-        const targets = images.slice(-4);
-        for (let i = 0; i < targets.length; i++) {
-            const targetImg = targets[i];
-            const src = targetImg.src;
-            const a = document.createElement('a');
-            a.download = `flow_result_${i+1}.png`; 
-            if (src.startsWith('blob:')) {
-                a.href = src;
+    for (let i = 0; i < 4; i++) {
+        console.log(`[Flow] Đang xử lý nâng cấp 2K cho ảnh ${i+1}/4...`);
+        try {
+            // Setup promise chờ file tải xuống (việc nâng cấp tốn khoảng 15-30s)
+            const downloadPromise = page.waitForEvent('download', { timeout: 90000 });
+            
+            // Nhúng mã JS để hover và bấm nút 3 chấm
+            await page.evaluate(async (imgIndex) => {
+                const imgs = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
+                const targets = imgs.slice(-4);
+                if (targets[imgIndex]) {
+                    const targetImg = targets[imgIndex];
+                    // Giả lập đưa chuột vào ảnh để menu xuất hiện
+                    targetImg.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+                    targetImg.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+                    await new Promise(r => setTimeout(r, 800));
+                    
+                    // Tìm và bấm nút Tùy chọn (3 chấm)
+                    const parent = targetImg.closest('div[role="button"]') || targetImg.parentElement.parentElement;
+                    if (parent) {
+                        const buttons = Array.from(parent.querySelectorAll('button'));
+                        const menuBtn = buttons[buttons.length - 1]; // Nút cuối thường là menu
+                        if (menuBtn) menuBtn.click();
+                    }
+                }
+            }, i);
+
+            await delay(2000); // Đợi menu mọc ra
+
+            // Rà chuột vào chữ "Tải xuống"
+            const btnDownload = page.locator('text=/Tải xuống|Download/i').last();
+            if (await btnDownload.count() > 0) {
+                await btnDownload.hover();
+                await delay(2000); // Đợi menu phụ mọc ra
+                
+                // Bấm nút "Nâng cấp" kế bên "2K", hoặc bấm thẳng vào chữ 2K
+                const upscaleBtn = page.locator('button').filter({ hasText: /Nâng cấp/i }).first();
+                if (await upscaleBtn.count() > 0 && await upscaleBtn.isVisible()) {
+                    await upscaleBtn.click();
+                    console.log(`[Flow] Đã bấm nút "Nâng cấp" 2K. Đang chờ quá trình nâng cấp và tải xuống tự động...`);
+                } else {
+                    const txt2K = page.locator('text=2K').last();
+                    if (await txt2K.count() > 0) await txt2K.click();
+                }
+                
+                // Đợi tự động download 
+                const processDownload = await downloadPromise;
+                pendingDownloads.push(processDownload);
+                console.log(`[Flow] Tải xuống thành công ảnh 2K số ${i+1}!`);
             } else {
-                try {
-                    const res = await fetch(src);
-                    const blob = await res.blob();
-                    a.href = window.URL.createObjectURL(blob);
-                } catch(e) { continue; }
+               console.log(`[Flow] Không tìm thấy tuỳ chọn tải xuống cho ảnh ${i+1}.`);
             }
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            await new Promise(r => setTimeout(r, 1000));
+        } catch (err) {
+            console.log(`[Flow] Bỏ qua lỗi ảnh ${i+1}:`, err.message);
         }
-    });
+    }
 
     console.log(`[Flow] Đã đẩy lệnh lưu ảnh, đang chờ trình duyệt tải xuống...`);
     await delay(10000); // Wait for downloads to buffer
