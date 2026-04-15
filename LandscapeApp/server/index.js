@@ -29,6 +29,244 @@ function resolveThacUrl(selections) {
 }
 
 // Hàm tạo prompt thuần từ dữ liệu project — không cần Gemini API
+function extractSelectedModelUrl(note = '') {
+  const modelMatch = note.match(/\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:\s*(https?:\/\/[^\n]+)/i)
+    ?? note.match(/https?:\/\/[^\s\n]+/);
+  return modelMatch ? (modelMatch[1] ?? modelMatch[0])?.trim() : null;
+}
+
+function normalizePublicAssetUrl(url) {
+  if (!url || typeof url !== 'string') return url;
+  const trimmed = url.trim();
+  if (!trimmed.startsWith('/')) return trimmed;
+  return 'https://designer-jet.vercel.app' + encodeURI(trimmed);
+}
+
+function isBasicService(service = '') {
+  const normalized = String(service || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  return normalized.includes('goi co ban') || normalized.includes('basic');
+}
+
+function getProjectReferenceModelUrl(project = {}) {
+  return project.referenceModelUrl || extractSelectedModelUrl(project.note || '');
+}
+
+function buildProjectAiAssets(project) {
+  const isBasic = isBasicService(project.service);
+  const assets = [
+    {
+      label: 'Ảnh hiện trạng gốc (Image 1)',
+      url: project.rawImage,
+      role: 'Ảnh nền chính, phải giữ nguyên kiến trúc, góc chụp và phối cảnh.'
+    }
+  ];
+
+  if (isBasic) {
+    const modelUrl = getProjectReferenceModelUrl(project);
+    if (modelUrl) {
+      assets.push({
+        label: 'Ảnh mẫu khách đã chọn (Image 2)',
+        url: modelUrl,
+        role: 'Mẫu phong cách tham khảo. Dùng làm nguồn cảm hứng về đá, cây, hồ — KHÔNG sao chép layout.'
+      });
+    }
+    return assets;
+  }
+
+  assets.push({
+    label: 'Ảnh khoanh vùng thiết kế',
+    url: project.annotatedImage,
+    role: 'Ảnh quy hoạch công năng bằng màu, dùng để xác định đúng vị trí từng hạng mục.'
+  });
+
+  let thacUrl = resolveThacUrl(project.selections);
+  if (thacUrl) {
+    if (thacUrl.startsWith('/')) {
+      thacUrl = 'https://designer-jet.vercel.app' + encodeURI(thacUrl);
+    }
+    assets.push({
+      label: 'Mẫu khách chọn',
+      url: thacUrl,
+      role: 'Mẫu thác / vân đá chọn từ thư viện, dùng cho phối cảnh và vật liệu.'
+    });
+  }
+
+  return assets;
+}
+
+function buildBasicProjectFlowPrompt(project) {
+  const modelUrl = getProjectReferenceModelUrl(project);
+  const customNote = project.note?.replace(/\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?/i, '').trim();
+  const noteContent = (project.note || '').toLowerCase();
+  const hasWaterKeywords = /hồ|thác|nước|pond|waterfall|stream|lake|flow|suối/i.test(noteContent);
+  const hasWaterSelection = !!(project.selections?.thac || project.selections?.ho);
+  const includeWater = hasWaterKeywords || hasWaterSelection;
+  const assetLines = buildProjectAiAssets(project).map((asset, i) => `- File ${i + 1}: ${asset.label}. ${asset.role}`);
+
+  return [
+    'ROLE: Landscape visualization expert (STRICT image-to-image transformation)',
+    '',
+    '====================================================',
+    'OBJECTIVE',
+    '====================================================',
+    '',
+    'Transform the real site (Image 1) into a built landscape design',
+    'inspired by the reference model (Image 2).',
+    '',
+    'IMPORTANT:',
+    '- Image 1 = ONLY base image (camera angle, walls, space must remain EXACT)',
+    '- Image 2 = DESIGN REFERENCE ONLY (style, material, composition language)',
+    '- DO NOT copy layout or scale from Image 2',
+    '',
+    '====================================================',
+    `PROJECT DATA — ${project.customerName} | ${project.service}`,
+    '====================================================',
+    '',
+    ...(customNote ? ['CUSTOMER REQUEST:', `"${customNote}"`, ''] : []),
+    ...(modelUrl ? [`REFERENCE MODEL (Image 2): ${modelUrl}`, ''] : []),
+    '====================================================',
+    'CORE DESIGN TRANSLATION (CRITICAL)',
+    '====================================================',
+    '',
+    'From Image 2, extract ONLY:',
+    '',
+    '- Natural stone composition',
+    includeWater ? '- Waterfall flowing naturally across rocks' : '- Hill and stone arrangement',
+    '- Integration between stone + plants',
+    '- High-end garden feeling',
+    '',
+    'DO NOT copy:',
+    '- Full size or full layout',
+    '- Large mountain scale',
+    '',
+    '====================================================',
+    'SITE ADAPTATION (VERY IMPORTANT)',
+    '====================================================',
+    '',
+    'Adapt the design from Image 2 to fit the REAL residential yard in Image 1.',
+    '',
+    '- Scale DOWN all elements to match the real space',
+    '- Keep proportions realistic to this yard size',
+    '- Ensure the design feels buildable and not oversized',
+    '',
+    '====================================================',
+    includeWater ? 'MAIN FEATURE — WATERFALL' : 'MAIN FEATURE — LANDSCAPE HILLS',
+    '====================================================',
+    '',
+    ...(includeWater
+      ? [
+          '- Place waterfall at wall corner (like Image 1 geometry)',
+          '- Inspired by stone from Image 2',
+          '',
+          'REQUIRED:',
+          '- Compact stone waterfall',
+          '- Built into wall (not freestanding mountain)',
+          '- Flow naturally down into pond',
+          '',
+          'FORBIDDEN:',
+          '- DO NOT create large rock mountain',
+          '- DO NOT copy full waterfall from Image 2',
+          '- DO NOT let waterfall occupy entire width'
+        ]
+      : [
+          '- Create natural hills and stone arrangements (inspired by Image 2)',
+          '- Place primarily against walls or in designated yard corners',
+          '',
+          'REQUIRED:',
+          '- Detailed dry garden composition',
+          '- Pine trees (Tùng La Hán) as focal points',
+          '- Lush moss or velvet grass (Cỏ nhung)',
+          '',
+          'FORBIDDEN:',
+          '- DO NOT add any water features (no ponds, no waterfalls)',
+          '- DO NOT add fish'
+        ]),
+    '',
+    ...(includeWater
+      ? [
+          '====================================================',
+          'POND',
+          '====================================================',
+          '',
+          '- Natural curved koi pond in front of waterfall',
+          '- Proportional to yard size',
+          '- Clean edge, elegant',
+          ''
+        ]
+      : []),
+    '====================================================',
+    'LANDSCAPE',
+    '====================================================',
+    '',
+    '- Use planting style from Image 2:',
+    '  - bonsai trees',
+    '  - shrubs',
+    '  - natural greenery',
+    '',
+    'BUT:',
+    '- Reduce density',
+    '- Keep clean, breathable layout',
+    '',
+    '====================================================',
+    'STONE LANGUAGE',
+    '====================================================',
+    '',
+    '- Use stone type from Image 2:',
+    '  - natural, slightly warm tone',
+    `- Apply consistently to ${includeWater ? 'waterfall' : 'hills'} and accents`,
+    '',
+    '====================================================',
+    'PATHWAY',
+    '====================================================',
+    '',
+    '- Add stepping stones (inspired by Image 2)',
+    '- Natural spacing',
+    '- Soft garden path, not hard paving',
+    '',
+    '====================================================',
+    'OVERALL HARMONY',
+    '====================================================',
+    '',
+    '- High-end residential garden',
+    '- Balanced composition',
+    '- Not crowded',
+    includeWater ? '- Clear focal point at waterfall' : '- Clear focal point at pine trees and hills',
+    '',
+    '====================================================',
+    'REALISM',
+    '====================================================',
+    '',
+    '- Photorealistic, built project look',
+    '- Correct scale, believable materials',
+    '- NO CGI look',
+    '- NO oversized elements',
+    '- NO copy-paste composition',
+    '',
+    '====================================================',
+    'FINAL INTENT',
+    '====================================================',
+    '',
+    'A realistic garden built on this exact site,',
+    'inspired by the style of Image 2,',
+    'but fully adapted to the real scale and layout of Image 1.',
+    '',
+    '====================================================',
+    'ATTACHED FILES',
+    '====================================================',
+    '',
+    ...assetLines
+  ].join('\n');
+}
+
+function buildProjectFlowPrompt(project) {
+  return isBasicService(project.service)
+    ? buildBasicProjectFlowPrompt(project)
+    : buildServerPrompt(project, buildProjectAiAssets(project));
+}
+
 function buildServerPrompt(project, assets) {
   const hasNote = !!(project.note && project.note.trim());
   const hasExtra = (project.extraAssets && project.extraAssets.length > 0);
@@ -210,6 +448,7 @@ const ProjectSchema = new mongoose.Schema({
   customerPhone: String,
   rawImage: String,
   annotatedImage: String,
+  referenceModelUrl: String,
   selections: {
     thac: String,
     thacUrl: String,
@@ -280,6 +519,48 @@ app.get('/api/projects/:id', async (req, res) => {
   }
 });
 
+app.delete('/api/projects', async (req, res) => {
+  try {
+    const result = await Project.deleteMany({});
+    res.json({ success: true, deletedCount: result.deletedCount || 0 });
+  } catch (err) {
+    console.error('Delete all projects error:', err);
+    res.status(500).json({ error: err.message || 'Không thể xóa danh sách dự án.' });
+  }
+});
+
+app.post('/api/projects/delete-all', async (req, res) => {
+  try {
+    const result = await Project.deleteMany({});
+    res.json({ success: true, deletedCount: result.deletedCount || 0 });
+  } catch (err) {
+    console.error('Delete all projects error:', err);
+    res.status(500).json({ error: err.message || 'Không thể xóa danh sách dự án.' });
+  }
+});
+
+app.delete('/api/projects/:id', async (req, res) => {
+  try {
+    const deleted = await Project.findOneAndDelete({ id: req.params.id });
+    if (!deleted) return res.status(404).json({ error: 'Project not found' });
+    res.json({ success: true, id: req.params.id });
+  } catch (err) {
+    console.error('Delete project error:', err);
+    res.status(500).json({ error: err.message || 'Không thể xóa dự án.' });
+  }
+});
+
+app.post('/api/projects/:id/delete', async (req, res) => {
+  try {
+    const deleted = await Project.findOneAndDelete({ id: req.params.id });
+    if (!deleted) return res.status(404).json({ error: 'Project not found' });
+    res.json({ success: true, id: req.params.id });
+  } catch (err) {
+    console.error('Delete project error:', err);
+    res.status(500).json({ error: err.message || 'Không thể xóa dự án.' });
+  }
+});
+
 app.post('/api/projects', async (req, res) => {
   try {
     const data = req.body;
@@ -291,6 +572,10 @@ app.post('/api/projects', async (req, res) => {
     
     // 2. Upload Annotated Image
     data.annotatedImage = await uploadToCloudinary(data.annotatedImage);
+
+    if (data.referenceModelUrl) {
+      data.referenceModelUrl = await uploadToCloudinary(normalizePublicAssetUrl(data.referenceModelUrl));
+    }
     
     // 3. Upload Extra Assets
     if (data.extraAssets && data.extraAssets.length > 0) {
@@ -312,34 +597,27 @@ app.post('/api/projects', async (req, res) => {
       data.selections.thacUrl = await uploadToCloudinary(absoluteThacUrl);
     }
     
+    const shouldAutoRunFlow = isBasicService(data.service);
+
     // Create project
-    const newProject = new Project(data);
+    const newProject = new Project({
+      ...data,
+      status: shouldAutoRunFlow ? 'processing' : (data.status || 'pending'),
+      workflowBranch: shouldAutoRunFlow ? 'chatgpt_image' : data.workflowBranch
+    });
     await newProject.save();
 
     console.log('Project saved to DB:', newProject.id);
     res.status(201).json(newProject);
 
     // Auto-trigger ChatGPT generation in background for Gói Cơ Bản
-    if (data.service === 'Gói Cơ Bản') {
+    if (shouldAutoRunFlow) {
       console.log(`[AUTO] Tự động kích hoạt ChatGPT cho dự án "${data.customerName}" (${newProject.id})...`);
       setImmediate(async () => {
         try {
-          const assets = [
-            { label: 'Ảnh hiện trạng gốc', url: newProject.rawImage, role: 'Ảnh nền chính, phải giữ nguyên kiến trúc, góc chụp và phối cảnh.' },
-            { label: 'Ảnh khoanh vùng thiết kế', url: newProject.annotatedImage, role: 'Ảnh quy hoạch công năng bằng màu, dùng để xác định đúng vị trí từng hạng mục.' }
-          ];
-
-          let thacUrl = resolveThacUrl(newProject.selections);
-          if (thacUrl) {
-            // Encode if it's a relative path
-            if (thacUrl.startsWith('/')) {
-              thacUrl = 'https://designer-jet.vercel.app' + encodeURI(thacUrl);
-            }
-            assets.push({ label: 'Mẫu khách chọn', url: thacUrl, role: 'Mẫu thác / vân đá chọn từ thư viện.' });
-          }
-
-          // Xây dựng prompt trực tiếp từ dữ liệu project, không cần Gemini API
-          const resolvedPrompt = buildServerPrompt(newProject.toObject(), assets);
+          const projectForAi = newProject.toObject();
+          const assets = buildProjectAiAssets(projectForAi);
+          const resolvedPrompt = buildProjectFlowPrompt(projectForAi);
 
           await Project.findOneAndUpdate({ id: newProject.id }, { status: 'processing', workflowBranch: 'chatgpt_image' });
 
@@ -363,19 +641,17 @@ app.post('/api/projects', async (req, res) => {
             }
           };
 
-          console.log(`[AUTO] Đang bắt đầu xử lý ảnh qua Google Labs Flow cho "${data.customerName}"...`);
+          console.log(`[AUTO] Đang bắt đầu xử lý ảnh qua Google Labs Flow cho "${data.customerName}" với pipeline giống nút admin...`);
           await runFlowAutomation({ prompt: resolvedPrompt, assets, onImageReady }).catch(err => {
               console.error('[AUTO] Lỗi Google Flow:', err.message);
-          });
-
-          console.log(`[AUTO] Đang chuyển sang xử lý ảnh qua ChatGPT cho "${data.customerName}"...`);
-          await runChatGptAutomation({ prompt: resolvedPrompt, assets, onImageReady }).catch(err => {
-              console.error('[AUTO] Lỗi ChatGPT:', err.message);
           });
 
           if (autoCount > 0) {
             await Project.findOneAndUpdate({ id: newProject.id }, { $set: { status: 'done' } });
             console.log(`[AUTO] ✅ Hoàn thành tự động tạo ${autoCount} ảnh cho "${data.customerName}"`);
+          } else {
+            await Project.findOneAndUpdate({ id: newProject.id }, { $set: { status: 'pending' } });
+            console.log(`[AUTO] ⚠️ Google Flow chưa trả về ảnh nào cho "${data.customerName}".`);
           }
         } catch (err) {
           console.error(`[AUTO] ❌ Lỗi tự động tạo ảnh cho "${data.customerName}":`, err.message);

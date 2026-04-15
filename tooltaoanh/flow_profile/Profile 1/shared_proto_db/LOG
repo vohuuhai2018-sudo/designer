@@ -1,3 +1,6 @@
-2026/04/14-23:18:01.119 72f4 Reusing MANIFEST D:\4. DỰ ÁN SƠN HẢI\1. WEB\APP VẼ\tooltaoanh\flow_profile\Profile 1\shared_proto_db/MANIFEST-000001
-2026/04/14-23:18:01.119 72f4 Recovering log #3
-2026/04/14-23:18:01.120 72f4 Reusing old log D:\4. DỰ ÁN SƠN HẢI\1. WEB\APP VẼ\tooltaoanh\flow_profile\Profile 1\shared_proto_db/000003.log 
+2026/04/15-15:24:53.434 5328 Reusing MANIFEST D:\4. DỰ ÁN SƠN HẢI\1. WEB\APP VẼ\tooltaoanh\flow_profile\Profile 1\shared_proto_db/MANIFEST-000001
+2026/04/15-15:24:53.435 5328 Recovering log #3
+2026/04/15-15:24:53.436 5328 Reusing old log D:\4. DỰ ÁN SƠN HẢI\1. WEB\APP VẼ\tooltaoanh\flow_profile\Profile 1\shared_proto_db/000003.log 
+2026/04/15-15:24:53.468 5328 Level-0 table #5: started
+2026/04/15-15:24:53.471 5328 Level-0 table #5: 70902 bytes OK
+2026/04/15-15:24:53.476 5328 Delete type=0 #3

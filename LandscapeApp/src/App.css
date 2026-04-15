@@ -1416,6 +1416,47 @@ canvas {
   font-size: 0.85rem;
 }
 
+.admin-project-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.btn-admin-delete-all,
+.btn-delete-project-detail,
+.btn-delete-project-card {
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(127, 29, 29, 0.16);
+  color: #fecaca;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 900;
+  transition: all 0.2s ease;
+}
+
+.btn-admin-delete-all:hover,
+.btn-delete-project-detail:hover,
+.btn-delete-project-card:hover {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(248, 113, 113, 0.65);
+  color: #fff;
+}
+
+.btn-admin-delete-all:disabled,
+.btn-delete-project-detail:disabled,
+.btn-delete-project-card:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-admin-delete-all {
+  padding: 8px 14px;
+  border-radius: 999px;
+}
+
 .btn-back-universal {
   display: flex;
   align-items: center;
@@ -1533,6 +1574,19 @@ canvas {
 /* Dossier Detail */
 .project-detail-premium {
   text-align: left;
+}
+
+.detail-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.btn-delete-project-detail {
+  padding: 11px 18px;
+  border-radius: 14px;
 }
 
 .dossier-layout {
@@ -1773,6 +1827,21 @@ canvas {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+}
+
+.card-admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.btn-delete-project-card {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
 }
 
 .time-stamp-luxe {

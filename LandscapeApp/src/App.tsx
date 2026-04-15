@@ -77,6 +77,7 @@ interface Project {
   customerEmail?: string;
   rawImage: string;
   annotatedImage: string;
+  referenceModelUrl?: string;
   selections: Selection;
   service: string;
   status: 'pending' | 'processing' | 'done';
@@ -102,6 +103,30 @@ interface AiUploadAsset {
   label: string;
   url: string;
   role: string;
+}
+
+function extractSelectedModelUrl(note?: string): string | null {
+  const modelMatch = note?.match(/\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:\s*(https?:\/\/[^\n]+)/i)
+    ?? note?.match(/https?:\/\/[^\s\n]+/);
+  return modelMatch ? (modelMatch[1] ?? modelMatch[0])?.trim() : null;
+}
+
+function getProjectReferenceAsset(project: Project): { label: string; url: string; alt: string } {
+  const modelUrl = project.referenceModelUrl || extractSelectedModelUrl(project.note);
+
+  if ((project.service === 'Gói Cơ bản' || project.service === 'Gói Cơ Bản') && modelUrl) {
+    return {
+      label: 'Ảnh mẫu khách đã chọn',
+      url: modelUrl,
+      alt: 'Ảnh mẫu khách đã chọn'
+    };
+  }
+
+  return {
+    label: 'Ảnh khoanh vùng ý tưởng',
+    url: project.annotatedImage,
+    alt: 'Ảnh khoanh vùng'
+  };
 }
 
 // --- ASSETS CONFIG ---
@@ -266,6 +291,7 @@ export default function App() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [service, setService] = useState('');
   const [note, setNote] = useState('');
+  const [referenceModelUrl, setReferenceModelUrl] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [extraAssets, setExtraAssets] = useState<string[]>([]);
   const [historySize, setHistorySize] = useState(0);
@@ -376,10 +402,24 @@ export default function App() {
     }
   };
 
+  // Auto-poll mỗi 10s khi đang ở trang Admin
   useEffect(() => {
-    // Keep local cache in sync silently
-    try { localStorage.setItem('sh_system_content', JSON.stringify(systemContent)); } catch(e){}
-  }, [systemContent]);
+    if (view !== 'admin') return;
+
+    // Luôn poll mỗi 10s nếu là admin để cập nhật danh sách mới
+    const pollDelay = projects.some(project => project.status === 'processing') ? 3000 : 10000;
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await apiFetch('/api/projects');
+        if (res.ok) {
+          const data = await res.json();
+          setProjects(data);
+        }
+      } catch (e) { /* ignore network errors */ }
+    }, pollDelay);
+
+    return () => clearInterval(pollInterval);
+  }, [view, projects]);
 
   // Load projects when entering admin view
   useEffect(() => {
@@ -398,24 +438,7 @@ export default function App() {
     }
   }, [view]);
 
-  // Auto-poll mỗi 10s khi có project đang processing
-  useEffect(() => {
-    if (view !== 'admin') return;
-    const hasProcessing = projects.some(p => p.status === 'processing');
-    if (!hasProcessing) return;
 
-    const pollInterval = setInterval(async () => {
-      try {
-        const res = await apiFetch('/api/projects');
-        const data = await res.json();
-        setProjects(data);
-        const stillProcessing = data.some((p: Project) => p.status === 'processing');
-        if (!stillProcessing) clearInterval(pollInterval);
-      } catch (e) { /* bỏ qua lỗi mạng */ }
-    }, 10000);
-
-    return () => clearInterval(pollInterval);
-  }, [view, projects]);
 
 
   const compressImage = (base64Str: string, maxWidth = 1200): Promise<string> => {
@@ -463,6 +486,7 @@ export default function App() {
       customerEmail,
       rawImage,
       annotatedImage,
+      referenceModelUrl: referenceModelUrl || extractSelectedModelUrl(note) || undefined,
       selections: {
         ...selections,
         thacUrl: selectedThacVariant?.url,
@@ -502,6 +526,7 @@ export default function App() {
     setCustomerEmail('');
     setService('');
     setNote('');
+    setReferenceModelUrl('');
     setExtraAssets([]);
     setSubmittedProjectId('');
     setView('welcome');
@@ -611,8 +636,11 @@ export default function App() {
           <BasicSelectionView 
             systemContent={systemContent}
             onSelect={imgUrl => {
-              // Append to note for KTS to see
-              setNote(prev => `[MẪU ĐÃ CHỌN]: ${imgUrl}\n${prev}`);
+              setReferenceModelUrl(imgUrl);
+              setNote(prev => {
+                const cleaned = prev.replace(/\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?/i, '').trimStart();
+                return `[MẪU ĐÃ CHỌN]: ${imgUrl}\n${cleaned}`;
+              });
               handleGlobalNext();
             }}
           />
@@ -627,6 +655,7 @@ export default function App() {
             systemContent={systemContent}
             service={service}
             note={note}
+            referenceModelUrl={referenceModelUrl}
             onNoteChange={setNote}
           />
         )}
@@ -697,6 +726,25 @@ export default function App() {
               if (!response.ok) throw new Error(payload?.error || 'Không thể cập nhật dữ liệu dự án.');
               setProjects(prev => prev.map(p => p.id === id ? { ...p, ...payload } : p));
               return payload as Project;
+            }}
+            onDeleteProject={async (id) => {
+              let response = await apiFetch(`/api/projects/${id}`, { method: 'DELETE' });
+              if (response.status === 404) {
+                response = await apiFetch(`/api/projects/${id}/delete`, { method: 'POST' });
+              }
+              const payload = await response.json().catch(() => null);
+              if (!response.ok) throw new Error(payload?.error || 'Không thể xóa dữ liệu dự án.');
+              setProjects(prev => prev.filter(p => p.id !== id));
+            }}
+            onDeleteAllProjects={async () => {
+              let response = await apiFetch('/api/projects', { method: 'DELETE' });
+              if (response.status === 404) {
+                response = await apiFetch('/api/projects/delete-all', { method: 'POST' });
+              }
+              const payload = await response.json().catch(() => null);
+              if (!response.ok) throw new Error(payload?.error || 'Không thể xóa toàn bộ dữ liệu dự án.');
+              setProjects([]);
+              return payload?.deletedCount || 0;
             }}
             onSync={syncSystemContent}
             onGenerateAiImage={async (id, payload) => {
@@ -809,7 +857,7 @@ function WelcomeView({ onStart, onAdmin }: { onStart: () => void, onAdmin: () =>
 
 function UploadView({ 
   rawImage, onUpload, extraAssets, onExtraAssetsChange, onProceed, systemContent,
-  service, note, onNoteChange
+  service, note, referenceModelUrl, onNoteChange
 }: { 
   rawImage: string; 
   onUpload: (img: string) => void;
@@ -819,6 +867,7 @@ function UploadView({
   systemContent: any;
   service?: string;
   note?: string;
+  referenceModelUrl?: string;
   onNoteChange?: (note: string) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -857,7 +906,7 @@ function UploadView({
     onExtraAssetsChange(extraAssets.filter((_, i) => i !== index));
   };
 
-  const basicModelUrl = service === 'Gói Cơ bản' && note ? note.match(/\[MẪU ĐÃ CHỌN\]:\s*(http[^\n]+)/)?.[1] : null;
+  const basicModelUrl = service === 'Gói Cơ bản' ? (referenceModelUrl || extractSelectedModelUrl(note)) : null;
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view upload-view nav-offset">
@@ -927,10 +976,10 @@ function UploadView({
           <textarea 
             className="luxe-textarea" 
             placeholder="Ví dụ: tôi có diện tích 8x5m này cần làm hồ cá koi cổ điển đá vân mây, có lối đi rải sỏi, có cây tùng và đèn đá điểm..."
-            value={note ? note.replace(/\[MẪU ĐÃ CHỌN\]:.*?\n/, '') : ''}
+            value={note ? note.replace(/\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?/i, '') : ''}
             onChange={(e) => {
-              const modelMatch = note?.match(/\[MẪU ĐÃ CHỌN\]:[^\n]*/);
-              const header = modelMatch ? modelMatch[0] + '\n' : '';
+              const modelUrl = referenceModelUrl || extractSelectedModelUrl(note);
+              const header = modelUrl ? `[MẪU ĐÃ CHỌN]: ${modelUrl}\n` : '';
               if (onNoteChange) onNoteChange(header + e.target.value);
             }}
             style={{ width: '100%', height: '120px', background: 'var(--surface)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '16px', marginTop: '15px' }}
@@ -2356,8 +2405,8 @@ function AIStudioContent({ onFeedback }: { onFeedback: (msg: string) => void }) 
 }
 
 // --- ADMIN VIEW ---
-function AdminView({ 
-  projects, isLoading, systemContent, onSystemContentUpdate, onSync, onBack, onUpdateProject, onGenerateAiImage 
+function AdminView({
+  projects, isLoading, systemContent, onSystemContentUpdate, onSync, onBack, onUpdateProject, onDeleteProject, onDeleteAllProjects, onGenerateAiImage
 }: { 
   projects: Project[]; 
   isLoading: boolean;
@@ -2366,6 +2415,8 @@ function AdminView({
   onSync: () => Promise<boolean>;
   onBack: () => void;
   onUpdateProject: (id: string, updates: ProjectUpdate) => Promise<Project>;
+  onDeleteProject: (id: string) => Promise<void>;
+  onDeleteAllProjects: () => Promise<number>;
   onGenerateAiImage: (id: string, payload: any) => Promise<Project>;
 }) {
   const [activeTab, setActiveTab] = useState<'projects' | 'resources'>('projects');
@@ -2381,6 +2432,8 @@ function AdminView({
   const [aiStudioStatus, setAiStudioStatus] = useState('Sẵn sàng.');
   const [isDraggingToDesigner, setIsDraggingToDesigner] = useState(false);
   const [draggedItem, setDraggedItem] = useState<DesignerLibraryItem | null>(null);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
+  const [isDeletingAllProjects, setIsDeletingAllProjects] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const designerFileRef = useRef<HTMLInputElement>(null);
@@ -2388,6 +2441,15 @@ function AdminView({
   const autoLoadedDesignerProjectRef = useRef<string | null>(null);
 
   useEffect(() => { if (actionFeedback) { const t = setTimeout(() => setActionFeedback(''), 4000); return () => clearTimeout(t); } }, [actionFeedback]);
+  useEffect(() => {
+    if (!selectedProject) return;
+    const latestProject = projects.find(project => project.id === selectedProject.id);
+    if (!latestProject) return;
+    setSelectedProject(prev => {
+      if (!prev || prev.id !== latestProject.id) return prev;
+      return latestProject;
+    });
+  }, [projects, selectedProject?.id]);
 
   // --- HELPERS ---
   const getAssetInfo = (id: string, category: 'THAC' | 'KE' | 'CANH' | 'HO'): { name: string, url: string } | null => {
@@ -2466,6 +2528,43 @@ function AdminView({
   };
 
   const grouped = groupProjects();
+
+  const handleDeleteProject = async (project: Project, event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    if (deletingProjectId) return;
+
+    const ok = window.confirm(`Xóa dự án của "${project.customerName}" khỏi danh sách admin?`);
+    if (!ok) return;
+
+    try {
+      setDeletingProjectId(project.id);
+      await onDeleteProject(project.id);
+      if (selectedProject?.id === project.id) setSelectedProject(null);
+      setActionFeedback(`Đã xóa dự án của ${project.customerName}.`);
+    } catch (err: any) {
+      setActionFeedback(err?.message || 'Không thể xóa dữ liệu dự án.');
+    } finally {
+      setDeletingProjectId(null);
+    }
+  };
+
+  const handleDeleteAllProjects = async () => {
+    if (projects.length === 0 || isDeletingAllProjects) return;
+
+    const ok = window.confirm(`Xóa toàn bộ ${projects.length} dự án khỏi admin? Thao tác này không thể hoàn tác.`);
+    if (!ok) return;
+
+    try {
+      setIsDeletingAllProjects(true);
+      const deletedCount = await onDeleteAllProjects();
+      setSelectedProject(null);
+      setActionFeedback(`Đã xóa ${deletedCount || projects.length} dự án khỏi hệ thống.`);
+    } catch (err: any) {
+      setActionFeedback(err?.message || 'Không thể xóa toàn bộ dữ liệu dự án.');
+    } finally {
+      setIsDeletingAllProjects(false);
+    }
+  };
 
   // --- DESIGNER HELPERS ---
   const getDesignerUrl = () => {
@@ -2548,24 +2647,18 @@ function AdminView({
 
   // --- AI HELPERS ---
   const getAiUploadAssets = (project: Project): AiUploadAsset[] => {
-    const isBasic = project.service === 'Gói Cơ bản';
-
-    // Extract model URL from note for Basic Package
-    const modelMatch = project.note?.match(/\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:\s*(https?:\/\/[^\n]+)/i)
-      ?? project.note?.match(/https?:\/\/[^\s\n]+/);
-    const modelUrl = modelMatch ? (modelMatch[1] ?? modelMatch[0])?.trim() : null;
+    const isBasic = project.service === 'Gói Cơ bản' || project.service === 'Gói Cơ Bản';
+    const modelUrl = getProjectReferenceAsset(project).url;
 
     const assets: AiUploadAsset[] = [
       { label: 'Ảnh hiện trạng gốc (Image 1)', url: project.rawImage, role: 'Ảnh nền chính, phải giữ nguyên kiến trúc, góc chụp và phối cảnh.' },
     ];
 
     if (isBasic) {
-      // Basic Package: show model reference image as Image 2
       if (modelUrl) {
         assets.push({ label: 'Ảnh mẫu khách đã chọn (Image 2)', url: modelUrl, role: 'Mẫu phong cách tham khảo. Dùng làm nguồn cảm hứng về đá, cây, hồ — KHÔNG sao chép layout.' });
       }
     } else {
-      // Other packages: annotated zone image as Image 2
       assets.push({ label: 'Ảnh khoanh vùng thiết kế', url: project.annotatedImage, role: 'Ảnh quy hoạch công năng bằng màu, dùng để xác định đúng vị trí từng hạng mục.' });
 
       if (project.selections.thac) {
@@ -2602,6 +2695,12 @@ function AdminView({
     const customNote = project.note?.replace(/\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?/i, '').trim();
 
     if (isBasic) {
+      const noteContent = (project.note || '').toLowerCase();
+      // Detect if user wants water features based on keywords
+      const hasWaterKeywords = /hồ|thác|nước|pond|waterfall|stream|lake|flow|suối/i.test(noteContent);
+      const hasWaterSelection = !!(project.selections.thac || project.selections.ho);
+      const includeWater = hasWaterKeywords || hasWaterSelection;
+
       // =============================================
       // NEW MASTER PROMPT — BASIC PACKAGE (Image-to-Image)
       // =============================================
@@ -2639,8 +2738,8 @@ function AdminView({
         '',
         'From Image 2, extract ONLY:',
         '',
-        '- Natural layered stone composition',
-        '- Waterfall flowing across multiple small levels',
+        '- Natural stone composition',
+        includeWater ? '- Waterfall flowing naturally across rocks' : '- Hill and stone arrangement',
         '- Integration between stone + plants',
         '- High-end garden feeling',
         '',
@@ -2659,30 +2758,46 @@ function AdminView({
         '- Ensure the design feels buildable and not oversized',
         '',
         '====================================================',
-        'MAIN FEATURE — WATERFALL',
+        includeWater ? 'MAIN FEATURE — WATERFALL' : 'MAIN FEATURE — LANDSCAPE HILLS',
         '====================================================',
         '',
-        '- Place waterfall at wall corner (like Image 1 geometry)',
-        '- Inspired by layered stone from Image 2',
+        ...(includeWater ? [
+          '- Place waterfall at wall corner (like Image 1 geometry)',
+          '- Inspired by stone from Image 2',
+          '',
+          'REQUIRED:',
+          '- Compact stone waterfall',
+          '- Built into wall (not freestanding mountain)',
+          '- Flow naturally down into pond',
+          '',
+          'FORBIDDEN:',
+          '- DO NOT create large rock mountain',
+          '- DO NOT copy full waterfall from Image 2',
+          '- DO NOT let waterfall occupy entire width',
+        ] : [
+          '- Create natural hills and stone arrangements (inspired by Image 2)',
+          '- Place primarily against walls or in designated yard corners',
+          '',
+          'REQUIRED:',
+          '- Detailed dry garden composition',
+          '- Pine trees (Tùng La Hán) as focal points',
+          '- Lush moss or velvet grass (Cỏ nhung)',
+          '',
+          'FORBIDDEN:',
+          '- DO NOT add any water features (no ponds, no waterfalls)',
+          '- DO NOT add fish',
+        ]),
         '',
-        'REQUIRED:',
-        '- Compact multi-layer stone waterfall',
-        '- Built into wall (not freestanding mountain)',
-        '- Flow naturally down into pond',
-        '',
-        'FORBIDDEN:',
-        '- DO NOT create large rock mountain',
-        '- DO NOT copy full waterfall from Image 2',
-        '- DO NOT let waterfall occupy entire width',
-        '',
-        '====================================================',
-        'POND',
-        '====================================================',
-        '',
-        '- Natural curved koi pond in front of waterfall',
-        '- Proportional to yard size',
-        '- Clean edge, elegant',
-        '',
+        ...(includeWater ? [
+          '====================================================',
+          'POND',
+          '====================================================',
+          '',
+          '- Natural curved koi pond in front of waterfall',
+          '- Proportional to yard size',
+          '- Clean edge, elegant',
+          '',
+        ] : []),
         '====================================================',
         'LANDSCAPE',
         '====================================================',
@@ -2690,7 +2805,7 @@ function AdminView({
         '- Use planting style from Image 2:',
         '  - bonsai trees',
         '  - shrubs',
-        '  - layered greenery',
+        '  - natural greenery',
         '',
         'BUT:',
         '- Reduce density',
@@ -2701,8 +2816,8 @@ function AdminView({
         '====================================================',
         '',
         '- Use stone type from Image 2:',
-        '  - layered, natural, slightly warm tone',
-        '- Apply consistently to waterfall and accents',
+        '  - natural, slightly warm tone',
+        `- Apply consistently to ${includeWater ? 'waterfall' : 'hills'} and accents`,
         '',
         '====================================================',
         'PATHWAY',
@@ -2719,7 +2834,7 @@ function AdminView({
         '- High-end residential garden',
         '- Balanced composition',
         '- Not crowded',
-        '- Clear focal point at waterfall',
+        includeWater ? '- Clear focal point at waterfall' : '- Clear focal point at pine trees and hills',
         '',
         '====================================================',
         'REALISM',
@@ -2891,6 +3006,7 @@ function AdminView({
 
   const visibleDesignerLibrary = designerTab === 'customer' ? designerCustomerLibrary : SYSTEM_REFERENCE_LIBRARY;
 
+  const projectReferenceAsset = selectedProject ? getProjectReferenceAsset(selectedProject) : null;
   const aiUploadAssets = selectedProject ? getAiUploadAssets(selectedProject) : [];
   const chatGptPrompt = selectedProject ? buildChatGptPrompt(selectedProject) : '';
   const aiResultImages = selectedProject?.aiResults || [];
@@ -2912,6 +3028,25 @@ function AdminView({
     setAiGeneratedPrompt('');
     setAiStudioStatus('Sẵn sàng tổng hợp prompt và tài nguyên AI.');
   }, [showAIStudio, selectedProject]);
+
+  useEffect(() => {
+    if (!showAIStudio || !selectedProject || !isGeneratingAi) return;
+
+    const resultCount = selectedProject.aiResults?.length || 0;
+
+    if (selectedProject.status === 'done' && resultCount > 0) {
+      setAiStudioStatus(`Google Flow da tra ve ${resultCount} anh. He thong dang hoan tat dong bo giao dien...`);
+      return;
+    }
+
+    if (selectedProject.status === 'processing') {
+      setAiStudioStatus(
+        resultCount > 0
+          ? `Google Flow dang chay. Da nhan ${resultCount}/4 anh va dang tiep tuc dong bo...`
+          : 'Google Flow dang sinh anh. He thong se tu cap nhat ngay khi co ket qua moi...'
+      );
+    }
+  }, [showAIStudio, selectedProject, isGeneratingAi]);
 
   useEffect(() => {
     const handleDesignerMessage = async (event: MessageEvent) => {
@@ -3203,9 +3338,22 @@ function AdminView({
           </div>
           <div className="admin-title-section">
             <h1>Sơn Hải Landscape Control Center</h1>
-            <div className="stats-pill-bar">
-               <span className="count-badge">{projects.length}</span>
-               <span>Hồ sơ khách hàng</span>
+            <div className="admin-project-toolbar">
+              <div className="stats-pill-bar">
+                 <span className="count-badge">{projects.length}</span>
+                 <span>Hồ sơ khách hàng</span>
+              </div>
+              {activeTab === 'projects' && projects.length > 0 && (
+                <button
+                  type="button"
+                  className="btn-admin-delete-all"
+                  onClick={handleDeleteAllProjects}
+                  disabled={isDeletingAllProjects}
+                >
+                  <Trash2 size={16} />
+                  {isDeletingAllProjects ? 'Đang xóa...' : 'Xóa tất cả dự án'}
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -3226,6 +3374,15 @@ function AdminView({
           <div className="project-detail-premium">
             <div className="detail-header-row">
               <button onClick={() => setSelectedProject(null)} className="btn-back-premium"><ChevronLeft size={18} /> Danh sách dự án</button>
+              <button
+                type="button"
+                className="btn-delete-project-detail"
+                onClick={(event) => handleDeleteProject(selectedProject, event)}
+                disabled={deletingProjectId === selectedProject.id}
+              >
+                <Trash2 size={16} />
+                {deletingProjectId === selectedProject.id ? 'Đang xóa...' : 'Xóa dự án'}
+              </button>
             </div>
 
             <div className="dossier-layout">
@@ -3265,8 +3422,8 @@ function AdminView({
                   </div>
                   <div className="image-luxe-card">
                     <div className="card-label-orb">02</div>
-                    <label>Ảnh khoanh vùng ý tưởng</label>
-                    <div className="image-frame"><img src={selectedProject.annotatedImage} alt="Ảnh khoanh vùng" /></div>
+                    <label>{projectReferenceAsset?.label || 'Ảnh khoanh vùng ý tưởng'}</label>
+                    <div className="image-frame"><img src={projectReferenceAsset?.url || selectedProject.annotatedImage} alt={projectReferenceAsset?.alt || 'Ảnh khoanh vùng'} /></div>
                   </div>
                   {(selectedProject.extraAssets || []).length > 0 && (
                      <div className="extra-media-luxe">
@@ -3384,12 +3541,36 @@ function AdminView({
                   <div className="date-badge-luxe"><Folder size={18} color="var(--accent)" /> {dateGroup}</div>
                   <div className="customer-cards-grid">
                     {grouped[dateGroup].map(project => (
-                      <button key={project.id} type="button" className="management-card-luxe" onClick={() => setSelectedProject(project)}>
+                      <div
+                        key={project.id}
+                        role="button"
+                        tabIndex={0}
+                        className="management-card-luxe"
+                        onClick={() => setSelectedProject(project)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            setSelectedProject(project);
+                          }
+                        }}
+                      >
                         <div className="card-top-row">
                           <span className="time-stamp-luxe">
                             {new Date(project.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}
                           </span>
-                          <div className={`status-badge-luxe ${project.status}`}>{getStatusLabel(project.status)}</div>
+                          <div className="card-admin-actions">
+                            <div className={`status-badge-luxe ${project.status}`}>{getStatusLabel(project.status)}</div>
+                            <button
+                              type="button"
+                              className="btn-delete-project-card"
+                              onClick={(event) => handleDeleteProject(project, event)}
+                              disabled={deletingProjectId === project.id}
+                              aria-label={`Xóa dự án của ${project.customerName}`}
+                            >
+                              <Trash2 size={15} />
+                              {deletingProjectId === project.id ? 'Đang xóa' : 'Xóa'}
+                            </button>
+                          </div>
                         </div>
                         <div className="card-client-info">
                           <div className="client-name">{project.customerName}</div>
@@ -3402,7 +3583,7 @@ function AdminView({
                         {project.status === 'processing' && (
                           <div className="card-ai-generating">
                             <span className="generating-spinner" />
-                            <span>Đã hoàn thiện {project.aiResults?.length || 0}/2 phương án...</span>
+                            <span>Đã hoàn thiện {project.aiResults?.length || 0}/4 phương án...</span>
                           </div>
                         )}
                         {project.aiResults && project.aiResults.length > 0 && (
@@ -3414,7 +3595,7 @@ function AdminView({
                             ))}
                           </div>
                         )}
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </div>

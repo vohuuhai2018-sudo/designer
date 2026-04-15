@@ -60,7 +60,447 @@ async function downloadAssetToFile(asset, targetDir, index) {
   return { filePath, mimeType: response.headers.get('content-type') || 'image/png' };
 }
 
-async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
+async function buildClipboardPayload(files) {
+  const payload = [];
+  for (let index = 0; index < files.length; index += 1) {
+    const file = files[index];
+    const imageBuffer = await fs.readFile(file.filePath);
+    payload.push({
+      base64: imageBuffer.toString('base64'),
+      mimeType: file.mimeType || 'image/png',
+      name: path.basename(file.filePath) || `image_${index + 1}.png`
+    });
+  }
+  return payload;
+}
+
+async function resolveVisiblePromptSelector(page) {
+  return page.evaluate(() => {
+    const selectors = [
+      'textarea',
+      '[contenteditable="true"]',
+      'div[role="textbox"]'
+    ];
+
+    const isVisible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && style.opacity !== '0'
+        && rect.width > 20
+        && rect.height > 20;
+    };
+
+    const candidates = selectors.flatMap((selector) =>
+      Array.from(document.querySelectorAll(selector)).map((element) => ({ selector, element }))
+    ).filter(({ element }) => isVisible(element) && !element.closest('[aria-hidden="true"]'));
+
+    candidates.sort((a, b) => {
+      const aRect = a.element.getBoundingClientRect();
+      const bRect = b.element.getBoundingClientRect();
+      return bRect.top - aRect.top;
+    });
+
+    if (candidates[0]) {
+      return candidates[0].selector;
+    }
+
+    return null;
+  });
+}
+
+async function getPromptLocator(page) {
+  const selector = await resolveVisiblePromptSelector(page);
+  if (!selector) {
+    throw new Error('Khong tim thay o nhap prompt dang hien thi tren Flow.');
+  }
+  return page.locator(selector).filter({ hasNot: page.locator('[aria-hidden="true"]') }).last();
+}
+
+async function waitForPromptInputReady(page) {
+  await page.waitForFunction(() => {
+    const candidates = Array.from(document.querySelectorAll('textarea, [contenteditable="true"], div[role="textbox"]'));
+    const isVisible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && style.opacity !== '0'
+        && rect.width > 20
+        && rect.height > 20;
+    };
+
+    return candidates.some((element) => {
+      if (!isVisible(element)) return false;
+      if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+        return !element.disabled && !element.readOnly;
+      }
+      return element.getAttribute('contenteditable') === 'true' || element.getAttribute('role') === 'textbox';
+    });
+  }, { timeout: 30000 });
+}
+
+async function readPromptText(page) {
+  return page.evaluate(() => {
+    const candidates = Array.from(document.querySelectorAll('textarea, [contenteditable="true"], div[role="textbox"]'));
+    const isVisible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && style.opacity !== '0'
+        && rect.width > 20
+        && rect.height > 20;
+    };
+
+    const target = candidates
+      .filter((element) => isVisible(element) && !element.closest('[aria-hidden="true"]'))
+      .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0];
+    if (!target) return '';
+
+    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+      return target.value || '';
+    }
+
+    return target.textContent || '';
+  });
+}
+
+async function setPromptTextViaDom(page, prompt) {
+  return page.evaluate((text) => {
+    const candidates = Array.from(document.querySelectorAll('textarea, [contenteditable="true"], div[role="textbox"]'));
+    const isVisible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && style.opacity !== '0'
+        && rect.width > 20
+        && rect.height > 20;
+    };
+
+    const target = candidates
+      .filter((element) => isVisible(element) && !element.closest('[aria-hidden="true"]'))
+      .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0];
+    if (!target) {
+      return { ok: false, reason: 'prompt-not-found' };
+    }
+
+    target.focus();
+
+    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+      target.value = text;
+      target.dispatchEvent(new InputEvent('input', {
+        bubbles: true,
+        cancelable: true,
+        data: text,
+        inputType: 'insertText'
+      }));
+      target.dispatchEvent(new Event('change', { bubbles: true }));
+      return { ok: (target.value || '').includes(text.slice(0, 20)) };
+    }
+
+    target.textContent = text;
+    target.dispatchEvent(new InputEvent('beforeinput', {
+      bubbles: true,
+      cancelable: true,
+      data: text,
+      inputType: 'insertText'
+    }));
+    target.dispatchEvent(new InputEvent('input', {
+      bubbles: true,
+      cancelable: true,
+      data: text,
+      inputType: 'insertText'
+    }));
+    return { ok: (target.textContent || '').includes(text.slice(0, 20)) };
+  }, prompt);
+}
+
+async function pasteAssetsIntoPrompt(page, clipboardFiles) {
+  await waitForPromptInputReady(page);
+  const promptBox = await getPromptLocator(page);
+  await promptBox.waitFor({ state: 'visible', timeout: 30000 });
+  await promptBox.click();
+
+  await page.evaluate(async ({ files }) => {
+    const candidates = Array.from(document.querySelectorAll('textarea, [contenteditable="true"], div[role="textbox"]'));
+    const isVisible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && style.opacity !== '0'
+        && rect.width > 20
+        && rect.height > 20
+        && !element.closest('[aria-hidden="true"]');
+    };
+
+    const target = candidates
+      .filter((element) => isVisible(element))
+      .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0];
+    if (!target) {
+      throw new Error('Khong tim thay o nhap prompt de dan anh.');
+    }
+
+    const dataTransfer = new DataTransfer();
+    for (const fileInfo of files) {
+      const response = await fetch(`data:${fileInfo.mimeType};base64,${fileInfo.base64}`);
+      const blob = await response.blob();
+      dataTransfer.items.add(new File([blob], fileInfo.name, { type: fileInfo.mimeType }));
+    }
+
+    target.dispatchEvent(new ClipboardEvent('paste', {
+      clipboardData: dataTransfer,
+      bubbles: true,
+      cancelable: true
+    }));
+  }, { files: clipboardFiles });
+
+  return promptBox;
+}
+
+async function waitForPromptAssetsReady(page, expectedCount) {
+  console.log(`[Flow] Dang cho Flow upload xong ${expectedCount} anh input...`);
+
+  await page.waitForFunction((count) => {
+    const candidates = Array.from(document.querySelectorAll('textarea, [contenteditable="true"], div[role="textbox"]'));
+    const pickTextbox = () => candidates
+      .filter((element) => {
+        if (!(element instanceof HTMLElement)) return false;
+        const style = window.getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.display !== 'none'
+          && style.visibility !== 'hidden'
+          && style.opacity !== '0'
+          && rect.width > 20
+          && rect.height > 20
+          && !element.closest('[aria-hidden="true"]');
+      })
+      .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0];
+
+    const textbox = pickTextbox();
+    if (!textbox) return false;
+
+    const isVisible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 16 && rect.height > 16;
+    };
+
+    const composer = textbox.closest('form')
+      || textbox.closest('[role="group"]')
+      || textbox.parentElement
+      || document.body;
+
+    const textboxRect = textbox.getBoundingClientRect();
+    const attachmentImages = Array.from(composer.querySelectorAll('img')).filter((img) => {
+      if (!(img instanceof HTMLImageElement) || !isVisible(img)) return false;
+      const rect = img.getBoundingClientRect();
+      const src = img.currentSrc || img.src || '';
+      if (!src || /avatar|profile|googleusercontent.*photo/i.test(src)) return false;
+      const maxSide = Math.max(rect.width, rect.height);
+      const minSide = Math.min(rect.width, rect.height);
+      const inComposerBand = rect.bottom <= textboxRect.top + 24 && rect.top >= textboxRect.top - 120;
+      return (img.naturalWidth > 0 || img.complete)
+        && minSide >= 24
+        && maxSide <= 120
+        && inComposerBand;
+    });
+
+    const hasPendingProgress = !!composer.querySelector('[role="progressbar"], progress, [aria-busy="true"]');
+    return attachmentImages.length >= count && !hasPendingProgress;
+  }, expectedCount, { timeout: 120000 });
+
+  const attachmentDebug = await page.evaluate(() => {
+    const candidates = Array.from(document.querySelectorAll('textarea, [contenteditable="true"], div[role="textbox"]'));
+    const textbox = candidates
+      .filter((element) => {
+        if (!(element instanceof HTMLElement)) return false;
+        const style = window.getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.display !== 'none'
+          && style.visibility !== 'hidden'
+          && style.opacity !== '0'
+          && rect.width > 20
+          && rect.height > 20
+          && !element.closest('[aria-hidden="true"]');
+      })
+      .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0];
+    if (!textbox) return { readyCount: 0, sendEnabled: false };
+
+    const composer = textbox.closest('form')
+      || textbox.closest('[role="group"]')
+      || textbox.parentElement
+      || document.body;
+
+    const textboxRect = textbox.getBoundingClientRect();
+    const readyCount = Array.from(composer.querySelectorAll('img')).filter((img) => {
+      if (!(img instanceof HTMLImageElement)) return false;
+      const rect = img.getBoundingClientRect();
+      const src = img.currentSrc || img.src || '';
+      const maxSide = Math.max(rect.width, rect.height);
+      const minSide = Math.min(rect.width, rect.height);
+      const inComposerBand = rect.bottom <= textboxRect.top + 24 && rect.top >= textboxRect.top - 120;
+      return minSide >= 24
+        && maxSide <= 120
+        && inComposerBand
+        && !!src
+        && !/avatar|profile|googleusercontent.*photo/i.test(src);
+    }).length;
+
+    const sendButton = Array.from(document.querySelectorAll('button')).find((button) => {
+      const text = (button.textContent || '').trim();
+      const label = button.getAttribute('aria-label') || '';
+      return /send|gui|tao|arrow_forward/i.test(`${text} ${label}`);
+    });
+
+    return {
+      readyCount,
+      sendEnabled: !!sendButton && !sendButton.hasAttribute('disabled') && sendButton.getAttribute('aria-disabled') !== 'true'
+    };
+  });
+
+  console.log(`[Flow] Upload input hoan tat: ${attachmentDebug.readyCount} attachment san sang, sendEnabled=${attachmentDebug.sendEnabled}.`);
+  await delay(2000);
+}
+
+async function waitForComposerReadyToSubmit(page, expectedCount, prompt) {
+  const promptNeedle = String(prompt || '').trim().slice(0, 20);
+
+  await page.waitForFunction(({ count, promptSnippet }) => {
+    const candidates = Array.from(document.querySelectorAll('textarea, [contenteditable="true"], div[role="textbox"]'));
+
+    const isVisible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && style.opacity !== '0'
+        && rect.width > 20
+        && rect.height > 20;
+    };
+
+    const textbox = candidates
+      .filter((element) => isVisible(element) && !element.closest('[aria-hidden="true"]'))
+      .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0];
+    if (!textbox) return false;
+
+    const composer = textbox.closest('form')
+      || textbox.closest('[role="group"]')
+      || textbox.parentElement
+      || document.body;
+
+    const textboxRect = textbox.getBoundingClientRect();
+    const readyCount = Array.from(composer.querySelectorAll('img')).filter((img) => {
+      if (!(img instanceof HTMLImageElement)) return false;
+      const rect = img.getBoundingClientRect();
+      const src = img.currentSrc || img.src || '';
+      const maxSide = Math.max(rect.width, rect.height);
+      const minSide = Math.min(rect.width, rect.height);
+      const inComposerBand = rect.bottom <= textboxRect.top + 24 && rect.top >= textboxRect.top - 120;
+      return minSide >= 24
+        && maxSide <= 120
+        && inComposerBand
+        && !!src
+        && !/avatar|profile|googleusercontent.*photo/i.test(src);
+    }).length;
+
+    const promptValue = textbox instanceof HTMLTextAreaElement || textbox instanceof HTMLInputElement
+      ? (textbox.value || '')
+      : (textbox.textContent || '');
+
+    const sendButton = Array.from(document.querySelectorAll('button')).find((button) => {
+      const text = (button.textContent || '').trim();
+      const label = button.getAttribute('aria-label') || '';
+      return /send|gui|gửi|tao|tạo|arrow_forward/i.test(`${text} ${label}`);
+    });
+
+    const sendEnabled = !!sendButton
+      && !sendButton.hasAttribute('disabled')
+      && sendButton.getAttribute('aria-disabled') !== 'true';
+
+    const promptOk = promptSnippet ? promptValue.includes(promptSnippet) : promptValue.trim().length > 0;
+    return readyCount >= count && promptOk && sendEnabled;
+  }, { count: expectedCount, promptSnippet: promptNeedle }, { timeout: 60000 });
+
+  const composerState = await page.evaluate(() => {
+    const candidates = Array.from(document.querySelectorAll('textarea, [contenteditable="true"], div[role="textbox"]'));
+    const isVisible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && style.opacity !== '0'
+        && rect.width > 20
+        && rect.height > 20;
+    };
+
+    const textbox = candidates
+      .filter((element) => isVisible(element) && !element.closest('[aria-hidden="true"]'))
+      .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0];
+    const composer = textbox?.closest('form')
+      || textbox?.closest('[role="group"]')
+      || textbox?.parentElement
+      || document.body;
+
+    const textboxRect = textbox?.getBoundingClientRect?.() || { top: 0 };
+    const readyCount = Array.from(composer.querySelectorAll('img')).filter((img) => {
+      if (!(img instanceof HTMLImageElement)) return false;
+      const rect = img.getBoundingClientRect();
+      const src = img.currentSrc || img.src || '';
+      const maxSide = Math.max(rect.width, rect.height);
+      const minSide = Math.min(rect.width, rect.height);
+      const inComposerBand = rect.bottom <= textboxRect.top + 24 && rect.top >= textboxRect.top - 120;
+      return minSide >= 24
+        && maxSide <= 120
+        && inComposerBand
+        && !!src
+        && !/avatar|profile|googleusercontent.*photo/i.test(src);
+    }).length;
+
+    const promptValue = textbox instanceof HTMLTextAreaElement || textbox instanceof HTMLInputElement
+      ? (textbox.value || '')
+      : (textbox?.textContent || '');
+
+    const sendButton = Array.from(document.querySelectorAll('button')).find((button) => {
+      const text = (button.textContent || '').trim();
+      const label = button.getAttribute('aria-label') || '';
+      return /send|gui|gửi|tao|tạo|arrow_forward/i.test(`${text} ${label}`);
+    });
+
+    return {
+      readyCount,
+      promptLength: promptValue.trim().length,
+      sendEnabled: !!sendButton
+        && !sendButton.hasAttribute('disabled')
+        && sendButton.getAttribute('aria-disabled') !== 'true'
+    };
+  });
+
+  console.log(`[FlowV2] Composer ready: attachments=${composerState.readyCount}, promptLength=${composerState.promptLength}, sendEnabled=${composerState.sendEnabled}`);
+}
+
+async function preparePersistentContextPage(browserContext) {
+  const existingPages = browserContext.pages().filter(page => !page.isClosed());
+  const primaryPage = existingPages[0] || await browserContext.newPage();
+  const extraPages = existingPages.slice(1);
+
+  await Promise.all(extraPages.map(page => page.close().catch(() => null)));
+
+  return primaryPage;
+}
+
+async function runFlowVariant(page, prompt, inputFiles, tempDir, onImageReady) {
   try {
     const pendingDownloads = []; // giữ lại để tương thích nhưng không dùng tập trung nữa
 
@@ -268,6 +708,200 @@ async function runFlowVariant(page, prompt, filePaths, tempDir, onImageReady) {
   }
 }
 
+async function fillPromptBox(promptBox, prompt) {
+  await waitForPromptInputReady(promptBox.page());
+
+  const currentPromptBox = await getPromptLocator(promptBox.page());
+  await currentPromptBox.click();
+
+  try {
+    await currentPromptBox.fill(prompt);
+  } catch (error) {
+    console.log(`[FlowV2] fill() khong thanh cong, chuyen sang fallback: ${error.message}`);
+  }
+
+  let currentValue = await readPromptText(promptBox.page());
+  if (currentValue.includes(prompt.slice(0, 20))) {
+    return;
+  }
+
+  const domWriteResult = await setPromptTextViaDom(promptBox.page(), prompt);
+  if (domWriteResult?.ok) {
+    currentValue = await readPromptText(promptBox.page());
+    if (currentValue.includes(prompt.slice(0, 20))) {
+      return;
+    }
+  }
+
+  await currentPromptBox.click();
+  await promptBox.page().keyboard.down('Control');
+  await promptBox.page().keyboard.press('a');
+  await promptBox.page().keyboard.up('Control');
+  await promptBox.page().keyboard.press('Backspace');
+  await promptBox.page().keyboard.insertText(prompt);
+
+  currentValue = await readPromptText(promptBox.page());
+  if (!currentValue.includes(prompt.slice(0, 20))) {
+    throw new Error('Da dan anh xong nhung khong the chen prompt vao o chat cua Flow.');
+  }
+
+  console.log(`[FlowV2] Prompt da vao o chat (${currentValue.trim().length} ky tu).`);
+}
+
+async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady) {
+  const outputPaths = [];
+  let chatUrl = 'https://labs.google/fx/vi/tools/flow';
+
+  try {
+    console.log('[FlowV2] Truy cap trang chu Flow...');
+    await page.goto('https://labs.google/fx/vi/tools/flow', { waitUntil: 'domcontentloaded' });
+    await delay(3000);
+
+    try {
+      const errorBackBtn = page.locator('button:has-text("Quay lại dự án"), button:has-text("Quay lai du an")');
+      if (await errorBackBtn.count() > 0) {
+        await errorBackBtn.first().click();
+        await delay(2000);
+      }
+
+      const newProjBtn = page.locator('button, div').filter({ hasText: /Dự án mới|Du an moi|Nouveau projet/i }).last();
+      if (await newProjBtn.count() > 0 && await newProjBtn.isVisible()) {
+        await newProjBtn.click();
+        await delay(3000);
+      }
+    } catch (error) {
+      console.log(`[FlowV2] Bo qua buoc tao du an moi: ${error.message}`);
+    }
+
+    chatUrl = page.url();
+
+    console.log(`[FlowV2] Dan cung luc ${inputFiles.length} anh vao Flow...`);
+    const clipboardFiles = await buildClipboardPayload(inputFiles);
+    const promptBox = await pasteAssetsIntoPrompt(page, clipboardFiles);
+    await waitForPromptAssetsReady(page, inputFiles.length);
+
+    console.log('[FlowV2] Nhap prompt sau khi attachment da san sang...');
+    await fillPromptBox(promptBox, prompt);
+    await delay(1000);
+
+    try {
+      const configBtn = page.locator('button').filter({ hasText: /Nano Banana|x/ }).first();
+      if (await configBtn.count() > 0) {
+        await configBtn.click();
+        await delay(1000);
+
+        const x4Btn = page.locator('button').filter({ hasText: /^x4$/ }).first();
+        if (await x4Btn.count() > 0) {
+          await x4Btn.click();
+          await delay(500);
+        }
+
+        await promptBox.click();
+      }
+    } catch (error) {
+      console.log(`[FlowV2] Bo qua loi chon x4: ${error.message}`);
+    }
+
+    await waitForComposerReadyToSubmit(page, inputFiles.length, prompt);
+
+    const existingImgSources = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('img'))
+        .filter(img => img.width > 100 && !img.src.includes('avatar'))
+        .map(img => img.src);
+    });
+    console.log(`[FlowV2] Da ghi nho ${existingImgSources.length} anh cu tren trang.`);
+
+    const sendBtn = page.locator('button:has-text("arrow_forward"), button[aria-label*="Gửi"], button[aria-label*="Gui"], button[aria-label*="Send"], button[aria-label*="Tạo"], button[aria-label*="Tao"]').first();
+    if (await sendBtn.count() > 0 && await sendBtn.isVisible()) {
+      await sendBtn.click();
+    } else {
+      await page.keyboard.press('Enter');
+    }
+
+    console.log('[FlowV2] Dang cho Google Flow sinh ket qua anh...');
+    try {
+      await page.waitForFunction((oldSources) => {
+        const currentImages = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
+        const newImages = currentImages.filter(img => !oldSources.includes(img.src));
+        return newImages.length >= 4;
+      }, existingImgSources, { timeout: 240000 });
+    } catch (error) {
+      console.log(`[FlowV2] Het thoi gian cho 4 anh moi, se xu ly nhung anh da co: ${error.message}`);
+    }
+
+    await delay(15000);
+
+    const newResultsInDom = await page.evaluate((oldSources) => {
+      const currentImages = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
+      return currentImages.filter(img => !oldSources.includes(img.src)).map(img => ({
+        src: img.src,
+        rect: {
+          x: img.getBoundingClientRect().x + img.getBoundingClientRect().width / 2,
+          y: img.getBoundingClientRect().y + img.getBoundingClientRect().height / 2,
+          w: img.getBoundingClientRect().width,
+          h: img.getBoundingClientRect().height
+        }
+      }));
+    }, existingImgSources);
+
+    console.log(`[FlowV2] Tim thay ${newResultsInDom.length} anh ket qua moi.`);
+
+    let processedCount = 0;
+    for (let index = 0; index < Math.min(newResultsInDom.length, 4); index += 1) {
+      const item = newResultsInDom[index];
+      const outputPath = path.join(tempDir, `flow_result_${Date.now()}_${index}.png`);
+
+      try {
+        if (!item.src) {
+          continue;
+        }
+
+        if (item.src.startsWith('data:image')) {
+          const content = item.src.split('base64,')[1];
+          await fs.writeFile(outputPath, Buffer.from(content, 'base64'));
+        } else if (item.src.startsWith('blob:')) {
+          const base64Data = await page.evaluate(async (blobUrl) => {
+            const response = await fetch(blobUrl);
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.readAsDataURL(blob);
+            });
+          }, item.src);
+          const content = String(base64Data).split('base64,')[1];
+          await fs.writeFile(outputPath, Buffer.from(content, 'base64'));
+        } else {
+          const arrayBuffer = await page.evaluate(async (url) => {
+            const response = await fetch(url);
+            const buffer = await response.arrayBuffer();
+            return Array.from(new Uint8Array(buffer));
+          }, item.src);
+          await fs.writeFile(outputPath, Buffer.from(arrayBuffer));
+        }
+
+        outputPaths.push(outputPath);
+        processedCount += 1;
+        console.log(`[FlowV2] Da tai xong anh ket qua ${index + 1}`);
+
+        if (typeof onImageReady === 'function') {
+          await onImageReady(outputPath);
+        }
+      } catch (error) {
+        console.log(`[FlowV2] Bo qua anh loi: ${error.message}`);
+      }
+    }
+
+    console.log(`[FlowV2] Hoan tat: ${processedCount}/4 anh da tai va upload thanh cong.`);
+    await page.close().catch(() => null);
+    return { outputPaths, chatUrl };
+  } catch (error) {
+    console.error('[FlowV2] Loi nghiem trong:', error);
+    await page.close().catch(() => null);
+    return { outputPaths, chatUrl };
+  }
+}
+
 async function runFlowAutomation({ prompt, assets, onImageReady }) {
   const tempDir = path.join(os.tmpdir(), `landscape-flow-${Date.now()}`);
   await ensureDirectory(tempDir);
@@ -289,15 +923,14 @@ async function runFlowAutomation({ prompt, assets, onImageReady }) {
       args: ['--disable-blink-features=AutomationControlled']
     });
 
-    const filePaths = inputFiles.map(file => file.filePath);
-    const defaultPage = browser.pages()[0] || await browser.newPage();
+    const defaultPage = await preparePersistentContextPage(browser);
 
     console.log(`[AUTO-FLOW] Đang khởi động Google Labs Flow...`);
     
-    const outputPaths = await runFlowVariant(defaultPage, prompt, filePaths, tempDir, onImageReady);
+    const { outputPaths, chatUrl } = await runFlowVariantV2(defaultPage, prompt, inputFiles, tempDir, onImageReady);
 
     console.log(`[AUTO-FLOW] Hoàn tất. Lấy được ${outputPaths.length}/4 ảnh.`);
-    return { outputPaths, chatUrl: 'https://labs.google/fx/vi/tools/flow/project/04886b36-e1dc-4244-bd0e-21e750bab491' };
+    return { outputPaths, chatUrl };
   } finally {
     if (browser) {
       // Giữ khoảng thời gian nhỏ trước khi tắt để đảm bảo onImageReady xử lý xong (nước cuối)
