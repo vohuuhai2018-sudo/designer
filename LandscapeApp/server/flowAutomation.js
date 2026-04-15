@@ -8,7 +8,9 @@ const CHROME_CANDIDATES = [
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
+  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'
 ];
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -270,100 +272,46 @@ async function waitForPromptAssetsReady(page, expectedCount) {
   console.log(`[Flow] Dang cho Flow upload xong ${expectedCount} anh input...`);
 
   await page.waitForFunction((count) => {
-    const candidates = Array.from(document.querySelectorAll('textarea, [contenteditable="true"], div[role="textbox"]'));
-    const pickTextbox = () => candidates
-      .filter((element) => {
-        if (!(element instanceof HTMLElement)) return false;
-        const style = window.getComputedStyle(element);
-        const rect = element.getBoundingClientRect();
-        return style.display !== 'none'
-          && style.visibility !== 'hidden'
-          && style.opacity !== '0'
-          && rect.width > 20
-          && rect.height > 20
-          && !element.closest('[aria-hidden="true"]');
-      })
-      .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0];
-
-    const textbox = pickTextbox();
-    if (!textbox) return false;
-
-    const isVisible = (element) => {
-      if (!(element instanceof HTMLElement)) return false;
-      const style = window.getComputedStyle(element);
-      const rect = element.getBoundingClientRect();
-      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 16 && rect.height > 16;
-    };
-
-    const composer = textbox.closest('form')
-      || textbox.closest('[role="group"]')
-      || textbox.parentElement
-      || document.body;
-
-    const textboxRect = textbox.getBoundingClientRect();
-    const attachmentImages = Array.from(composer.querySelectorAll('img')).filter((img) => {
-      if (!(img instanceof HTMLImageElement) || !isVisible(img)) return false;
-      const rect = img.getBoundingClientRect();
-      const src = img.currentSrc || img.src || '';
-      if (!src || /avatar|profile|googleusercontent.*photo/i.test(src)) return false;
-      const maxSide = Math.max(rect.width, rect.height);
-      const minSide = Math.min(rect.width, rect.height);
-      const inComposerBand = rect.bottom <= textboxRect.top + 24 && rect.top >= textboxRect.top - 120;
-      return (img.naturalWidth > 0 || img.complete)
-        && minSide >= 24
-        && maxSide <= 120
-        && inComposerBand;
+    var allImgs = Array.from(document.querySelectorAll('img'));
+    var assets = allImgs.filter(function(img) {
+      if (!(img instanceof HTMLImageElement)) return false;
+      var s = window.getComputedStyle(img);
+      var r = img.getBoundingClientRect();
+      if (s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0') return false;
+      if (r.width < 30 || r.height < 30) return false;
+      if (!img.complete && img.naturalWidth === 0) return false;
+      var src = img.currentSrc || img.src || '';
+      if (!src) return false;
+      if (/avatar|profile|googleusercontent|placeholder|logo|icon|discord|instagram|x-logo|favicon/i.test(src)) return false;
+      if (src.endsWith('.svg')) return false;
+      return true;
     });
-
-    const hasPendingProgress = !!composer.querySelector('[role="progressbar"], progress, [aria-busy="true"]');
-    return attachmentImages.length >= count && !hasPendingProgress;
+    if (assets.length < count) return false;
+    var hasPending = !!document.querySelector('[role="progressbar"], progress, [aria-busy="true"]');
+    return !hasPending;
   }, expectedCount, { timeout: 120000 });
 
   const attachmentDebug = await page.evaluate(() => {
-    const candidates = Array.from(document.querySelectorAll('textarea, [contenteditable="true"], div[role="textbox"]'));
-    const textbox = candidates
-      .filter((element) => {
-        if (!(element instanceof HTMLElement)) return false;
-        const style = window.getComputedStyle(element);
-        const rect = element.getBoundingClientRect();
-        return style.display !== 'none'
-          && style.visibility !== 'hidden'
-          && style.opacity !== '0'
-          && rect.width > 20
-          && rect.height > 20
-          && !element.closest('[aria-hidden="true"]');
-      })
-      .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0];
-    if (!textbox) return { readyCount: 0, sendEnabled: false };
-
-    const composer = textbox.closest('form')
-      || textbox.closest('[role="group"]')
-      || textbox.parentElement
-      || document.body;
-
-    const textboxRect = textbox.getBoundingClientRect();
-    const readyCount = Array.from(composer.querySelectorAll('img')).filter((img) => {
+    var allImgs = Array.from(document.querySelectorAll('img'));
+    var readyCount = allImgs.filter(function(img) {
       if (!(img instanceof HTMLImageElement)) return false;
-      const rect = img.getBoundingClientRect();
-      const src = img.currentSrc || img.src || '';
-      const maxSide = Math.max(rect.width, rect.height);
-      const minSide = Math.min(rect.width, rect.height);
-      const inComposerBand = rect.bottom <= textboxRect.top + 24 && rect.top >= textboxRect.top - 120;
-      return minSide >= 24
-        && maxSide <= 120
-        && inComposerBand
-        && !!src
-        && !/avatar|profile|googleusercontent.*photo/i.test(src);
+      var s = window.getComputedStyle(img);
+      var r = img.getBoundingClientRect();
+      if (s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0') return false;
+      if (r.width < 30 || r.height < 30) return false;
+      if (!img.complete && img.naturalWidth === 0) return false;
+      var src = img.currentSrc || img.src || '';
+      if (!src) return false;
+      if (/avatar|profile|googleusercontent|placeholder|logo|icon|discord|instagram|x-logo|favicon/i.test(src)) return false;
+      if (src.endsWith('.svg')) return false;
+      return true;
     }).length;
-
-    const sendButton = Array.from(document.querySelectorAll('button')).find((button) => {
-      const text = (button.textContent || '').trim();
-      const label = button.getAttribute('aria-label') || '';
-      return /send|gui|tao|arrow_forward/i.test(`${text} ${label}`);
+    var sendButton = Array.from(document.querySelectorAll('button')).find(function(btn) {
+      var text = (btn.textContent || '').trim();
+      return /arrow_forward/i.test(text);
     });
-
     return {
-      readyCount,
+      readyCount: readyCount,
       sendEnabled: !!sendButton && !sendButton.hasAttribute('disabled') && sendButton.getAttribute('aria-disabled') !== 'true'
     };
   });
@@ -376,114 +324,78 @@ async function waitForComposerReadyToSubmit(page, expectedCount, prompt) {
   const promptNeedle = String(prompt || '').trim().slice(0, 20);
 
   await page.waitForFunction(({ count, promptSnippet }) => {
-    const candidates = Array.from(document.querySelectorAll('textarea, [contenteditable="true"], div[role="textbox"]'));
-
-    const isVisible = (element) => {
-      if (!(element instanceof HTMLElement)) return false;
-      const style = window.getComputedStyle(element);
-      const rect = element.getBoundingClientRect();
-      return style.display !== 'none'
-        && style.visibility !== 'hidden'
-        && style.opacity !== '0'
-        && rect.width > 20
-        && rect.height > 20;
-    };
-
-    const textbox = candidates
-      .filter((element) => isVisible(element) && !element.closest('[aria-hidden="true"]'))
-      .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0];
-    if (!textbox) return false;
-
-    const composer = textbox.closest('form')
-      || textbox.closest('[role="group"]')
-      || textbox.parentElement
-      || document.body;
-
-    const textboxRect = textbox.getBoundingClientRect();
-    const readyCount = Array.from(composer.querySelectorAll('img')).filter((img) => {
+    // Đếm ảnh asset
+    var assetCount = Array.from(document.querySelectorAll('img')).filter(function(img) {
       if (!(img instanceof HTMLImageElement)) return false;
-      const rect = img.getBoundingClientRect();
-      const src = img.currentSrc || img.src || '';
-      const maxSide = Math.max(rect.width, rect.height);
-      const minSide = Math.min(rect.width, rect.height);
-      const inComposerBand = rect.bottom <= textboxRect.top + 24 && rect.top >= textboxRect.top - 120;
-      return minSide >= 24
-        && maxSide <= 120
-        && inComposerBand
-        && !!src
-        && !/avatar|profile|googleusercontent.*photo/i.test(src);
+      var s = window.getComputedStyle(img);
+      var r = img.getBoundingClientRect();
+      if (s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0') return false;
+      if (r.width < 30 || r.height < 30) return false;
+      if (!img.complete && img.naturalWidth === 0) return false;
+      var src = img.currentSrc || img.src || '';
+      if (!src) return false;
+      if (/avatar|profile|googleusercontent|placeholder|logo|icon|discord|instagram|x-logo|favicon/i.test(src)) return false;
+      if (src.endsWith('.svg')) return false;
+      return true;
     }).length;
 
-    const promptValue = textbox instanceof HTMLTextAreaElement || textbox instanceof HTMLInputElement
+    // Tìm textbox để kiểm tra prompt
+    var candidates = Array.from(document.querySelectorAll('[contenteditable="true"], div[role="textbox"], textarea'));
+    var textbox = candidates.filter(function(el) {
+      if (!(el instanceof HTMLElement)) return false;
+      var s = window.getComputedStyle(el);
+      var r = el.getBoundingClientRect();
+      return s.display !== 'none' && s.visibility !== 'hidden' && s.opacity !== '0' && r.width > 20 && r.height > 20 && !el.closest('[aria-hidden="true"]');
+    }).sort(function(a, b) { return b.getBoundingClientRect().top - a.getBoundingClientRect().top; })[0];
+    if (!textbox) return false;
+
+    var promptValue = textbox instanceof HTMLTextAreaElement || textbox instanceof HTMLInputElement
       ? (textbox.value || '')
       : (textbox.textContent || '');
 
-    const sendButton = Array.from(document.querySelectorAll('button')).find((button) => {
-      const text = (button.textContent || '').trim();
-      const label = button.getAttribute('aria-label') || '';
-      return /send|gui|gửi|tao|tạo|arrow_forward/i.test(`${text} ${label}`);
+    var sendButton = Array.from(document.querySelectorAll('button')).find(function(btn) {
+      return /arrow_forward/i.test(btn.textContent || '');
     });
+    var sendEnabled = !!sendButton && !sendButton.hasAttribute('disabled') && sendButton.getAttribute('aria-disabled') !== 'true';
 
-    const sendEnabled = !!sendButton
-      && !sendButton.hasAttribute('disabled')
-      && sendButton.getAttribute('aria-disabled') !== 'true';
-
-    const promptOk = promptSnippet ? promptValue.includes(promptSnippet) : promptValue.trim().length > 0;
-    return readyCount >= count && promptOk && sendEnabled;
+    var promptOk = promptSnippet ? promptValue.includes(promptSnippet) : promptValue.trim().length > 0;
+    return assetCount >= count && promptOk && sendEnabled;
   }, { count: expectedCount, promptSnippet: promptNeedle }, { timeout: 60000 });
 
   const composerState = await page.evaluate(() => {
-    const candidates = Array.from(document.querySelectorAll('textarea, [contenteditable="true"], div[role="textbox"]'));
-    const isVisible = (element) => {
-      if (!(element instanceof HTMLElement)) return false;
-      const style = window.getComputedStyle(element);
-      const rect = element.getBoundingClientRect();
-      return style.display !== 'none'
-        && style.visibility !== 'hidden'
-        && style.opacity !== '0'
-        && rect.width > 20
-        && rect.height > 20;
-    };
-
-    const textbox = candidates
-      .filter((element) => isVisible(element) && !element.closest('[aria-hidden="true"]'))
-      .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0];
-    const composer = textbox?.closest('form')
-      || textbox?.closest('[role="group"]')
-      || textbox?.parentElement
-      || document.body;
-
-    const textboxRect = textbox?.getBoundingClientRect?.() || { top: 0 };
-    const readyCount = Array.from(composer.querySelectorAll('img')).filter((img) => {
+    var assetCount = Array.from(document.querySelectorAll('img')).filter(function(img) {
       if (!(img instanceof HTMLImageElement)) return false;
-      const rect = img.getBoundingClientRect();
-      const src = img.currentSrc || img.src || '';
-      const maxSide = Math.max(rect.width, rect.height);
-      const minSide = Math.min(rect.width, rect.height);
-      const inComposerBand = rect.bottom <= textboxRect.top + 24 && rect.top >= textboxRect.top - 120;
-      return minSide >= 24
-        && maxSide <= 120
-        && inComposerBand
-        && !!src
-        && !/avatar|profile|googleusercontent.*photo/i.test(src);
+      var s = window.getComputedStyle(img);
+      var r = img.getBoundingClientRect();
+      if (s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0') return false;
+      if (r.width < 30 || r.height < 30) return false;
+      if (!img.complete && img.naturalWidth === 0) return false;
+      var src = img.currentSrc || img.src || '';
+      if (!src) return false;
+      if (/avatar|profile|googleusercontent|placeholder|logo|icon|discord|instagram|x-logo|favicon/i.test(src)) return false;
+      if (src.endsWith('.svg')) return false;
+      return true;
     }).length;
 
-    const promptValue = textbox instanceof HTMLTextAreaElement || textbox instanceof HTMLInputElement
+    var candidates = Array.from(document.querySelectorAll('[contenteditable="true"], div[role="textbox"], textarea'));
+    var textbox = candidates.filter(function(el) {
+      if (!(el instanceof HTMLElement)) return false;
+      var s = window.getComputedStyle(el);
+      var r = el.getBoundingClientRect();
+      return s.display !== 'none' && s.visibility !== 'hidden' && s.opacity !== '0' && r.width > 20 && r.height > 20 && !el.closest('[aria-hidden="true"]');
+    }).sort(function(a, b) { return b.getBoundingClientRect().top - a.getBoundingClientRect().top; })[0];
+    var promptValue = textbox instanceof HTMLTextAreaElement || textbox instanceof HTMLInputElement
       ? (textbox.value || '')
       : (textbox?.textContent || '');
 
-    const sendButton = Array.from(document.querySelectorAll('button')).find((button) => {
-      const text = (button.textContent || '').trim();
-      const label = button.getAttribute('aria-label') || '';
-      return /send|gui|gửi|tao|tạo|arrow_forward/i.test(`${text} ${label}`);
+    var sendButton = Array.from(document.querySelectorAll('button')).find(function(btn) {
+      return /arrow_forward/i.test(btn.textContent || '');
     });
 
     return {
-      readyCount,
+      readyCount: assetCount,
       promptLength: promptValue.trim().length,
-      sendEnabled: !!sendButton
-        && !sendButton.hasAttribute('disabled')
-        && sendButton.getAttribute('aria-disabled') !== 'true'
+      sendEnabled: !!sendButton && !sendButton.hasAttribute('disabled') && sendButton.getAttribute('aria-disabled') !== 'true'
     };
   });
 
