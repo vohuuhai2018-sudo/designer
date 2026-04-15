@@ -402,15 +402,6 @@ async function waitForComposerReadyToSubmit(page, expectedCount, prompt) {
   console.log(`[FlowV2] Composer ready: attachments=${composerState.readyCount}, promptLength=${composerState.promptLength}, sendEnabled=${composerState.sendEnabled}`);
 }
 
-async function preparePersistentContextPage(browserContext) {
-  const existingPages = browserContext.pages().filter(page => !page.isClosed());
-  const primaryPage = existingPages[0] || await browserContext.newPage();
-  const extraPages = existingPages.slice(1);
-
-  await Promise.all(extraPages.map(page => page.close().catch(() => null)));
-
-  return primaryPage;
-}
 
 async function runFlowVariant(page, prompt, inputFiles, tempDir, onImageReady) {
   try {
@@ -814,19 +805,32 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady)
   }
 }
 
-async function runFlowAutomation({ prompt, assets, onImageReady }) {
-  const tempDir = path.join(os.tmpdir(), `landscape-flow-${Date.now()}`);
-  await ensureDirectory(tempDir);
+// ===== SHARED BROWSER: 1 browser duy nhất, mỗi project mở 1 tab mới =====
+// Cho phép xử lý nhiều project song song mà không conflict persistent context.
+let _sharedBrowser = null;
+let _sharedBrowserPromise = null;
+let _activeTabCount = 0;
+const IDLE_CLOSE_MS = 30000; // Đóng browser sau 30s không có tab nào hoạt động
+let _idleTimer = null;
 
-  const inputFiles = [];
-  let browser;
-
-  try {
-    for (let index = 0; index < assets.length; index += 1) {
-      inputFiles.push(await downloadAssetToFile(assets[index], tempDir, index));
+async function getSharedBrowser() {
+  // Nếu đang có browser mở và chưa bị đóng, dùng lại
+  if (_sharedBrowser && _sharedBrowser.pages) {
+    try {
+      _sharedBrowser.pages(); // test nếu browser còn sống
+      return _sharedBrowser;
+    } catch (_) {
+      _sharedBrowser = null;
+      _sharedBrowserPromise = null;
     }
+  }
 
-    browser = await chromium.launchPersistentContext(FLOW_PROFILE_DIR, {
+  // Nếu đang trong quá trình mở, chờ
+  if (_sharedBrowserPromise) return _sharedBrowserPromise;
+
+  _sharedBrowserPromise = (async () => {
+    console.log('[BROWSER] Khởi tạo shared browser (persistent context)...');
+    _sharedBrowser = await chromium.launchPersistentContext(FLOW_PROFILE_DIR, {
       executablePath: resolveBrowserExecutable(),
       headless: false,
       viewport: { width: 1440, height: 900 },
@@ -834,21 +838,56 @@ async function runFlowAutomation({ prompt, assets, onImageReady }) {
       permissions: ['clipboard-read', 'clipboard-write'],
       args: ['--disable-blink-features=AutomationControlled']
     });
+    console.log('[BROWSER] Shared browser đã sẵn sàng.');
+    return _sharedBrowser;
+  })();
 
-    const defaultPage = await preparePersistentContextPage(browser);
+  return _sharedBrowserPromise;
+}
 
-    console.log(`[AUTO-FLOW] Đang khởi động Google Labs Flow...`);
-    
-    const { outputPaths, chatUrl } = await runFlowVariantV2(defaultPage, prompt, inputFiles, tempDir, onImageReady);
-
-    console.log(`[AUTO-FLOW] Hoàn tất. Lấy được ${outputPaths.length}/4 ảnh.`);
-    return { outputPaths, chatUrl };
-  } finally {
-    if (browser) {
-      // Giữ khoảng thời gian nhỏ trước khi tắt để đảm bảo onImageReady xử lý xong (nước cuối)
-      await delay(3000);
-      await browser.close().catch(() => null);
+function scheduleIdleClose() {
+  if (_idleTimer) clearTimeout(_idleTimer);
+  _idleTimer = setTimeout(async () => {
+    if (_activeTabCount <= 0 && _sharedBrowser) {
+      console.log('[BROWSER] Không còn tab nào hoạt động, đóng browser để tiết kiệm tài nguyên.');
+      await _sharedBrowser.close().catch(() => null);
+      _sharedBrowser = null;
+      _sharedBrowserPromise = null;
+      _activeTabCount = 0;
     }
+  }, IDLE_CLOSE_MS);
+}
+
+async function runFlowAutomation({ prompt, assets, onImageReady }) {
+  const tempDir = path.join(os.tmpdir(), `landscape-flow-${Date.now()}`);
+  await ensureDirectory(tempDir);
+
+  const inputFiles = [];
+
+  try {
+    for (let index = 0; index < assets.length; index += 1) {
+      inputFiles.push(await downloadAssetToFile(assets[index], tempDir, index));
+    }
+
+    const browser = await getSharedBrowser();
+    const page = await browser.newPage();
+    _activeTabCount++;
+
+    if (_idleTimer) clearTimeout(_idleTimer);
+
+    console.log(`[AUTO-FLOW] Mở tab mới cho Flow (đang có ${_activeTabCount} tab hoạt động)...`);
+
+    try {
+      const { outputPaths, chatUrl } = await runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady);
+      console.log(`[AUTO-FLOW] Hoàn tất. Lấy được ${outputPaths.length}/4 ảnh.`);
+      return { outputPaths, chatUrl };
+    } finally {
+      _activeTabCount = Math.max(0, _activeTabCount - 1);
+      console.log(`[AUTO-FLOW] Tab đã xong, còn ${_activeTabCount} tab hoạt động.`);
+      // page.close() đã được gọi trong runFlowVariantV2
+      scheduleIdleClose();
+    }
+  } finally {
     await Promise.all(inputFiles.map(file => fs.unlink(file.filePath).catch(() => null)));
   }
 }
