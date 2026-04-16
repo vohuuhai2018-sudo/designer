@@ -311,6 +311,7 @@ export default function App() {
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedProjectId, setSubmittedProjectId] = useState<string>('');
+  const [retryCount, setRetryCount] = useState(0);
 
   // --- SIMPLE ROUTING ---
   useEffect(() => {
@@ -340,10 +341,9 @@ export default function App() {
         sampleImage: "/assets/sample_angle.jpg"
       },
       plans: [
-        { id: "free", name: "Gói Miễn phí", header: "1. GÓI MIỄN PHÍ", sub: "Phác thảo nhanh ý tưởng sơ bộ (1 tấm hình gọn gàng).", media: [{ type: 'image', url: "https://images.unsplash.com/photo-1598902108854-10e335adac99?q=80&w=1200" }] },
-        { id: "basic", name: "Gói Cơ bản", header: "2. GÓI CƠ BẢN", sub: "KTS thiết kế 1 bản vẽ 3D chuẩn hóa (1 tấm hình chất lượng cao).", media: [{ type: 'image', url: "https://images.unsplash.com/photo-1516455590571-18256e5bb4ff?q=80&w=1200" }] },
-        { id: "advanced", name: "Gói Nâng cao", header: "3. GÓI NÂNG CAO", sub: "1 Bản vẽ thiết kế chuẩn + 1 Video diễn họa 3D sống động.", media: [{ type: 'image', url: "https://images.unsplash.com/photo-1613545325278-f24b0cae1224?q=80&w=1200" }, { type: 'video', url: "https://assets.mixkit.co/videos/preview/mixkit-residential-house-with-a-pool-and-green-landscaping-12270-large.mp4" }] },
-        { id: "premium", name: "Gói Premium", header: "4. GÓI PREMIUM (TRỌN BỘ 3D)", sub: "Thiết kế 3D toàn diện, xuất 6 góc nhìn đẹp nhất + 1 Video 4K diễn họa chi tiết.", media: [
+        { id: "basic", name: "Gói Cơ bản", header: "1. GÓI CƠ BẢN", sub: "KTS thiết kế 1 bản vẽ 3D chuẩn hóa (1 tấm hình chất lượng cao).", media: [{ type: 'image', url: "https://images.unsplash.com/photo-1516455590571-18256e5bb4ff?q=80&w=1200" }] },
+        { id: "advanced", name: "Gói Nâng cao", header: "2. GÓI NÂNG CAO", sub: "1 Bản vẽ thiết kế chuẩn + 1 Video diễn họa 3D sống động.", media: [{ type: 'image', url: "https://images.unsplash.com/photo-1613545325278-f24b0cae1224?q=80&w=1200" }, { type: 'video', url: "https://assets.mixkit.co/videos/preview/mixkit-residential-house-with-a-pool-and-green-landscaping-12270-large.mp4" }] },
+        { id: "premium", name: "Gói Premium", header: "3. GÓI PREMIUM (TRỌN BỘ 3D)", sub: "Thiết kế 3D toàn diện, xuất 6 góc nhìn đẹp nhất + 1 Video 4K diễn họa chi tiết.", media: [
           { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=1" },
           { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=2" },
           { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=3" },
@@ -552,6 +552,7 @@ export default function App() {
     setReferenceModelUrl('');
     setExtraAssets([]);
     setSubmittedProjectId('');
+    setRetryCount(0);
     setView('welcome');
   };
 
@@ -606,7 +607,7 @@ export default function App() {
   return (
     <>
       {showGlobalNav && (
-        <div className="global-nav-premium">
+        <div className={`global-nav-premium ${view === 'plan' ? 'wider' : ''}`}>
           <div className="nav-inner-luxe">
             <button onClick={handleGlobalBack} className="btn-nav-glass">
               <ChevronLeft size={20} /> Quay lại
@@ -635,7 +636,7 @@ export default function App() {
         </div>
       )}
 
-      <div className={`container ${(view as any) === 'admin' || (view as any) === 'login' ? 'full-width' : ''}`}>
+      <div className={`container ${(view as any) === 'admin' || (view as any) === 'login' ? 'full-width' : ''} ${view === 'plan' ? 'wider' : ''}`}>
         <AnimatePresence mode="wait">
         {view === 'welcome' && (
           <WelcomeView
@@ -727,7 +728,19 @@ export default function App() {
           />
         )}
         {view === 'success' && (
-          <SuccessView projectId={submittedProjectId} service={service} onReset={resetAll} />
+          <SuccessView
+            projectId={submittedProjectId}
+            service={service}
+            onReset={resetAll}
+            retryCount={retryCount}
+            onRetry={() => {
+              setRetryCount(prev => prev + 1);
+              setRawImage('');
+              setAnnotatedImage('');
+              setSubmittedProjectId('');
+              setView('upload');
+            }}
+          />
         )}
         {view === 'my_projects' && (
           <MyProjectsView
@@ -1746,7 +1759,6 @@ function PlanSelectionView({ service, onServiceChange, systemContent }: {
 }) {
   const [showSamples, setShowSamples] = useState(false);
   const services = [
-    { id: 'free', name: 'Gói Miễn phí', desc: 'Giúp bạn phác thảo nhanh ý tưởng', price: 'Miễn phí', icon: <Sparkles size={32} />, color: '#94a3b8' },
     { id: 'basic', name: 'Gói Cơ bản', desc: 'KTS thiết kế cho bạn 1 tấm ảnh đúng yêu cầu', price: '199.000đ', icon: <ImageIcon size={32} />, color: '#e2b170' },
     { id: 'advanced', name: 'Gói Nâng cao', desc: '1 bản vẽ chuẩn và thêm 1 video diễn họa', price: '299.000đ', icon: <VideoIcon size={32} />, color: '#6366f1' },
     { id: 'premium', name: 'Gói Premium', desc: 'KTS thiết kế 3D chuyên sâu cho bạn', price: 'Báo giá Zalo', icon: <Crown size={32} />, color: '#a855f7' }
@@ -1754,8 +1766,8 @@ function PlanSelectionView({ service, onServiceChange, systemContent }: {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view plan-view">
-      <h2 style={{textAlign: 'center', marginBottom: '1.5rem', marginTop: '160px', fontSize: '2.2rem'}}>Chọn Gói Giải Pháp</h2>
-      <p style={{textAlign: 'center', color: 'rgba(255,255,255,0.6)', marginBottom: '2rem', fontSize: '1.1rem'}}>Lựa chọn gói thiết kế phù hợp để hiện thực hóa ý tưởng của bạn.</p>
+      <h2 style={{textAlign: 'center', marginBottom: '0.8rem', marginTop: '100px', fontSize: '1.8rem'}}>Chọn Gói Giải Pháp</h2>
+      <p style={{textAlign: 'center', color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem', fontSize: '0.95rem'}}>Lựa chọn gói thiết kế phù hợp để hiện thực hóa ý tưởng của bạn.</p>
 
       <div className="service-list-premium">
         {services.map(s => (
@@ -1779,15 +1791,15 @@ function PlanSelectionView({ service, onServiceChange, systemContent }: {
         ))}
       </div>
 
-      <div style={{ marginTop: '3rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
-        <button 
+      <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
+        <button
           className="btn-show-samples"
           onClick={() => setShowSamples(true)}
         >
-          <Play size={24} fill="currentColor" />
+          <Play size={20} fill="currentColor" />
           XEM KẾT QUẢ MẪU CỦA CÁC GÓI
         </button>
-        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '1.1rem', fontWeight: 600 }}>* Vui lòng chọn 1 gói bên trên để tiếp tục</span>
+        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem', fontWeight: 600 }}>* Vui lòng chọn 1 gói bên trên để tiếp tục</span>
       </div>
 
       {showSamples && (
@@ -2010,7 +2022,7 @@ function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewRe
   );
 }
 
-function SuccessView({ projectId, service, onReset }: { projectId: string; service: string; onReset: () => void }) {
+function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry }: { projectId: string; service: string; onReset: () => void; retryCount?: number; onRetry?: () => void }) {
   const [project, setProject] = useState<Project | null>(null);
 
   useEffect(() => {
@@ -2057,7 +2069,7 @@ function SuccessView({ projectId, service, onReset }: { projectId: string; servi
          )}
          
          {images.length > 0 && (
-           <div className="results-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginTop: '2rem', width: '100%' }}>
+           <div className="results-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '1rem', marginTop: '1.5rem', width: '100%' }}>
              {images.map((url, i) => (
                <div key={i} style={{ position: 'relative', width: '100%', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.25)', display: 'flex', justifyContent: 'center' }}>
                  <img src={url} alt={`Phương án ${i+1}`} style={{ width: '100%', height: 'auto', display: 'block' }} />
@@ -2073,7 +2085,7 @@ function SuccessView({ projectId, service, onReset }: { projectId: string; servi
            <div style={{ marginTop: '2rem', width: '100%', textAlign: 'center' }}>
              <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '16px', marginBottom: '1.5rem', border: '1px solid rgba(255,255,255,0.1)' }}>
                <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)', marginBottom: '8px' }}>Link xem kết quả (lưu lại để xem bất kỳ lúc nào):</p>
-               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center' }}>
+               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
                  <code style={{ background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', wordBreak: 'break-all', color: 'var(--accent)' }}>
                    {window.location.origin}/result/{projectId}
                  </code>
@@ -2088,6 +2100,29 @@ function SuccessView({ projectId, service, onReset }: { projectId: string; servi
                  </button>
                </div>
              </div>
+             {retryCount < 1 && onRetry && (
+               <button
+                 onClick={onRetry}
+                 style={{
+                   width: '100%',
+                   padding: '16px',
+                   marginBottom: '12px',
+                   background: 'rgba(255,255,255,0.06)',
+                   border: '2px solid var(--accent)',
+                   borderRadius: '16px',
+                   color: 'var(--accent)',
+                   fontSize: '1.1rem',
+                   fontWeight: 800,
+                   cursor: 'pointer',
+                   display: 'flex',
+                   alignItems: 'center',
+                   justifyContent: 'center',
+                   gap: '10px',
+                 }}
+               >
+                 <RefreshCcw size={20} /> Thử lại lần 2 — Tìm mẫu ưng ý hơn
+               </button>
+             )}
              <button className="btn-primary main-cta" onClick={onReset}>
                Tạo Dự Án Mới
              </button>
