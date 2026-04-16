@@ -307,6 +307,13 @@ export default function App() {
     if (path === '/admin') {
       setView('login');
     }
+    // Route /result/<projectId> — cho phép user xem lại kết quả mà không cần đăng nhập
+    const resultMatch = path.match(/^\/result\/(.+)$/);
+    if (resultMatch) {
+      setSubmittedProjectId(resultMatch[1]);
+      setService('Gói Cơ Bản');
+      setView('success');
+    }
   }, []);
 
   // --- SYSTEM DYNAMIC CONTENT ---
@@ -638,7 +645,7 @@ export default function App() {
             onSelect={imgUrl => {
               setReferenceModelUrl(imgUrl);
               setNote(prev => {
-                const cleaned = prev.replace(/\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?/i, '').trimStart();
+                const cleaned = prev.replace(/(\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?)/gi, '').trimStart();
                 return `[MẪU ĐÃ CHỌN]: ${imgUrl}\n${cleaned}`;
               });
               handleGlobalNext();
@@ -976,9 +983,9 @@ function UploadView({
           <textarea 
             className="luxe-textarea" 
             placeholder="Ví dụ: tôi có diện tích 8x5m này cần làm hồ cá koi cổ điển đá vân mây, có lối đi rải sỏi, có cây tùng và đèn đá điểm..."
-            value={note ? note.replace(/\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?/i, '') : ''}
+            value={note ? note.replace(/(\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?)/gi, '').trimStart() : ''}
             onChange={(e) => {
-              const modelUrl = referenceModelUrl || extractSelectedModelUrl(note);
+              const modelUrl = referenceModelUrl;
               const header = modelUrl ? `[MẪU ĐÃ CHỌN]: ${modelUrl}\n` : '';
               if (onNoteChange) onNoteChange(header + e.target.value);
             }}
@@ -1895,7 +1902,7 @@ function SuccessView({ projectId, service, onReset }: { projectId: string; servi
   const [project, setProject] = useState<Project | null>(null);
 
   useEffect(() => {
-    if (!projectId || service !== 'Gói Cơ Bản') return;
+    if (!projectId || (service !== 'Gói Cơ Bản' && service !== 'Gói Cơ bản')) return;
     
     const fetchProject = async () => {
       try {
@@ -1914,7 +1921,7 @@ function SuccessView({ projectId, service, onReset }: { projectId: string; servi
     return () => clearInterval(interval);
   }, [projectId, service]);
 
-  if (service === 'Gói Cơ Bản') {
+  if (service === 'Gói Cơ Bản' || service === 'Gói Cơ bản') {
     const isDone = project?.status === 'done';
     const images = project?.aiResults || [];
     
@@ -1951,9 +1958,28 @@ function SuccessView({ projectId, service, onReset }: { projectId: string; servi
          )}
          
          {isDone && (
-           <button className="btn-primary main-cta" onClick={onReset} style={{ marginTop: '3rem' }}>
-             Tạo Dự Án Mới
-           </button>
+           <div style={{ marginTop: '2rem', width: '100%', textAlign: 'center' }}>
+             <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '16px', marginBottom: '1.5rem', border: '1px solid rgba(255,255,255,0.1)' }}>
+               <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)', marginBottom: '8px' }}>Link xem kết quả (lưu lại để xem bất kỳ lúc nào):</p>
+               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center' }}>
+                 <code style={{ background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', wordBreak: 'break-all', color: 'var(--accent)' }}>
+                   {window.location.origin}/result/{projectId}
+                 </code>
+                 <button
+                   onClick={() => {
+                     navigator.clipboard.writeText(`${window.location.origin}/result/${projectId}`);
+                     alert('Đã sao chép link!');
+                   }}
+                   style={{ padding: '8px 12px', borderRadius: '8px', background: 'var(--accent)', color: '#000', fontWeight: 700, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                 >
+                   Sao chép
+                 </button>
+               </div>
+             </div>
+             <button className="btn-primary main-cta" onClick={onReset}>
+               Tạo Dự Án Mới
+             </button>
+           </div>
          )}
       </motion.div>
     );
