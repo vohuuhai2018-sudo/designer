@@ -3788,31 +3788,43 @@ function AdminView({
               </div>
             ) : (
               <div className="ai-result-grid">
-                {aiResultImages.slice().reverse().map((imageUrl, index) => (
-                  <div key={`${imageUrl}-${index}`} className="ai-result-card" style={{ position: 'relative' }}>
-                    <button 
-                       className="ai-result-delete-btn" 
-                       title="Xóa ảnh này"
+                {aiResultImages.slice().reverse().map((mediaUrl, index) => {
+                  const isVideo = mediaUrl.endsWith('.mp4') || mediaUrl.includes('/video/');
+                  return (
+                  <div key={`${mediaUrl}-${index}`} className="ai-result-card" style={{ position: 'relative' }}>
+                    <button
+                       className="ai-result-delete-btn"
+                       title={isVideo ? "Xóa video này" : "Xóa ảnh này"}
                        style={{ position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}
                        onClick={async () => {
-                          const newResults = (selectedProject.aiResults || []).filter((img: string) => img !== imageUrl);
+                          const newResults = (selectedProject.aiResults || []).filter((r: string) => r !== mediaUrl);
                           try {
                              const updated = await onUpdateProject(selectedProject.id, { aiResults: newResults });
                              setSelectedProject(updated);
                           } catch {
-                             setActionFeedback("Lỗi khi xóa ảnh.");
+                             setActionFeedback("Lỗi khi xóa.");
                           }
                        }}
                     >
                        <X size={14} />
                     </button>
-                    <img src={imageUrl} alt={`AI Generation ${index + 1}`} />
+                    {isVideo ? (
+                      <video src={mediaUrl} controls style={{ width: '100%', borderRadius: '8px' }} />
+                    ) : (
+                      <img src={mediaUrl} alt={`AI Generation ${index + 1}`} />
+                    )}
                     <div className="ai-result-actions">
-                      <button className="btn-link-inline" onClick={() => window.open(imageUrl, '_blank')}><ExternalLink size={16} /> Xem ảnh</button>
-                      <button className="btn-link-inline" onClick={() => copyText(imageUrl, 'Đã copy link ảnh AI.')}><Copy size={16} /> Link</button>
+                      <button className="btn-link-inline" onClick={() => window.open(mediaUrl, '_blank')}><ExternalLink size={16} /> {isVideo ? 'Xem video' : 'Xem ảnh'}</button>
+                      <button className="btn-link-inline" onClick={() => copyText(mediaUrl, isVideo ? 'Đã copy link video.' : 'Đã copy link ảnh AI.')}><Copy size={16} /> Link</button>
+                      {isVideo && (
+                        <a href={mediaUrl} download style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent)', fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none' }}>
+                          <Upload size={16} style={{ transform: 'rotate(180deg)' }} /> Tải về
+                        </a>
+                      )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
@@ -4282,11 +4294,14 @@ function AdminView({
                         )}
                         {project.aiResults && project.aiResults.length > 0 && (
                           <div className="card-ai-preview-grid">
-                            {project.aiResults.slice(0, 4).reverse().map((img, i) => (
-                               <div key={i} className="card-ai-thumb" title="Ảnh AI tạo ra">
-                                  <img src={img} alt={`AI Thumb ${i+1}`} />
+                            {project.aiResults.slice(0, 4).reverse().map((media, i) => {
+                               const isVid = media.endsWith('.mp4') || media.includes('/video/');
+                               return (
+                               <div key={i} className="card-ai-thumb" title={isVid ? "Video AI" : "Ảnh AI"}>
+                                  {isVid ? <video src={media} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={media} alt={`AI Thumb ${i+1}`} />}
                                </div>
-                            ))}
+                               );
+                            })}
                           </div>
                         )}
                       </div>

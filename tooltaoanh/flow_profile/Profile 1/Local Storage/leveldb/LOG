@@ -1,6 +1,0 @@
-2026/04/16-23:14:52.060 3e865c Reusing MANIFEST /Users/bephi/webve/designer/tooltaoanh/flow_profile/Profile 1/Local Storage/leveldb/MANIFEST-000001
-2026/04/16-23:14:52.061 3e865c Recovering log #4
-2026/04/16-23:14:52.062 3e865c Reusing old log /Users/bephi/webve/designer/tooltaoanh/flow_profile/Profile 1/Local Storage/leveldb/000004.log 
-2026/04/16-23:15:52.065 3e865f Level-0 table #7: started
-2026/04/16-23:15:52.071 3e865f Level-0 table #7: 17063 bytes OK
-2026/04/16-23:15:52.073 3e865f Delete type=0 #4

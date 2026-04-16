@@ -1,2 +1,3 @@
-2026/04/14-01:05:43.500 5690 Creating DB D:\4. DỰ ÁN SƠN HẢI\1. WEB\APP VẼ\tooltaoanh\flow_profile\Default\Local Storage\leveldb since it was missing.
-2026/04/14-01:05:43.521 5690 Reusing MANIFEST D:\4. DỰ ÁN SƠN HẢI\1. WEB\APP VẼ\tooltaoanh\flow_profile\Default\Local Storage\leveldb/MANIFEST-000001
+2026/04/17-00:29:38.282 40104f Reusing MANIFEST /Users/bephi/webve/designer/tooltaoanh/flow_profile/Default/Local Storage/leveldb/MANIFEST-000001
+2026/04/17-00:29:38.284 40104f Recovering log #3
+2026/04/17-00:29:38.284 40104f Reusing old log /Users/bephi/webve/designer/tooltaoanh/flow_profile/Default/Local Storage/leveldb/000003.log 

@@ -1,7 +1,4 @@
-2026/04/14-01:07:52.170 63fc Reusing MANIFEST D:\4. DỰ ÁN SƠN HẢI\1. WEB\APP VẼ\tooltaoanh\flow_profile\Default\IndexedDB\https_labs.google_0.indexeddb.leveldb/MANIFEST-000001
-2026/04/14-01:07:52.170 63fc Recovering log #4
-2026/04/14-01:07:52.171 63fc Reusing old log D:\4. DỰ ÁN SƠN HẢI\1. WEB\APP VẼ\tooltaoanh\flow_profile\Default\IndexedDB\https_labs.google_0.indexeddb.leveldb/000004.log 
-2026/04/14-01:07:52.181 7fe4 Level-0 table #8: started
-2026/04/14-01:07:52.185 7fe4 Level-0 table #8: 9034 bytes OK
-2026/04/14-01:07:52.189 7fe4 Delete type=0 #4
-2026/04/14-01:07:52.189 7374 Manual compaction at level-0 from '\x00\x05\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x06\x00\x00\x00' @ 0 : 0; will stop at (end)
+2026/04/17-00:29:39.575 401003 Reusing MANIFEST /Users/bephi/webve/designer/tooltaoanh/flow_profile/Default/IndexedDB/https_labs.google_0.indexeddb.leveldb/MANIFEST-000001
+2026/04/17-00:29:39.575 401003 Recovering log #4
+2026/04/17-00:29:39.576 401003 Reusing old log /Users/bephi/webve/designer/tooltaoanh/flow_profile/Default/IndexedDB/https_labs.google_0.indexeddb.leveldb/000004.log 
+2026/04/17-00:29:39.588 40100f Manual compaction at level-0 from '\x00\x06\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x07\x00\x00\x00' @ 0 : 0; will stop at (end)
