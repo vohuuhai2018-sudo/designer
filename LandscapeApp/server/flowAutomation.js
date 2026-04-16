@@ -678,6 +678,44 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady)
 
     chatUrl = page.url();
 
+    // === ĐẢM BẢO CHẾ ĐỘ HÌNH ẢNH + x4 TRƯỚC KHI LÀM GÌ KHÁC ===
+    try {
+      console.log('[FlowV2] Cau hinh che do Hinh anh + x4...');
+      const configBtn = page.locator('button').filter({ hasText: /Video.*x|Hình ảnh.*x|Nano.*x|crop/ }).first();
+      if (await configBtn.count() > 0) {
+        await configBtn.click();
+        await delay(1500);
+
+        // Click tab Hình ảnh
+        const imageTabBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: /imageHình ảnh/ }).first();
+        if (await imageTabBtn.count() > 0) {
+          const isSelected = await imageTabBtn.getAttribute('aria-selected');
+          if (isSelected !== 'true') {
+            await imageTabBtn.click();
+            await delay(1000);
+            console.log('[FlowV2] Da chuyen sang tab Hinh anh.');
+          } else {
+            console.log('[FlowV2] Da dang o tab Hinh anh.');
+          }
+        }
+
+        // Chọn x4
+        const x4Btn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: /^x4$/ }).first();
+        if (await x4Btn.count() > 0) {
+          await x4Btn.click();
+          await delay(500);
+          console.log('[FlowV2] Da chon x4.');
+        }
+
+        // Đóng config panel bằng click lại config button (toggle)
+        await configBtn.click();
+        await delay(800);
+        console.log('[FlowV2] Da dong config panel.');
+      }
+    } catch (error) {
+      console.log(`[FlowV2] Bo qua loi cau hinh: ${error.message}`);
+    }
+
     console.log(`[FlowV2] Dan cung luc ${inputFiles.length} anh vao Flow...`);
     const clipboardFiles = await buildClipboardPayload(inputFiles);
     const promptBox = await pasteAssetsIntoPrompt(page, clipboardFiles);
@@ -686,24 +724,6 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady)
     console.log('[FlowV2] Nhap prompt sau khi attachment da san sang...');
     await fillPromptBox(promptBox, prompt);
     await delay(1000);
-
-    try {
-      const configBtn = page.locator('button').filter({ hasText: /Nano Banana|x/ }).first();
-      if (await configBtn.count() > 0) {
-        await configBtn.click();
-        await delay(1000);
-
-        const x4Btn = page.locator('button').filter({ hasText: /^x4$/ }).first();
-        if (await x4Btn.count() > 0) {
-          await x4Btn.click();
-          await delay(500);
-        }
-
-        await promptBox.click();
-      }
-    } catch (error) {
-      console.log(`[FlowV2] Bo qua loi chon x4: ${error.message}`);
-    }
 
     await waitForComposerReadyToSubmit(page, inputFiles.length, prompt);
 
@@ -892,6 +912,231 @@ async function runFlowAutomation({ prompt, assets, onImageReady }) {
   }
 }
 
+// ===== VIDEO AUTOMATION =====
+async function runFlowVideoAutomation({ prompt, imageUrl, onVideoReady }) {
+  const tempDir = path.join(os.tmpdir(), `landscape-flow-video-${Date.now()}`);
+  await ensureDirectory(tempDir);
+
+  const inputFiles = [];
+
+  try {
+    // Download reference image
+    if (imageUrl) {
+      inputFiles.push(await downloadAssetToFile({ url: imageUrl, label: 'reference' }, tempDir, 0));
+    }
+
+    const browser = await getSharedBrowser();
+    const page = await browser.newPage();
+    _activeTabCount++;
+
+    if (_idleTimer) clearTimeout(_idleTimer);
+
+    console.log(`[AUTO-VIDEO] Mở tab mới cho Flow Video (đang có ${_activeTabCount} tab hoạt động)...`);
+
+    try {
+      const result = await runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideoReady);
+      console.log(`[AUTO-VIDEO] Hoàn tất. Video: ${result.videoPath ? 'OK' : 'KHÔNG CÓ'}`);
+      return result;
+    } finally {
+      _activeTabCount = Math.max(0, _activeTabCount - 1);
+      console.log(`[AUTO-VIDEO] Tab đã xong, còn ${_activeTabCount} tab hoạt động.`);
+      scheduleIdleClose();
+    }
+  } finally {
+    await Promise.all(inputFiles.map(file => fs.unlink(file.filePath).catch(() => null)));
+  }
+}
+
+async function runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideoReady) {
+  let videoPath = null;
+  let chatUrl = 'https://labs.google/fx/vi/tools/flow';
+
+  try {
+    console.log('[FlowVideo] Truy cập trang chủ Flow...');
+    await page.goto('https://labs.google/fx/vi/tools/flow', { waitUntil: 'domcontentloaded' });
+    await delay(3000);
+
+    // Bỏ qua lỗi & tạo dự án mới
+    try {
+      const errorBackBtn = page.locator('button:has-text("Quay lại dự án"), button:has-text("Quay lai du an")');
+      if (await errorBackBtn.count() > 0) {
+        await errorBackBtn.first().click();
+        await delay(2000);
+      }
+      const newProjBtn = page.locator('button, div').filter({ hasText: /Dự án mới|Du an moi/i }).last();
+      if (await newProjBtn.count() > 0 && await newProjBtn.isVisible()) {
+        await newProjBtn.click();
+        await delay(3000);
+      }
+    } catch (e) {
+      console.log(`[FlowVideo] Bỏ qua bước tạo dự án mới: ${e.message}`);
+    }
+
+    chatUrl = page.url();
+
+    // === CẤU HÌNH: Video + 16:9 + x1 ===
+    console.log('[FlowVideo] Cấu hình chế độ Video + 16:9 + x1...');
+    try {
+      const configBtn = page.locator('button').filter({ hasText: /Video.*x|Hình ảnh.*x|Nano.*x|crop/ }).first();
+      if (await configBtn.count() > 0) {
+        await configBtn.click();
+        await delay(1500);
+
+        // Click tab Video
+        const videoTab = page.locator('button.flow_tab_slider_trigger').filter({ hasText: /videocamVideo/ }).first();
+        if (await videoTab.count() > 0) {
+          const isSelected = await videoTab.getAttribute('aria-selected');
+          if (isSelected !== 'true') {
+            await videoTab.click();
+            await delay(1000);
+            console.log('[FlowVideo] Đã chuyển sang tab Video.');
+          } else {
+            console.log('[FlowVideo] Đã đang ở tab Video.');
+          }
+        }
+
+        // Chọn 16:9
+        const ratio169 = page.locator('button.flow_tab_slider_trigger').filter({ hasText: /16:9/ }).first();
+        if (await ratio169.count() > 0) {
+          await ratio169.click();
+          await delay(500);
+          console.log('[FlowVideo] Đã chọn 16:9.');
+        }
+
+        // Chọn x1
+        const x1Btn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: /^x1$/ }).first();
+        if (await x1Btn.count() > 0) {
+          await x1Btn.click();
+          await delay(500);
+          console.log('[FlowVideo] Đã chọn x1.');
+        }
+
+        // Đóng config panel bằng click lại config button (toggle)
+        await configBtn.click();
+        await delay(800);
+        console.log('[FlowVideo] Đã đóng config panel.');
+      }
+    } catch (e) {
+      console.log(`[FlowVideo] Lỗi cấu hình: ${e.message}`);
+    }
+
+    const promptBox = page.locator('div[role="textbox"][contenteditable="true"]').first();
+
+    // === BƯỚC 4: Upload ảnh reference (nếu có) ===
+    if (inputFiles.length > 0) {
+      console.log('[FlowVideo] Dán ảnh reference vào Flow...');
+      const clipboardFiles = await buildClipboardPayload(inputFiles);
+      await pasteAssetsIntoPrompt(page, clipboardFiles);
+      await waitForPromptAssetsReady(page, inputFiles.length);
+      await delay(1000);
+    }
+
+    // === BƯỚC 5: Nhập prompt ===
+    console.log('[FlowVideo] Nhập prompt video...');
+    await fillPromptBox(promptBox, prompt);
+    await delay(1000);
+
+    // Đảm bảo sẵn sàng gửi
+    await waitForComposerReadyToSubmit(page, inputFiles.length, prompt);
+
+    // Ghi nhớ các video/element cũ
+    const existingVideos = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('video')).map(v => v.src || v.currentSrc || '');
+    });
+    console.log(`[FlowVideo] Đã ghi nhớ ${existingVideos.length} video cũ trên trang.`);
+
+    // === BƯỚC 6: Bấm Tạo ===
+    console.log('[FlowVideo] Bấm nút Tạo...');
+    const sendBtn = page.locator('button:has-text("arrow_forward"), button[aria-label*="Gửi"], button[aria-label*="Tạo"]').first();
+    if (await sendBtn.count() > 0 && await sendBtn.isVisible()) {
+      await sendBtn.click();
+    } else {
+      await page.keyboard.press('Enter');
+    }
+
+    // === BƯỚC 7: Chờ video sinh ra (timeout 10 phút vì video mất lâu) ===
+    console.log('[FlowVideo] Đang chờ Google Flow sinh video... (có thể mất 3-10 phút)');
+    try {
+      await page.waitForFunction((oldVideos) => {
+        const videos = Array.from(document.querySelectorAll('video'));
+        const newVideos = videos.filter(v => {
+          const src = v.src || v.currentSrc || '';
+          return src && !oldVideos.includes(src) && (v.offsetWidth > 100);
+        });
+        return newVideos.length >= 1;
+      }, existingVideos, { timeout: 600000 }); // 10 phút
+    } catch (e) {
+      console.log(`[FlowVideo] Hết thời gian chờ video: ${e.message}`);
+    }
+
+    await delay(10000); // Chờ thêm để video load hoàn toàn
+
+    // === BƯỚC 8: Tải video ===
+    console.log('[FlowVideo] Tìm và tải video kết quả...');
+    const newVideosInDom = await page.evaluate((oldVideos) => {
+      const videos = Array.from(document.querySelectorAll('video'));
+      return videos.filter(v => {
+        const src = v.src || v.currentSrc || '';
+        return src && !oldVideos.includes(src) && (v.offsetWidth > 100);
+      }).map(v => ({
+        src: v.src || v.currentSrc || '',
+        poster: v.poster || '',
+        width: v.offsetWidth,
+        height: v.offsetHeight
+      }));
+    }, existingVideos);
+
+    console.log(`[FlowVideo] Tìm thấy ${newVideosInDom.length} video mới.`);
+
+    if (newVideosInDom.length > 0) {
+      const video = newVideosInDom[0];
+      const outputPath = path.join(tempDir, `flow_video_${Date.now()}.mp4`);
+
+      try {
+        if (video.src.startsWith('blob:')) {
+          // Tải blob video
+          const base64Data = await page.evaluate(async (blobUrl) => {
+            const response = await fetch(blobUrl);
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.readAsDataURL(blob);
+            });
+          }, video.src);
+          const content = String(base64Data).split('base64,')[1];
+          await fs.writeFile(outputPath, Buffer.from(content, 'base64'));
+        } else {
+          // Tải URL trực tiếp
+          const arrayBuffer = await page.evaluate(async (url) => {
+            const response = await fetch(url);
+            const buffer = await response.arrayBuffer();
+            return Array.from(new Uint8Array(buffer));
+          }, video.src);
+          await fs.writeFile(outputPath, Buffer.from(arrayBuffer));
+        }
+
+        videoPath = outputPath;
+        console.log(`[FlowVideo] Đã tải xong video: ${outputPath}`);
+
+        if (typeof onVideoReady === 'function') {
+          await onVideoReady(outputPath);
+        }
+      } catch (e) {
+        console.log(`[FlowVideo] Lỗi tải video: ${e.message}`);
+      }
+    }
+
+    await page.close().catch(() => null);
+    return { videoPath, chatUrl };
+  } catch (error) {
+    console.error('[FlowVideo] Lỗi nghiêm trọng:', error);
+    await page.close().catch(() => null);
+    return { videoPath, chatUrl };
+  }
+}
+
 module.exports = {
-  runFlowAutomation
+  runFlowAutomation,
+  runFlowVideoAutomation
 };

@@ -6,7 +6,7 @@ const cloudinary = require('cloudinary').v2;
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { runChatGptAutomation } = require('./chatgptAutomation');
-const { runFlowAutomation } = require('./flowAutomation');
+const { runFlowAutomation, runFlowVideoAutomation } = require('./flowAutomation');
 const { generateLandscapePrompt } = require('./geminiPromptService');
 
 // Helper để tìm Link ảnh mẫu nếu FrontEnd chỉ gửi ID (hoặc fix cho các ca cũ)
@@ -805,6 +805,54 @@ app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
   }
 });
 
+
+// VIDEO GENERATION API
+app.post('/api/projects/:id/generate-video', async (req, res) => {
+  try {
+    const { prompt, imageUrl } = req.body;
+
+    if (!imageUrl) {
+      return res.status(400).json({ error: 'Thiếu URL ảnh tham chiếu để tạo video.' });
+    }
+
+    const project = await Project.findOne({ id: req.params.id });
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    let videoUrl = null;
+
+    const onVideoReady = async (outputPath) => {
+      try {
+        const url = await uploadToCloudinary(outputPath);
+        if (!url || !url.startsWith('http')) return;
+        videoUrl = url;
+        console.log(`[Video] Đã upload video: ${url}`);
+        await Project.findOneAndUpdate(
+          { id: req.params.id },
+          { $push: { aiResults: url } }
+        );
+      } catch (e) {
+        console.error('Lỗi upload video:', e.message);
+      }
+    };
+
+    const automationResult = await runFlowVideoAutomation({
+      prompt: prompt || 'Smooth cinematic camera movement through this landscape garden design. Gentle water flowing, leaves swaying in breeze. Photorealistic, golden hour lighting.',
+      imageUrl,
+      onVideoReady
+    });
+
+    res.json({
+      project: await Project.findOne({ id: req.params.id }),
+      videoUrl,
+      chatUrl: automationResult?.chatUrl
+    });
+  } catch (err) {
+    console.error('Video generation error:', err);
+    res.status(500).json({ error: err.message || 'Không thể tạo video.' });
+  }
+});
 
 // SYSTEM CONTENT API
 app.post('/api/upload', async (req, res) => {

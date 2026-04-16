@@ -2863,6 +2863,7 @@ Hãy nhìn trực tiếp vào hình ảnh khoanh vùng thiết kế (File 2) mà
     { id: 'tuong_da', label: 'Tường Đá Nhân Tạo', color: '#22c55e', key: 'promptTuongDa' },
     { id: 'cafe_san_vuon', label: 'Cà Phê Sân Vườn', color: '#f59e0b', key: 'promptCafeSanVuon' },
     { id: 'advanced', label: 'Nâng cao / Premium', color: '#6366f1', key: 'promptAdvanced' },
+    { id: 'video', label: 'Video AI', color: '#ec4899', key: 'promptVideo' },
   ];
 
   const [prompts, setPrompts] = useState<Record<string, string>>({
@@ -2871,6 +2872,7 @@ Hãy nhìn trực tiếp vào hình ảnh khoanh vùng thiết kế (File 2) mà
     promptTuongDa: systemContent.promptTuongDa || defaultBasicPrompt,
     promptCafeSanVuon: systemContent.promptCafeSanVuon || defaultBasicPrompt,
     promptAdvanced: systemContent.promptAdvanced || defaultAdvancedPrompt,
+    promptVideo: systemContent.promptVideo || 'Smooth cinematic camera slowly panning through this beautiful landscape garden. Gentle water flowing over rocks, koi fish swimming peacefully, leaves and branches swaying in soft breeze. Golden hour warm lighting with long shadows. Photorealistic quality, peaceful zen atmosphere. Camera moves from left to right revealing the full garden design.',
   });
   const [editingTab, setEditingTab] = useState('ho_co_dien');
   const [isSaving, setIsSaving] = useState(false);
@@ -2896,6 +2898,7 @@ Hãy nhìn trực tiếp vào hình ảnh khoanh vùng thiết kế (File 2) mà
       promptTuongDa: defaultBasicPrompt,
       promptCafeSanVuon: defaultBasicPrompt,
       promptAdvanced: defaultAdvancedPrompt,
+      promptVideo: 'Smooth cinematic camera slowly panning through this beautiful landscape garden. Gentle water flowing over rocks, koi fish swimming peacefully, leaves and branches swaying in soft breeze. Golden hour warm lighting with long shadows. Photorealistic quality, peaceful zen atmosphere. Camera moves from left to right revealing the full garden design.',
     };
     setPrompts(prev => ({ ...prev, [currentTab.key]: defaults[currentTab.key] }));
     onFeedback('Đã khôi phục prompt mặc định. Nhấn LƯU để áp dụng.');
@@ -2997,6 +3000,9 @@ function AdminView({
   const [aiGeneratedPrompt, setAiGeneratedPrompt] = useState('');
   const [aiStudioStatus, setAiStudioStatus] = useState('Sẵn sàng.');
   const [isDraggingToDesigner, setIsDraggingToDesigner] = useState(false);
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+  const [videoPrompt, setVideoPrompt] = useState('');
+  const [selectedVideoImage, setSelectedVideoImage] = useState('');
   const [draggedItem, setDraggedItem] = useState<DesignerLibraryItem | null>(null);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [isDeletingAllProjects, setIsDeletingAllProjects] = useState(false);
@@ -4136,6 +4142,83 @@ function AdminView({
                       </button>
                     )}
                   </div>
+
+                  {/* VIDEO AI GENERATION */}
+                  {selectedProject.status === 'done' && selectedProject.aiResults && selectedProject.aiResults.length > 0 && (
+                    <div style={{ marginTop: '24px', background: 'rgba(99,102,241,0.08)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(99,102,241,0.2)' }}>
+                      <h4 style={{ color: '#6366f1', fontWeight: 800, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <VideoIcon size={20} /> Tạo Video AI từ ảnh
+                      </h4>
+                      <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', marginBottom: '12px' }}>
+                        Chọn 1 ảnh kết quả làm reference, hệ thống sẽ tạo video chuyển động từ ảnh đó.
+                      </p>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '8px', marginBottom: '12px' }}>
+                        {selectedProject.aiResults.filter((url: string) => !url.endsWith('.mp4') && !url.includes('/video/')).map((url: string, i: number) => (
+                          <div
+                            key={i}
+                            onClick={() => setSelectedVideoImage(url)}
+                            style={{
+                              borderRadius: '10px', overflow: 'hidden', cursor: 'pointer',
+                              border: selectedVideoImage === url ? '3px solid #6366f1' : '2px solid rgba(255,255,255,0.1)',
+                              opacity: selectedVideoImage === url ? 1 : 0.6,
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <img src={url} alt={`Ảnh ${i+1}`} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }} />
+                          </div>
+                        ))}
+                      </div>
+                      <textarea
+                        placeholder="Nhập prompt video (hoặc để trống dùng mặc định)..."
+                        value={videoPrompt}
+                        onChange={e => setVideoPrompt(e.target.value)}
+                        style={{
+                          width: '100%', minHeight: '80px', background: 'rgba(0,0,0,0.3)', color: '#fff',
+                          border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '12px',
+                          fontFamily: 'inherit', fontSize: '0.85rem', marginBottom: '12px', resize: 'vertical'
+                        }}
+                      />
+                      <button
+                        disabled={!selectedVideoImage || isGeneratingVideo}
+                        onClick={async () => {
+                          if (!selectedVideoImage) return;
+                          setIsGeneratingVideo(true);
+                          setActionFeedback('Đang gửi lệnh tạo video AI... (có thể mất 3-10 phút)');
+                          try {
+                            const defaultPrompt = systemContent.promptVideo || 'Smooth cinematic camera slowly panning through this beautiful landscape garden. Gentle water flowing over rocks, koi fish swimming, leaves swaying in soft breeze. Golden hour warm lighting, photorealistic quality, peaceful atmosphere. 16:9 cinematic ratio.';
+                            const res = await apiFetch(`/api/projects/${selectedProject.id}/generate-video`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ prompt: videoPrompt.trim() || defaultPrompt, imageUrl: selectedVideoImage })
+                            });
+                            const data = await res.json();
+                            if (data.videoUrl) {
+                              setActionFeedback('Video AI đã tạo thành công!');
+                              setSelectedProject(data.project);
+                            } else {
+                              setActionFeedback('Không tạo được video. Thử lại sau.');
+                            }
+                          } catch (e: any) {
+                            setActionFeedback(`Lỗi: ${e.message}`);
+                          } finally {
+                            setIsGeneratingVideo(false);
+                          }
+                        }}
+                        style={{
+                          width: '100%', padding: '14px', borderRadius: '12px', fontWeight: 800, fontSize: '0.9rem',
+                          border: 'none', cursor: (!selectedVideoImage || isGeneratingVideo) ? 'not-allowed' : 'pointer',
+                          background: selectedVideoImage ? '#6366f1' : 'rgba(255,255,255,0.08)',
+                          color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                        }}
+                      >
+                        {isGeneratingVideo ? (
+                          <><RefreshCcw size={18} className="spin" /> Đang tạo video...</>
+                        ) : (
+                          <><VideoIcon size={18} /> Tạo Video AI</>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
