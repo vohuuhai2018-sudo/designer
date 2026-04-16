@@ -733,13 +733,47 @@ export default function App() {
             service={service}
             onReset={resetAll}
             retryCount={retryCount}
-            onRetry={() => {
+            onRetry={async () => {
               setRetryCount(prev => prev + 1);
-              setRawImage('');
-              setAnnotatedImage('');
-              setSubmittedProjectId('');
-              setView('upload');
+              setIsSubmitting(true);
+              try {
+                const selectedThacVariant = selections.thac
+                  ? ASSETS.THAC.flatMap(c => c.variants || []).find(v => v.id === selections.thac)
+                  : null;
+                const projectData = {
+                  id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+                  timestamp: new Date().toISOString(),
+                  deviceId: getDeviceId(),
+                  customerName,
+                  customerPhone,
+                  customerEmail,
+                  rawImage,
+                  annotatedImage,
+                  referenceModelUrl: referenceModelUrl || extractSelectedModelUrl(note) || undefined,
+                  selections: {
+                    ...selections,
+                    thacUrl: selectedThacVariant?.url,
+                    thacName: selectedThacVariant?.name
+                  },
+                  service,
+                  note,
+                  extraAssets,
+                  status: 'pending' as const
+                };
+                const response = await apiFetch('/api/projects', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(projectData)
+                });
+                if (!response.ok) throw new Error('Lỗi khi gửi dữ liệu.');
+                setSubmittedProjectId(projectData.id);
+              } catch (error) {
+                alert('Không thể thử lại. Vui lòng thử lại sau.');
+              } finally {
+                setIsSubmitting(false);
+              }
             }}
+            isRetrying={isSubmitting}
           />
         )}
         {view === 'my_projects' && (
@@ -2022,7 +2056,7 @@ function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewRe
   );
 }
 
-function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry }: { projectId: string; service: string; onReset: () => void; retryCount?: number; onRetry?: () => void }) {
+function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isRetrying = false }: { projectId: string; service: string; onReset: () => void; retryCount?: number; onRetry?: () => void; isRetrying?: boolean }) {
   const [project, setProject] = useState<Project | null>(null);
 
   useEffect(() => {
@@ -2103,24 +2137,29 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry }: {
              {retryCount < 1 && onRetry && (
                <button
                  onClick={onRetry}
+                 disabled={isRetrying}
                  style={{
                    width: '100%',
                    padding: '16px',
                    marginBottom: '12px',
-                   background: 'rgba(255,255,255,0.06)',
+                   background: isRetrying ? 'rgba(226,177,112,0.15)' : 'rgba(255,255,255,0.06)',
                    border: '2px solid var(--accent)',
                    borderRadius: '16px',
                    color: 'var(--accent)',
                    fontSize: '1.1rem',
                    fontWeight: 800,
-                   cursor: 'pointer',
+                   cursor: isRetrying ? 'wait' : 'pointer',
                    display: 'flex',
                    alignItems: 'center',
                    justifyContent: 'center',
                    gap: '10px',
                  }}
                >
-                 <RefreshCcw size={20} /> Thử lại lần 2 — Tìm mẫu ưng ý hơn
+                 {isRetrying ? (
+                   <><RefreshCcw size={20} className="spin" /> Đang gửi lại...</>
+                 ) : (
+                   <><RefreshCcw size={20} /> Thử lại lần 2 — Tìm mẫu ưng ý hơn</>
+                 )}
                </button>
              )}
              <button className="btn-primary main-cta" onClick={onReset}>
