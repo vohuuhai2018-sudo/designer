@@ -4152,6 +4152,30 @@ function AdminView({
                     )}
                   </div>
 
+                  {/* VIDEO ĐÃ TẠO */}
+                  {selectedProject.aiResults && selectedProject.aiResults.some((r: string) => r.endsWith('.mp4') || r.includes('/video/')) && (
+                    <div style={{ marginTop: '24px', background: 'rgba(34,197,94,0.08)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(34,197,94,0.2)' }}>
+                      <h4 style={{ color: '#22c55e', fontWeight: 800, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <VideoIcon size={20} /> Video AI đã tạo
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {selectedProject.aiResults.filter((r: string) => r.endsWith('.mp4') || r.includes('/video/')).map((videoUrl: string, i: number) => (
+                          <div key={i} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <video src={videoUrl} controls style={{ width: '100%', display: 'block' }} />
+                            <div style={{ display: 'flex', gap: '8px', padding: '8px', background: 'rgba(0,0,0,0.3)' }}>
+                              <a href={videoUrl} download style={{ flex: 1, padding: '8px', borderRadius: '8px', background: '#22c55e', color: '#000', fontWeight: 700, fontSize: '0.85rem', textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                <Upload size={14} style={{ transform: 'rotate(180deg)' }} /> Tải video về
+                              </a>
+                              <button onClick={() => copyText(videoUrl, 'Đã copy link video.')} style={{ padding: '8px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Copy size={14} /> Link
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* VIDEO AI GENERATION */}
                   {selectedProject.status === 'done' && selectedProject.aiResults && selectedProject.aiResults.length > 0 && (
                     <div style={{ marginTop: '24px', background: 'rgba(99,102,241,0.08)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(99,102,241,0.2)' }}>
