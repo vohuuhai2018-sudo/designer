@@ -95,6 +95,7 @@ interface Project {
   note?: string;
   extraAssets?: string[];
   dimensions?: { width: string; depth: string; height: string };
+  basicCategory?: string;
   workflowBranch?: WorkflowBranch;
   finalImage?: string;
   aiResults?: string[];
@@ -308,6 +309,7 @@ export default function App() {
   const [customerEmail, setCustomerEmail] = useState('');
   const [extraAssets, setExtraAssets] = useState<string[]>([]);
   const [dimensions, setDimensions] = useState({ width: '', depth: '', height: '' });
+  const [basicCategory, setBasicCategory] = useState('ho_co_dien');
   const [historySize, setHistorySize] = useState(0);
   const [viewNotification, setViewNotification] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -523,6 +525,7 @@ export default function App() {
       note,
       extraAssets,
       dimensions: (dimensions.width || dimensions.depth || dimensions.height) ? dimensions : undefined,
+      basicCategory: service === 'Gói Cơ bản' ? basicCategory : undefined,
       status: 'pending' as const
     };
 
@@ -557,6 +560,7 @@ export default function App() {
     setReferenceModelUrl('');
     setExtraAssets([]);
     setDimensions({ width: '', depth: '', height: '' });
+    setBasicCategory('ho_co_dien');
     setSubmittedProjectId('');
     setRetryCount(0);
     setView('welcome');
@@ -664,10 +668,11 @@ export default function App() {
           />
         )}
         {view === 'basic_selection' && (
-          <BasicSelectionView 
+          <BasicSelectionView
             systemContent={systemContent}
-            onSelect={imgUrl => {
+            onSelect={(imgUrl, category) => {
               setReferenceModelUrl(imgUrl);
+              if (category) setBasicCategory(category);
               handleGlobalNext();
             }}
           />
@@ -1690,20 +1695,23 @@ function ServiceView({
   );
 }
 
-function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, onSelect: (url: string) => void }) {
+function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, onSelect: (url: string, category?: string) => void }) {
   const [subStep, setSubStep] = useState<'category' | 'gallery'>('category');
-  const [selectedImage, setSelectedImage] = useState<any>(null); // Chứa toàn bộ object ảnh thay vì chỉ url
+  const [selectedImage, setSelectedImage] = useState<any>(null);
+  const [selectedCategory, setSelectedCategory] = useState('ho_co_dien');
 
   const categories = [
-    { id: 'ho_co_dien', name: 'HỒ KOI SÂN VƯỜN CỔ ĐIỂN', icon: <Waves size={32} />, active: true },
-    { id: 'ho_hien_dai', name: 'HỒ KOI SÂN VƯỜN HIỆN ĐẠI', icon: <Monitor size={32} />, active: false },
-    { id: 'tuong_da', name: 'TƯỜNG ĐÁ NHÂN TẠO', icon: <Layers size={32} />, active: false }
+    { id: 'ho_co_dien', name: 'HỒ KOI SÂN VƯỜN CỔ ĐIỂN', icon: <Waves size={32} />, active: true, libraryKey: 'HO' },
+    { id: 'ho_hien_dai', name: 'HỒ KOI SÂN VƯỜN HIỆN ĐẠI', icon: <Monitor size={32} />, active: true, libraryKey: 'HO' },
+    { id: 'tuong_da', name: 'TƯỜNG ĐÁ NHÂN TẠO', icon: <Layers size={32} />, active: true, libraryKey: 'THAC' }
   ];
 
-  // Lấy toàn bộ biến thể từ thư viện Hồ Koi (HO)
+  // Lấy biến thể từ thư viện theo category đã chọn
   const lib = systemContent.library || ASSETS;
+  const currentCat = categories.find(c => c.id === selectedCategory);
+  const libraryKey = currentCat?.libraryKey || 'HO';
   const galleryImages: any[] = [];
-  (lib.HO || []).forEach((cat: any) => {
+  (lib[libraryKey] || []).forEach((cat: any) => {
     (cat.variants || []).forEach((v: any) => {
       galleryImages.push(v);
     });
@@ -1711,7 +1719,7 @@ function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, o
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="view basic-selection-view">
-       <div className="selection-panel" style={{ marginTop: '140px' }}>
+       <div className="selection-panel">
           <div className="title-group" style={{ textAlign: 'center', marginBottom: '3rem' }}>
             <h2 style={{ fontSize: '2.5rem', fontWeight: 900 }}>{subStep === 'category' ? 'Phong Cách Bạn Muốn?' : 'Chọn Mẫu Bạn Ưng Ý Nhất'}</h2>
             <p style={{ fontSize: '1.2rem', color: 'rgba(255,255,255,0.6)' }}>
@@ -1729,10 +1737,14 @@ function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, o
                 className="basic-cat-grid"
               >
                 {categories.map(cat => (
-                  <button 
-                    key={cat.id} 
+                  <button
+                    key={cat.id}
                     className={`basic-cat-card ${!cat.active ? 'disabled' : ''}`}
-                    onClick={() => cat.active && setSubStep('gallery')}
+                    onClick={() => {
+                      if (!cat.active) return;
+                      setSelectedCategory(cat.id);
+                      setSubStep('gallery');
+                    }}
                   >
                     <div className="cat-icon-orb">{cat.icon}</div>
                     <h3>{cat.name}</h3>
@@ -1798,7 +1810,7 @@ function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, o
                     <button 
                       className="btn-primary" 
                       style={{ width: '100%', fontSize: '1.2rem', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
-                      onClick={() => onSelect(selectedImage.url)}
+                      onClick={() => onSelect(selectedImage.url, selectedCategory)}
                     >
                       CHỐT MẪU NÀY <CheckCircle2 size={24} />
                     </button>
@@ -2806,14 +2818,31 @@ Hãy nhìn trực tiếp vào hình ảnh khoanh vùng thiết kế (File 2) mà
   Trắng → vùng rải sỏi, vật liệu trang trí sáng
   Nâu → lối đi, đá bước chân`;
 
-  const [basicPrompt, setBasicPrompt] = useState(systemContent.promptBasic || defaultBasicPrompt);
-  const [advancedPrompt, setAdvancedPrompt] = useState(systemContent.promptAdvanced || defaultAdvancedPrompt);
-  const [editingTab, setEditingTab] = useState<'basic' | 'advanced'>('basic');
+  const defaultModernPrompt = systemContent.promptHoHienDai || defaultBasicPrompt;
+  const defaultTuongDaPrompt = systemContent.promptTuongDa || defaultBasicPrompt;
+
+  const tabs = [
+    { id: 'ho_co_dien', label: 'Hồ Koi Cổ Điển', color: 'var(--accent)', key: 'promptBasic' },
+    { id: 'ho_hien_dai', label: 'Hồ Koi Hiện Đại', color: '#3b82f6', key: 'promptHoHienDai' },
+    { id: 'tuong_da', label: 'Tường Đá Nhân Tạo', color: '#22c55e', key: 'promptTuongDa' },
+    { id: 'advanced', label: 'Nâng cao / Premium', color: '#6366f1', key: 'promptAdvanced' },
+  ];
+
+  const [prompts, setPrompts] = useState<Record<string, string>>({
+    promptBasic: systemContent.promptBasic || defaultBasicPrompt,
+    promptHoHienDai: systemContent.promptHoHienDai || defaultBasicPrompt,
+    promptTuongDa: systemContent.promptTuongDa || defaultBasicPrompt,
+    promptAdvanced: systemContent.promptAdvanced || defaultAdvancedPrompt,
+  });
+  const [editingTab, setEditingTab] = useState('ho_co_dien');
   const [isSaving, setIsSaving] = useState(false);
+
+  const currentTab = tabs.find(t => t.id === editingTab)!;
+  const currentPrompt = prompts[currentTab.key] || '';
 
   const handleSave = async () => {
     setIsSaving(true);
-    const updated = { ...systemContent, promptBasic: basicPrompt, promptAdvanced: advancedPrompt };
+    const updated = { ...systemContent, ...prompts };
     onSystemContentUpdate(updated);
     onFeedback('Đang lưu prompt...');
     const success = await onSync();
@@ -2821,76 +2850,72 @@ Hãy nhìn trực tiếp vào hình ảnh khoanh vùng thiết kế (File 2) mà
     onFeedback(success ? '✅ Đã lưu prompt thành công!' : '❌ Lỗi khi lưu prompt.');
   };
 
-  const handleReset = (type: 'basic' | 'advanced') => {
-    if (!window.confirm('Bạn có chắc muốn khôi phục prompt mặc định?')) return;
-    if (type === 'basic') setBasicPrompt(defaultBasicPrompt);
-    else setAdvancedPrompt(defaultAdvancedPrompt);
+  const handleReset = () => {
+    if (!window.confirm('Bạn có chắc muốn khôi phục prompt mặc định cho tab này?')) return;
+    const defaults: Record<string, string> = {
+      promptBasic: defaultBasicPrompt,
+      promptHoHienDai: defaultBasicPrompt,
+      promptTuongDa: defaultBasicPrompt,
+      promptAdvanced: defaultAdvancedPrompt,
+    };
+    setPrompts(prev => ({ ...prev, [currentTab.key]: defaults[currentTab.key] }));
     onFeedback('Đã khôi phục prompt mặc định. Nhấn LƯU để áp dụng.');
   };
 
   return (
     <div style={{ padding: '20px 0' }}>
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <button
-          onClick={() => setEditingTab('basic')}
-          style={{
-            padding: '10px 20px', borderRadius: '12px', fontWeight: 800, fontSize: '0.9rem', border: 'none', cursor: 'pointer',
-            background: editingTab === 'basic' ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
-            color: editingTab === 'basic' ? '#000' : '#fff',
-          }}
-        >
-          Prompt Gói Cơ bản
-        </button>
-        <button
-          onClick={() => setEditingTab('advanced')}
-          style={{
-            padding: '10px 20px', borderRadius: '12px', fontWeight: 800, fontSize: '0.9rem', border: 'none', cursor: 'pointer',
-            background: editingTab === 'advanced' ? '#6366f1' : 'rgba(255,255,255,0.08)',
-            color: '#fff',
-          }}
-        >
-          Prompt Gói Nâng cao / Premium
-        </button>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setEditingTab(tab.id)}
+            style={{
+              padding: '10px 16px', borderRadius: '12px', fontWeight: 800, fontSize: '0.85rem', border: 'none', cursor: 'pointer',
+              background: editingTab === tab.id ? tab.color : 'rgba(255,255,255,0.08)',
+              color: editingTab === tab.id ? (tab.id === 'ho_co_dien' ? '#000' : '#fff') : '#fff',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
           <button
-            onClick={() => handleReset(editingTab)}
+            onClick={handleReset}
             style={{ padding: '10px 16px', borderRadius: '12px', background: 'rgba(255,60,60,0.1)', color: '#ff4d4f', border: '1px solid #ff4d4f', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}
           >
-            <RefreshCcw size={14} /> Khôi phục mặc định
+            Khôi phục mặc định
           </button>
           <button
             onClick={handleSave}
             disabled={isSaving}
             style={{ padding: '10px 24px', borderRadius: '12px', background: 'var(--accent)', color: '#000', fontWeight: 800, fontSize: '0.9rem', border: 'none', cursor: isSaving ? 'wait' : 'pointer' }}
           >
-            {isSaving ? 'Đang lưu...' : '💾 LƯU PROMPT'}
+            {isSaving ? 'Đang lưu...' : 'LƯU PROMPT'}
           </button>
         </div>
       </div>
 
       <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', padding: '20px' }}>
         <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: editingTab === 'basic' ? 'var(--accent)' : '#6366f1' }}>
-            {editingTab === 'basic' ? '📝 Master Prompt — Gói Cơ bản (Image-to-Image)' : '📝 Master Prompt — Gói Nâng cao / Premium (Annotation-based)'}
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: currentTab.color }}>
+            Prompt — {currentTab.label}
           </h3>
           <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
-            {editingTab === 'basic' ? basicPrompt.length : advancedPrompt.length} ký tự
+            {currentPrompt.length} ký tự
           </span>
         </div>
         <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '12px', lineHeight: '1.5' }}>
-          {editingTab === 'basic'
-            ? 'Prompt này dùng cho Gói Cơ bản — AI sẽ biến đổi ảnh thực tế (Image 1) theo phong cách mẫu tham khảo (Image 2). Hệ thống tự động thêm thông tin khách hàng, file đính kèm.'
-            : 'Prompt này dùng cho Gói Nâng cao & Premium — AI sẽ đọc ảnh khoanh vùng màu để bố trí các hạng mục. Hệ thống tự động thêm thông tin dự án, lựa chọn mẫu, file đính kèm.'}
+          Hệ thống tự động ghép thêm thông tin khách hàng, kích thước, file đính kèm vào cuối prompt.
         </p>
         <textarea
-          value={editingTab === 'basic' ? basicPrompt : advancedPrompt}
-          onChange={e => editingTab === 'basic' ? setBasicPrompt(e.target.value) : setAdvancedPrompt(e.target.value)}
+          value={currentPrompt}
+          onChange={e => setPrompts(prev => ({ ...prev, [currentTab.key]: e.target.value }))}
           style={{
             width: '100%',
             minHeight: '500px',
             background: 'rgba(0,0,0,0.4)',
             color: '#e2e8f0',
-            border: '1px solid rgba(255,255,255,0.15)',
+            border: `1px solid ${currentTab.color}30`,
             borderRadius: '12px',
             padding: '16px',
             fontFamily: "'Be Vietnam Pro', monospace",
@@ -3196,8 +3221,12 @@ function AdminView({
     const modelUrl = modelMatch ? modelMatch[1] ?? modelMatch[0] : null;
     const customNote = project.note?.replace(/\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?/i, '').trim();
 
-    // Use custom prompt from admin if available
-    if (isBasic && systemContent.promptBasic) {
+    // Use custom prompt from admin if available (per category)
+    const categoryPromptKey = isBasic
+      ? (project.basicCategory === 'ho_hien_dai' ? 'promptHoHienDai' : project.basicCategory === 'tuong_da' ? 'promptTuongDa' : 'promptBasic')
+      : null;
+
+    if (isBasic && categoryPromptKey && systemContent[categoryPromptKey]) {
       const dynamicParts = [
         '',
         '====================================================',
@@ -3212,7 +3241,7 @@ function AdminView({
         '',
         ...buildAiAssetLines(project),
       ].join('\n');
-      return systemContent.promptBasic + '\n' + dynamicParts;
+      return systemContent[categoryPromptKey] + '\n' + dynamicParts;
     }
 
     if (!isBasic && systemContent.promptAdvanced) {
