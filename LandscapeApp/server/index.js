@@ -458,6 +458,7 @@ const ProjectSchema = new mongoose.Schema({
   },
   service: String,
   status: { type: String, default: 'pending' },
+  deviceId: String,
   note: String,
   extraAssets: [String],
   workflowBranch: String,
@@ -505,6 +506,19 @@ app.get('/api/projects', async (req, res) => {
     res.json(projects);
   } catch (err) {
     console.error(`GET /api/projects - Lỗi truy vấn sau ${Date.now() - startTime}ms:`, err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/projects/by-device/:deviceId', async (req, res) => {
+  try {
+    const projects = await Project.find({ deviceId: req.params.deviceId })
+      .sort({ timestamp: -1 })
+      .select('id timestamp customerName service status aiResults finalImage rawImage referenceModelUrl')
+      .limit(20)
+      .lean();
+    res.json(projects);
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });

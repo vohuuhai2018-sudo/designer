@@ -59,7 +59,17 @@ function apiFetch(path: string, options?: RequestInit): Promise<Response> {
 }
 
 // --- TYPES ---
-type AppView = 'welcome' | 'upload' | 'editor' | 'service' | 'plan' | 'submit' | 'success' | 'admin' | 'login' | 'basic_selection';
+type AppView = 'welcome' | 'upload' | 'editor' | 'service' | 'plan' | 'submit' | 'success' | 'admin' | 'login' | 'basic_selection' | 'my_projects';
+
+// Device ID — định danh thiết bị thay cho đăng nhập
+function getDeviceId(): string {
+  let id = localStorage.getItem('sh_device_id');
+  if (!id) {
+    id = 'dev_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+    localStorage.setItem('sh_device_id', id);
+  }
+  return id;
+}
 type WorkflowBranch = 'manual_design' | 'chatgpt_image';
 
 interface Selection {
@@ -86,6 +96,7 @@ interface Project {
   workflowBranch?: WorkflowBranch;
   finalImage?: string;
   aiResults?: string[];
+  deviceId?: string;
 }
 
 type ProjectUpdate = Partial<Pick<Project, 'status' | 'workflowBranch' | 'finalImage' | 'aiResults'>>;
@@ -314,6 +325,10 @@ export default function App() {
       setService('Gói Cơ Bản');
       setView('success');
     }
+    // Route /my — dự án của tôi (theo thiết bị)
+    if (path === '/my') {
+      setView('my_projects');
+    }
   }, []);
 
   // --- SYSTEM DYNAMIC CONTENT ---
@@ -488,6 +503,7 @@ export default function App() {
     const projectData = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       timestamp: new Date().toISOString(),
+      deviceId: getDeviceId(),
       customerName,
       customerPhone,
       customerEmail,
@@ -622,12 +638,13 @@ export default function App() {
       <div className={`container ${(view as any) === 'admin' || (view as any) === 'login' ? 'full-width' : ''}`}>
         <AnimatePresence mode="wait">
         {view === 'welcome' && (
-          <WelcomeView 
-            onStart={() => setView('plan')} 
+          <WelcomeView
+            onStart={() => setView('plan')}
             onAdmin={() => {
                if (isAdminAuthenticated) setView('admin');
                else setView('login' as any);
-            }} 
+            }}
+            onMyProjects={() => setView('my_projects')}
           />
         )}
         {(view as any) === 'login' && (
@@ -644,10 +661,6 @@ export default function App() {
             systemContent={systemContent}
             onSelect={imgUrl => {
               setReferenceModelUrl(imgUrl);
-              setNote(prev => {
-                const cleaned = prev.replace(/(\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?)/gi, '').trimStart();
-                return `[MẪU ĐÃ CHỌN]: ${imgUrl}\n${cleaned}`;
-              });
               handleGlobalNext();
             }}
           />
@@ -715,6 +728,16 @@ export default function App() {
         )}
         {view === 'success' && (
           <SuccessView projectId={submittedProjectId} service={service} onReset={resetAll} />
+        )}
+        {view === 'my_projects' && (
+          <MyProjectsView
+            onBack={resetAll}
+            onViewResult={(projectId) => {
+              setSubmittedProjectId(projectId);
+              setService('Gói Cơ Bản');
+              setView('success');
+            }}
+          />
         )}
         {view === 'admin' && (
           <AdminView
@@ -828,7 +851,7 @@ function LoginView({ onSuccess, onBack }: { onSuccess: () => void, onBack: () =>
 
 // --- SUB-VIEWS ---
 
-function WelcomeView({ onStart, onAdmin }: { onStart: () => void, onAdmin: () => void }) {
+function WelcomeView({ onStart, onAdmin, onMyProjects }: { onStart: () => void, onAdmin: () => void, onMyProjects: () => void }) {
   const [clickCount, setClickCount] = useState(0);
 
   const handleLogoClick = () => {
@@ -856,6 +879,13 @@ function WelcomeView({ onStart, onAdmin }: { onStart: () => void, onAdmin: () =>
         </div>
         <button className="btn-primary main-cta" onClick={onStart}>
           Bắt đầu thiết kế <ArrowRight size={20} />
+        </button>
+        <button
+          className="btn-secondary"
+          onClick={onMyProjects}
+          style={{ marginTop: '12px', padding: '12px 32px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.15)', cursor: 'pointer', fontWeight: 600, fontSize: '1rem' }}
+        >
+          Dự án của tôi
         </button>
       </div>
     </motion.div>
@@ -980,14 +1010,12 @@ function UploadView({
                Mô tả chi tiết nội dung mà bạn muốn thực hiện để Kiến trúc sư nắm bắt ý tưởng chính xác nhất.
             </p>
           </div>
-          <textarea 
-            className="luxe-textarea" 
+          <textarea
+            className="luxe-textarea"
             placeholder="Ví dụ: tôi có diện tích 8x5m này cần làm hồ cá koi cổ điển đá vân mây, có lối đi rải sỏi, có cây tùng và đèn đá điểm..."
-            value={note ? note.replace(/(\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?)/gi, '').trimStart() : ''}
+            value={note ? note.replace(/(\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?)/gi, '').replace(/^https?:\/\/\S+\n?/gm, '').trimStart() : ''}
             onChange={(e) => {
-              const modelUrl = referenceModelUrl;
-              const header = modelUrl ? `[MẪU ĐÃ CHỌN]: ${modelUrl}\n` : '';
-              if (onNoteChange) onNoteChange(header + e.target.value);
+              if (onNoteChange) onNoteChange(e.target.value);
             }}
             style={{ width: '100%', height: '120px', background: 'var(--surface)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '16px', marginTop: '15px' }}
           />
@@ -1893,6 +1921,90 @@ function SubmitView({
         <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem', marginTop: '12px' }}>
           Điền Họ tên và Số điện thoại để kích hoạt nút tạo thiết kế.
         </p>
+      )}
+    </motion.div>
+  );
+}
+
+function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewResult: (id: string) => void }) {
+  const [myProjects, setMyProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const deviceId = getDeviceId();
+    apiFetch(`/api/projects/by-device/${deviceId}`)
+      .then(res => res.json())
+      .then(data => { if (Array.isArray(data)) setMyProjects(data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const statusLabel = (s: string) => {
+    if (s === 'done') return { text: 'Hoàn thành', color: '#22c55e' };
+    if (s === 'processing') return { text: 'Đang xử lý...', color: '#eab308' };
+    return { text: 'Chờ xử lý', color: '#94a3b8' };
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="view" style={{ maxWidth: '700px', width: '90%', padding: '2rem 0' }}>
+      <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', marginBottom: '1.5rem', fontSize: '1rem' }}>
+        <ChevronLeft size={18} style={{ verticalAlign: 'middle' }} /> Quay lại
+      </button>
+      <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '0.5rem' }}>Dự Án Của Tôi</h2>
+      <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: '2rem' }}>Các thiết kế đã tạo trên thiết bị này</p>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '3rem' }}>
+          <RefreshCcw size={32} className="spin" color="var(--accent)" />
+          <p style={{ marginTop: '1rem', color: 'rgba(255,255,255,0.5)' }}>Đang tải...</p>
+        </div>
+      ) : myProjects.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '3rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <Camera size={48} color="rgba(255,255,255,0.2)" />
+          <p style={{ marginTop: '1rem', color: 'rgba(255,255,255,0.4)' }}>Chưa có dự án nào trên thiết bị này</p>
+          <button className="btn-primary" onClick={onBack} style={{ marginTop: '1.5rem' }}>Bắt đầu thiết kế</button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {myProjects.map((p) => {
+            const st = statusLabel(p.status);
+            const previewImg = (p.aiResults && p.aiResults.length > 0) ? p.aiResults[0] : p.rawImage;
+            return (
+              <div
+                key={p.id}
+                onClick={() => p.status === 'done' || p.status === 'processing' ? onViewResult(p.id) : null}
+                style={{
+                  display: 'flex', gap: '16px', alignItems: 'center',
+                  background: 'rgba(255,255,255,0.04)', borderRadius: '14px', padding: '14px',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  cursor: p.status === 'done' || p.status === 'processing' ? 'pointer' : 'default',
+                  transition: 'background 0.2s'
+                }}
+              >
+                <img
+                  src={previewImg} alt=""
+                  style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '10px', flexShrink: 0, background: 'rgba(0,0,0,0.3)' }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {p.customerName || 'Dự án'}
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>
+                    {p.service} — {new Date(p.timestamp).toLocaleDateString('vi-VN')}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: st.color, background: `${st.color}20`, padding: '3px 10px', borderRadius: '20px' }}>
+                    {st.text}
+                  </span>
+                  {p.aiResults && p.aiResults.length > 0 && (
+                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>{p.aiResults.length} ảnh</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </motion.div>
   );
