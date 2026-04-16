@@ -231,6 +231,36 @@ const ASSETS = {
         { id: 'ho_koi_v1', url: 'https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=1200', name: 'Mẫu hồ số 01' }
       ]
     }
+  ],
+  HO_HIEN_DAI: [
+    {
+      id: 'ho_hd_default',
+      url: 'https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=1200',
+      name: 'Hồ Koi Hiện Đại',
+      variants: [
+        { id: 'ho_hd_v1', url: 'https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=1200', name: 'Mẫu Hiện Đại 01' }
+      ]
+    }
+  ],
+  TUONG_DA: [
+    {
+      id: 'tuong_da_default',
+      url: 'https://images.unsplash.com/photo-1598902108854-10e335adac99?q=80&w=1200',
+      name: 'Tường Đá Nhân Tạo',
+      variants: [
+        { id: 'tuong_da_v1', url: 'https://images.unsplash.com/photo-1598902108854-10e335adac99?q=80&w=1200', name: 'Mẫu Tường Đá 01' }
+      ]
+    }
+  ],
+  CAFE_SAN_VUON: [
+    {
+      id: 'cafe_default',
+      url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1200',
+      name: 'Cà Phê Sân Vườn',
+      variants: [
+        { id: 'cafe_v1', url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1200', name: 'Mẫu Cà Phê 01' }
+      ]
+    }
   ]
 };
 
@@ -1702,9 +1732,9 @@ function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, o
 
   const categories = [
     { id: 'ho_co_dien', name: 'HỒ KOI SÂN VƯỜN CỔ ĐIỂN', icon: <Waves size={32} />, active: true, libraryKey: 'HO' },
-    { id: 'ho_hien_dai', name: 'HỒ KOI SÂN VƯỜN HIỆN ĐẠI', icon: <Monitor size={32} />, active: true, libraryKey: 'HO' },
-    { id: 'tuong_da', name: 'TƯỜNG ĐÁ NHÂN TẠO', icon: <Layers size={32} />, active: true, libraryKey: 'THAC' },
-    { id: 'cafe_san_vuon', name: 'CÀ PHÊ SÂN VƯỜN', icon: <Crown size={32} />, active: true, libraryKey: 'HO' }
+    { id: 'ho_hien_dai', name: 'HỒ KOI SÂN VƯỜN HIỆN ĐẠI', icon: <Monitor size={32} />, active: true, libraryKey: 'HO_HIEN_DAI' },
+    { id: 'tuong_da', name: 'TƯỜNG ĐÁ NHÂN TẠO', icon: <Layers size={32} />, active: true, libraryKey: 'TUONG_DA' },
+    { id: 'cafe_san_vuon', name: 'CÀ PHÊ SÂN VƯỜN', icon: <Crown size={32} />, active: true, libraryKey: 'CAFE_SAN_VUON' }
   ];
 
   // Lấy biến thể từ thư viện theo category đã chọn
@@ -2320,9 +2350,10 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
 function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeedback, onClose }: { 
   systemContent: any, onSystemContentUpdate: (c: any) => void, onSync: () => Promise<boolean>, onFeedback: (msg: string) => void, onClose: () => void 
 }) {
-  const [selectedCat, setSelectedCat] = useState<'THAC' | 'KE' | 'CANH' | 'HO' | 'LOGIC' | 'AI_STUDIO' | 'TIPS' | 'PLANS'>('THAC');
-  const catItems = (selectedCat === 'THAC' || selectedCat === 'KE' || selectedCat === 'CANH' || selectedCat === 'HO') 
-    ? (systemContent.library?.[selectedCat] || (ASSETS as any)[selectedCat as keyof typeof ASSETS]) 
+  const [selectedCat, setSelectedCat] = useState<'THAC' | 'KE' | 'CANH' | 'HO' | 'HO_HIEN_DAI' | 'TUONG_DA' | 'CAFE_SAN_VUON' | 'LOGIC' | 'AI_STUDIO' | 'TIPS' | 'PLANS'>('THAC');
+  const libraryCats = ['THAC', 'KE', 'CANH', 'HO', 'HO_HIEN_DAI', 'TUONG_DA', 'CAFE_SAN_VUON'];
+  const catItems = libraryCats.includes(selectedCat)
+    ? (systemContent.library?.[selectedCat] || (ASSETS as any)[selectedCat] || [])
     : [];
   
   const replacerRef = useRef<HTMLInputElement>(null);
@@ -2430,7 +2461,10 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
           <button className={selectedCat === 'THAC' ? 'active' : ''} onClick={() => { setSelectedCat('THAC'); setSelectedItem(null); }}><Layers size={18} /> THÁC ĐÁ</button>
           <button className={selectedCat === 'KE' ? 'active' : ''} onClick={() => { setSelectedCat('KE'); setSelectedItem(null); }}><Box size={18} /> KÈ ĐÁ / BỜ</button>
           <button className={selectedCat === 'CANH' ? 'active' : ''} onClick={() => { setSelectedCat('CANH'); setSelectedItem(null); }}><Sparkles size={18} /> CẢNH QUAN</button>
-          <button className={selectedCat === 'HO' ? 'active' : ''} onClick={() => { setSelectedCat('HO'); setSelectedItem(null); }}><Waves size={18} /> MẪU HỒ KOI</button>
+          <button className={selectedCat === 'HO' ? 'active' : ''} onClick={() => { setSelectedCat('HO'); setSelectedItem(null); }}><Waves size={18} /> MẪU HỒ KOI CỔ ĐIỂN</button>
+          <button className={selectedCat === 'HO_HIEN_DAI' ? 'active' : ''} onClick={() => { setSelectedCat('HO_HIEN_DAI'); setSelectedItem(null); }}><Monitor size={18} /> MẪU HỒ KOI HIỆN ĐẠI</button>
+          <button className={selectedCat === 'TUONG_DA' ? 'active' : ''} onClick={() => { setSelectedCat('TUONG_DA'); setSelectedItem(null); }}><Layers size={18} /> MẪU TƯỜNG ĐÁ</button>
+          <button className={selectedCat === 'CAFE_SAN_VUON' ? 'active' : ''} onClick={() => { setSelectedCat('CAFE_SAN_VUON'); setSelectedItem(null); }}><Crown size={18} /> MẪU CÀ PHÊ SÂN VƯỜN</button>
         </div>
 
         <div className="sidebar-divider" />
@@ -2667,20 +2701,21 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
         ) : (
           <>
             <div className="manager-header">
-              <h3>Quản lý {selectedCat}</h3>
+              <h3>Quản lý {{ THAC: 'Thác Đá', KE: 'Kè Đá / Bờ', CANH: 'Cảnh Quan', HO: 'Hồ Koi Cổ Điển', HO_HIEN_DAI: 'Hồ Koi Hiện Đại', TUONG_DA: 'Tường Đá Nhân Tạo', CAFE_SAN_VUON: 'Cà Phê Sân Vườn' }[selectedCat] || selectedCat}</h3>
               <button className="btn-add-asset" onClick={() => {
                 const newLib = { ...systemContent.library };
-                const currentCat = selectedCat as 'THAC' | 'KE' | 'CANH' | 'HO';
-                const list = [...(newLib[currentCat] || (ASSETS as any)[currentCat])];
+                const currentCat = selectedCat as string;
+                const list = [...(newLib[currentCat] || (ASSETS as any)[currentCat] || [])];
                 const newId = `${currentCat.toLowerCase()}_new_${list.length + 1}`;
-                
+
                 const newItem: any = {
                   id: newId,
                   name: `Mẫu mới ${list.length + 1}`,
                   url: "https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=600"
                 };
 
-                if (currentCat === 'THAC' || currentCat === 'HO') {
+                const catsWithVariants = ['THAC', 'HO', 'HO_HIEN_DAI', 'TUONG_DA', 'CAFE_SAN_VUON'];
+                if (catsWithVariants.includes(currentCat)) {
                    newItem.variants = [
                      { id: `${newId}_v1`, name: "Biến thể mặc định", url: newItem.url }
                    ];
