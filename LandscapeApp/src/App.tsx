@@ -324,6 +324,7 @@ export default function App() {
     if (resultMatch) {
       setSubmittedProjectId(resultMatch[1]);
       setService('Gói Cơ Bản');
+      setRetryCount(99);
       setView('success');
     }
     // Route /my — dự án của tôi (theo thiết bị)
@@ -782,6 +783,7 @@ export default function App() {
             onViewResult={(projectId) => {
               setSubmittedProjectId(projectId);
               setService('Gói Cơ Bản');
+              setRetryCount(99);
               setView('success');
             }}
           />
