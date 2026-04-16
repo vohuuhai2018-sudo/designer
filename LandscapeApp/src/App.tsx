@@ -1703,7 +1703,8 @@ function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, o
   const categories = [
     { id: 'ho_co_dien', name: 'HỒ KOI SÂN VƯỜN CỔ ĐIỂN', icon: <Waves size={32} />, active: true, libraryKey: 'HO' },
     { id: 'ho_hien_dai', name: 'HỒ KOI SÂN VƯỜN HIỆN ĐẠI', icon: <Monitor size={32} />, active: true, libraryKey: 'HO' },
-    { id: 'tuong_da', name: 'TƯỜNG ĐÁ NHÂN TẠO', icon: <Layers size={32} />, active: true, libraryKey: 'THAC' }
+    { id: 'tuong_da', name: 'TƯỜNG ĐÁ NHÂN TẠO', icon: <Layers size={32} />, active: true, libraryKey: 'THAC' },
+    { id: 'cafe_san_vuon', name: 'CÀ PHÊ SÂN VƯỜN', icon: <Crown size={32} />, active: true, libraryKey: 'HO' }
   ];
 
   // Lấy biến thể từ thư viện theo category đã chọn
@@ -2825,6 +2826,7 @@ Hãy nhìn trực tiếp vào hình ảnh khoanh vùng thiết kế (File 2) mà
     { id: 'ho_co_dien', label: 'Hồ Koi Cổ Điển', color: 'var(--accent)', key: 'promptBasic' },
     { id: 'ho_hien_dai', label: 'Hồ Koi Hiện Đại', color: '#3b82f6', key: 'promptHoHienDai' },
     { id: 'tuong_da', label: 'Tường Đá Nhân Tạo', color: '#22c55e', key: 'promptTuongDa' },
+    { id: 'cafe_san_vuon', label: 'Cà Phê Sân Vườn', color: '#f59e0b', key: 'promptCafeSanVuon' },
     { id: 'advanced', label: 'Nâng cao / Premium', color: '#6366f1', key: 'promptAdvanced' },
   ];
 
@@ -2832,6 +2834,7 @@ Hãy nhìn trực tiếp vào hình ảnh khoanh vùng thiết kế (File 2) mà
     promptBasic: systemContent.promptBasic || defaultBasicPrompt,
     promptHoHienDai: systemContent.promptHoHienDai || defaultBasicPrompt,
     promptTuongDa: systemContent.promptTuongDa || defaultBasicPrompt,
+    promptCafeSanVuon: systemContent.promptCafeSanVuon || defaultBasicPrompt,
     promptAdvanced: systemContent.promptAdvanced || defaultAdvancedPrompt,
   });
   const [editingTab, setEditingTab] = useState('ho_co_dien');
@@ -2856,6 +2859,7 @@ Hãy nhìn trực tiếp vào hình ảnh khoanh vùng thiết kế (File 2) mà
       promptBasic: defaultBasicPrompt,
       promptHoHienDai: defaultBasicPrompt,
       promptTuongDa: defaultBasicPrompt,
+      promptCafeSanVuon: defaultBasicPrompt,
       promptAdvanced: defaultAdvancedPrompt,
     };
     setPrompts(prev => ({ ...prev, [currentTab.key]: defaults[currentTab.key] }));
@@ -3223,7 +3227,7 @@ function AdminView({
 
     // Use custom prompt from admin if available (per category)
     const categoryPromptKey = isBasic
-      ? (project.basicCategory === 'ho_hien_dai' ? 'promptHoHienDai' : project.basicCategory === 'tuong_da' ? 'promptTuongDa' : 'promptBasic')
+      ? (project.basicCategory === 'ho_hien_dai' ? 'promptHoHienDai' : project.basicCategory === 'tuong_da' ? 'promptTuongDa' : project.basicCategory === 'cafe_san_vuon' ? 'promptCafeSanVuon' : 'promptBasic')
       : null;
 
     if (isBasic && categoryPromptKey && systemContent[categoryPromptKey]) {
