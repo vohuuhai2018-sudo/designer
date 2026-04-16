@@ -2058,10 +2058,11 @@ function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewRe
 
 function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isRetrying = false }: { projectId: string; service: string; onReset: () => void; retryCount?: number; onRetry?: () => void; isRetrying?: boolean }) {
   const [project, setProject] = useState<Project | null>(null);
+  const [previousImages, setPreviousImages] = useState<string[]>([]);
 
   useEffect(() => {
     if (!projectId || (service !== 'Gói Cơ Bản' && service !== 'Gói Cơ bản')) return;
-    
+
     const fetchProject = async () => {
       try {
         const res = await apiFetch(`/api/projects/${projectId}`);
@@ -2073,54 +2074,98 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
         // ignore
       }
     };
-    
+
     fetchProject();
     const interval = setInterval(fetchProject, 5000);
     return () => clearInterval(interval);
   }, [projectId, service]);
 
+  // Khi retry, lưu ảnh cũ trước khi projectId thay đổi
+  useEffect(() => {
+    if (retryCount > 0 && project?.aiResults && project.aiResults.length > 0) {
+      setPreviousImages(prev => prev.length === 0 ? project.aiResults! : prev);
+    }
+  }, [retryCount, project]);
+
   if (service === 'Gói Cơ Bản' || service === 'Gói Cơ bản') {
     const isDone = project?.status === 'done';
     const images = project?.aiResults || [];
-    
+    const allImages = retryCount > 0 && isDone ? [...previousImages, ...images] : images;
+
     return (
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="view success-view" style={{ maxWidth: '800px', width: '90%' }}>
+      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="view success-view" style={{ maxWidth: '800px', width: '90%', paddingBottom: '40px' }}>
          {!isDone ? (
            <>
-             <div className="processing-spinner" style={{margin: '2rem auto'}}>
-               <RefreshCcw size={64} className="spin" color="var(--accent)" />
+             <div className="processing-spinner" style={{margin: '1.5rem auto'}}>
+               <RefreshCcw size={48} className="spin" color="var(--accent)" />
              </div>
-             <h2 style={{ fontSize: '2rem', fontWeight: 800 }}>Hệ thống đang thiết kế...</h2>
-             <p className="hint">Máy chủ Sơn Hải đang tự động vẽ các phương án dựa trên ý tưởng của Anh/Chị. Quá trình này có thể mất vài phút. Vui lòng không đóng trang.</p>
-             {images.length > 0 && <p style={{color: 'var(--accent)', fontWeight: 'bold', fontSize: '1.2rem'}}>Đã hoàn thiện {images.length}/2 phương án...</p>}
+             <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{retryCount > 0 ? 'Đang thiết kế lần 2...' : 'Hệ thống đang thiết kế...'}</h2>
+             <p className="hint" style={{ fontSize: '0.85rem' }}>Máy chủ Sơn Hải đang tự động vẽ các phương án. Vui lòng không đóng trang.</p>
+             {images.length > 0 && <p style={{color: 'var(--accent)', fontWeight: 'bold', fontSize: '1rem'}}>Đã hoàn thiện {images.length}/2 phương án...</p>}
+             {previousImages.length > 0 && (
+               <>
+                 <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', marginTop: '1rem' }}>Kết quả lần 1:</p>
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '8px', width: '100%' }}>
+                   {previousImages.map((url, i) => (
+                     <div key={`prev-${i}`} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', aspectRatio: '16/10' }}>
+                       <img src={url} alt={`Lần 1 - ${i+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                       <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.7)', padding: '4px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.7rem' }}>
+                         Lần 1 - PA{i + 1}
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </>
+             )}
            </>
          ) : (
            <>
-             <div className="success-icon"><CheckCircle2 size={64} /></div>
-             <h2 style={{ fontSize: '2rem', fontWeight: 800 }}>Đã hoàn thành bản vẽ!</h2>
-             <p className="hint">Dưới đây là các phương án thiết kế AI đã tự động tổng hợp theo yêu cầu của Anh/Chị.</p>
+             <div className="success-icon"><CheckCircle2 size={48} /></div>
+             <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Đã hoàn thành bản vẽ!</h2>
+             <p className="hint" style={{ fontSize: '0.85rem' }}>
+               {retryCount > 0 ? `Tổng cộng ${allImages.length} phương án từ ${retryCount + 1} lần thiết kế.` : 'Dưới đây là các phương án thiết kế AI.'}
+             </p>
            </>
          )}
-         
-         {images.length > 0 && (
-           <div className="results-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '1rem', marginTop: '1.5rem', width: '100%' }}>
+
+         {allImages.length > 0 && isDone && (
+           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '1rem', width: '100%' }}>
+             {allImages.map((url, i) => {
+               const isOld = retryCount > 0 && i < previousImages.length;
+               const label = retryCount > 0
+                 ? (isOld ? `Lần 1 - PA${i + 1}` : `Lần 2 - PA${i - previousImages.length + 1}`)
+                 : `Phương án ${i + 1}`;
+               return (
+                 <div key={i} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.25)', aspectRatio: '16/10' }}>
+                   <img src={url} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                   <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: isOld ? 'rgba(0,0,0,0.7)' : 'rgba(226,177,112,0.85)', padding: '5px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.75rem', color: isOld ? '#fff' : '#000' }}>
+                     {label}
+                   </div>
+                 </div>
+               );
+             })}
+           </div>
+         )}
+
+         {!isDone && images.length > 0 && (
+           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '1rem', width: '100%' }}>
              {images.map((url, i) => (
-               <div key={i} style={{ position: 'relative', width: '100%', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.25)', display: 'flex', justifyContent: 'center' }}>
-                 <img src={url} alt={`Phương án ${i+1}`} style={{ width: '100%', height: 'auto', display: 'block' }} />
-                 <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.7)', padding: '10px', textAlign: 'center', fontWeight: 'bold' }}>
+               <div key={i} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', aspectRatio: '16/10' }}>
+                 <img src={url} alt={`Phương án ${i+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                 <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.7)', padding: '5px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.75rem' }}>
                    Phương án {i + 1}
                  </div>
                </div>
              ))}
            </div>
          )}
-         
+
          {isDone && (
-           <div style={{ marginTop: '2rem', width: '100%', textAlign: 'center' }}>
-             <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '16px', marginBottom: '1.5rem', border: '1px solid rgba(255,255,255,0.1)' }}>
-               <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)', marginBottom: '8px' }}>Link xem kết quả (lưu lại để xem bất kỳ lúc nào):</p>
+           <div style={{ marginTop: '1.5rem', width: '100%', textAlign: 'center' }}>
+             <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px', marginBottom: '1rem', border: '1px solid rgba(255,255,255,0.1)' }}>
+               <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginBottom: '6px' }}>Link xem kết quả:</p>
                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
-                 <code style={{ background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', wordBreak: 'break-all', color: 'var(--accent)' }}>
+                 <code style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 10px', borderRadius: '8px', fontSize: '0.7rem', wordBreak: 'break-all', color: 'var(--accent)' }}>
                    {window.location.origin}/result/{projectId}
                  </code>
                  <button
@@ -2128,7 +2173,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                      navigator.clipboard.writeText(`${window.location.origin}/result/${projectId}`);
                      alert('Đã sao chép link!');
                    }}
-                   style={{ padding: '8px 12px', borderRadius: '8px', background: 'var(--accent)', color: '#000', fontWeight: 700, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                   style={{ padding: '6px 10px', borderRadius: '8px', background: 'var(--accent)', color: '#000', fontWeight: 700, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '0.8rem' }}
                  >
                    Sao chép
                  </button>
@@ -2140,13 +2185,13 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                  disabled={isRetrying}
                  style={{
                    width: '100%',
-                   padding: '16px',
-                   marginBottom: '12px',
+                   padding: '14px',
+                   marginBottom: '10px',
                    background: isRetrying ? 'rgba(226,177,112,0.15)' : 'rgba(255,255,255,0.06)',
                    border: '2px solid var(--accent)',
-                   borderRadius: '16px',
+                   borderRadius: '14px',
                    color: 'var(--accent)',
-                   fontSize: '1.1rem',
+                   fontSize: '0.95rem',
                    fontWeight: 800,
                    cursor: isRetrying ? 'wait' : 'pointer',
                    display: 'flex',
@@ -2156,13 +2201,13 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                  }}
                >
                  {isRetrying ? (
-                   <><RefreshCcw size={20} className="spin" /> Đang gửi lại...</>
+                   <><RefreshCcw size={18} className="spin" /> Đang gửi lại...</>
                  ) : (
-                   <><RefreshCcw size={20} /> Thử lại lần 2 — Tìm mẫu ưng ý hơn</>
+                   <><RefreshCcw size={18} /> Thử lại lần 2 — Tìm mẫu ưng ý hơn</>
                  )}
                </button>
              )}
-             <button className="btn-primary main-cta" onClick={onReset}>
+             <button className="btn-primary main-cta" onClick={onReset} style={{ fontSize: '0.95rem', padding: '14px' }}>
                Tạo Dự Án Mới
              </button>
            </div>

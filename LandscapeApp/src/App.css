@@ -1095,8 +1095,12 @@ canvas {
 /* Success View */
 .success-view {
   text-align: center;
-  justify-content: center;
-  gap: 24px;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 12px;
+  padding-top: 40px;
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
 }
 
 .success-icon {
