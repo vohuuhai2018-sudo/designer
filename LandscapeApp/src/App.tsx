@@ -36,7 +36,8 @@ import {
   Box,
   Loader2,
   Share2,
-  Waves
+  Waves,
+  Ruler
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -93,6 +94,7 @@ interface Project {
   status: 'pending' | 'processing' | 'done';
   note?: string;
   extraAssets?: string[];
+  dimensions?: { width: string; depth: string; height: string };
   workflowBranch?: WorkflowBranch;
   finalImage?: string;
   aiResults?: string[];
@@ -305,6 +307,7 @@ export default function App() {
   const [referenceModelUrl, setReferenceModelUrl] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [extraAssets, setExtraAssets] = useState<string[]>([]);
+  const [dimensions, setDimensions] = useState({ width: '', depth: '', height: '' });
   const [historySize, setHistorySize] = useState(0);
   const [viewNotification, setViewNotification] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -519,6 +522,7 @@ export default function App() {
       service,
       note,
       extraAssets,
+      dimensions: (dimensions.width || dimensions.depth || dimensions.height) ? dimensions : undefined,
       status: 'pending' as const
     };
 
@@ -530,7 +534,7 @@ export default function App() {
       });
 
       if (!response.ok) throw new Error('Lỗi khi gửi dữ liệu.');
-      
+
       setSubmittedProjectId(projectData.id);
       if (service !== 'Gói Cơ Bản') confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });
       setView('success');
@@ -552,6 +556,7 @@ export default function App() {
     setNote('');
     setReferenceModelUrl('');
     setExtraAssets([]);
+    setDimensions({ width: '', depth: '', height: '' });
     setSubmittedProjectId('');
     setRetryCount(0);
     setView('welcome');
@@ -724,6 +729,8 @@ export default function App() {
             onPhoneChange={setCustomerPhone}
             customerEmail={customerEmail}
             onEmailChange={setCustomerEmail}
+            dimensions={dimensions}
+            onDimensionsChange={setDimensions}
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
           />
@@ -759,6 +766,7 @@ export default function App() {
                   service,
                   note,
                   extraAssets,
+                  dimensions: (dimensions.width || dimensions.depth || dimensions.height) ? dimensions : undefined,
                   status: 'pending' as const
                 };
                 const response = await apiFetch('/api/projects', {
@@ -1052,22 +1060,38 @@ function UploadView({
         <div className="extra-assets-section-premium" style={{ marginTop: '20px' }}>
           <div className="extra-header-premium">
             <div className="extra-title-group">
-              <Layers size={26} color="var(--accent)" />
-              <h3>Bổ sung yêu cầu thiết kế</h3>
+              <MessageCircle size={26} color="var(--accent)" />
+              <h3>Mô tả ý tưởng của bạn</h3>
             </div>
             <p className="extra-desc-premium">
-               Mô tả chi tiết nội dung mà bạn muốn thực hiện để Kiến trúc sư nắm bắt ý tưởng chính xác nhất.
+               Hãy cho chúng tôi biết bạn muốn không gian trông như thế nào — càng chi tiết, bản vẽ càng chính xác.
             </p>
           </div>
           <textarea
             className="luxe-textarea"
-            placeholder="Ví dụ: tôi có diện tích 8x5m này cần làm hồ cá koi cổ điển đá vân mây, có lối đi rải sỏi, có cây tùng và đèn đá điểm..."
+            placeholder={"Ví dụ:\n• Diện tích khoảng 8×5m, muốn làm hồ cá koi cổ điển đá vân mây\n• Có lối đi rải sỏi trắng, cây tùng la hán và đèn đá\n• Thác nước nhỏ góc trái, bên phải trồng cây xanh\n• Phong cách Nhật Bản, tông trầm ấm..."}
             value={note ? note.replace(/(\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?)/gi, '').replace(/^https?:\/\/\S+\n?/gm, '').trimStart() : ''}
             onChange={(e) => {
               if (onNoteChange) onNoteChange(e.target.value);
             }}
-            style={{ width: '100%', height: '120px', background: 'var(--surface)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '16px', marginTop: '15px' }}
+            style={{
+              width: '100%',
+              minHeight: '180px',
+              background: 'rgba(15, 23, 42, 0.8)',
+              color: '#fff',
+              border: '1.5px solid rgba(226,177,112,0.25)',
+              borderRadius: '16px',
+              padding: '18px',
+              marginTop: '15px',
+              fontSize: '1rem',
+              lineHeight: '1.7',
+              fontFamily: 'inherit',
+              resize: 'vertical',
+            }}
           />
+          <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)', marginTop: '8px', textAlign: 'center', lineHeight: '1.5' }}>
+            Hệ thống AI sẽ tự động phân tích ảnh và yêu cầu của bạn để tạo bản vẽ phù hợp nhất.
+          </p>
         </div>
       ) : (
         <div className="extra-assets-section-premium">
@@ -1422,7 +1446,7 @@ function ServiceView({
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view service-view">
       <div className="selection-panel">
-        <div className="title-group" style={{textAlign: 'center', marginBottom: '2.5rem', marginTop: '160px'}}>
+        <div className="title-group" style={{textAlign: 'center', marginBottom: '2.5rem'}}>
           <h2 style={{ fontSize: '2.2rem' }}>Chọn Mẫu Thiết Kế</h2>
           <p style={{ fontSize: '1.1rem' }}>Tùy chỉnh phong cách đá và các hạng mục trang trí cho công trình.</p>
         </div>
@@ -1802,7 +1826,7 @@ function PlanSelectionView({ service, onServiceChange, systemContent }: {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view plan-view">
-      <h2 style={{textAlign: 'center', marginBottom: '0.8rem', marginTop: '100px', fontSize: '1.8rem'}}>Chọn Gói Giải Pháp</h2>
+      <h2 style={{textAlign: 'center', marginBottom: '0.8rem', fontSize: '1.8rem'}}>Chọn Gói Giải Pháp</h2>
       <p style={{textAlign: 'center', color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem', fontSize: '0.95rem'}}>Lựa chọn gói thiết kế phù hợp để hiện thực hóa ý tưởng của bạn.</p>
 
       <div className="service-list-premium">
@@ -1883,11 +1907,14 @@ function PlanSelectionView({ service, onServiceChange, systemContent }: {
 }
 
 function SubmitView({
-  customerName, onNameChange, customerPhone, onPhoneChange, customerEmail, onEmailChange, onSubmit, isSubmitting
+  customerName, onNameChange, customerPhone, onPhoneChange, customerEmail, onEmailChange,
+  dimensions, onDimensionsChange,
+  onSubmit, isSubmitting
 }: {
   customerName: string; onNameChange: (n: string) => void;
   customerPhone: string; onPhoneChange: (p: string) => void;
   customerEmail: string; onEmailChange: (e: string) => void;
+  dimensions: { width: string; depth: string; height: string }; onDimensionsChange: (d: { width: string; depth: string; height: string }) => void;
   onSubmit: () => void;
   isSubmitting?: boolean;
 }) {
@@ -1895,7 +1922,7 @@ function SubmitView({
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view submit-view">
-      <div className="title-group" style={{textAlign: 'center', marginBottom: '2rem', marginTop: '160px'}}>
+      <div className="title-group" style={{textAlign: 'center', marginBottom: '2rem'}}>
         <h2 style={{ fontSize: '2.2rem' }}>Thông Tin Liên Hệ</h2>
         <p style={{ fontSize: '1.1rem', color: 'var(--accent)', fontWeight: 600, maxWidth: '600px', margin: '0.5rem auto' }}>
           Hệ thống sẽ gửi bản vẽ phác thảo về Zalo và Email của Anh/Chị ngay sau khi hoàn tất.
@@ -1925,14 +1952,57 @@ function SubmitView({
 
         <div className="input-group">
           <label><Mail size={20} /> Email (Nếu có)</label>
-          <input 
-            type="email" 
-            placeholder="Nhập email để nhận bản vẽ (không bắt buộc)..." 
-            value={customerEmail} 
-            onChange={e => onEmailChange(e.target.value)} 
+          <input
+            type="email"
+            placeholder="Nhập email để nhận bản vẽ (không bắt buộc)..."
+            value={customerEmail}
+            onChange={e => onEmailChange(e.target.value)}
           />
         </div>
+
+        <div className="input-group">
+          <label><Ruler size={20} /> Kích thước không gian (mét)</label>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ flex: 1 }}>
+              <input
+                type="number"
+                inputMode="decimal"
+                placeholder="Ngang"
+                value={dimensions.width}
+                onChange={e => onDimensionsChange({ ...dimensions, width: e.target.value })}
+                style={{ width: '100%' }}
+              />
+              <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '4px', display: 'block', textAlign: 'center' }}>Ngang (m)</span>
+            </div>
+            <div style={{ flex: 1 }}>
+              <input
+                type="number"
+                inputMode="decimal"
+                placeholder="Dọc"
+                value={dimensions.depth}
+                onChange={e => onDimensionsChange({ ...dimensions, depth: e.target.value })}
+                style={{ width: '100%' }}
+              />
+              <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '4px', display: 'block', textAlign: 'center' }}>Dọc (m)</span>
+            </div>
+            <div style={{ flex: 1 }}>
+              <input
+                type="number"
+                inputMode="decimal"
+                placeholder="Cao"
+                value={dimensions.height}
+                onChange={e => onDimensionsChange({ ...dimensions, height: e.target.value })}
+                style={{ width: '100%' }}
+              />
+              <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '4px', display: 'block', textAlign: 'center' }}>Cao (m)</span>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem', marginTop: '24px', lineHeight: '1.6' }}>
+        Hệ thống sẽ tự động xử lý thiết kế dựa trên yêu cầu và thông tin của bạn.
+      </p>
 
       <motion.button
         onClick={onSubmit}

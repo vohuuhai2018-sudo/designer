@@ -96,7 +96,6 @@ button {
   max-width: 46vh; /* 100 / (19.5 / 9) approximately */
   height: 100vh;
   margin: 0 auto;
-  transform: translateX(-8px);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -112,7 +111,6 @@ button {
 @media (max-width: 500px) {
   .container {
     max-width: 100%;
-    transform: none;
   }
 }
 
@@ -139,7 +137,6 @@ button {
   width: 100%;
   max-width: 46vh;
   margin: 0 auto;
-  transform: translateX(-8px);
   height: 80px;
   z-index: 3000;
   background: transparent;
@@ -157,7 +154,6 @@ button {
 @media (max-width: 500px) {
   .global-nav-premium {
     max-width: 100%;
-    transform: none;
   }
 }
 
