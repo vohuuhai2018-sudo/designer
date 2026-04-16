@@ -15,6 +15,18 @@ const CHROME_CANDIDATES = [
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+// Tự động bấm "Tôi đồng ý" nếu gặp dialog thông báo của Google Flow
+async function dismissConsentDialog(page) {
+  try {
+    const agreeBtn = page.locator('button').filter({ hasText: /Tôi đồng ý|I agree|Đồng ý|Accept/ }).first();
+    if (await agreeBtn.count() > 0 && await agreeBtn.isVisible()) {
+      await agreeBtn.click();
+      await delay(1000);
+      console.log('[Flow] Đã bấm "Tôi đồng ý" trên dialog thông báo.');
+    }
+  } catch (_) {}
+}
+
 function resolveBrowserExecutable() {
   const executablePath = CHROME_CANDIDATES.find(candidate => require('fs').existsSync(candidate));
   if (!executablePath) {
@@ -659,6 +671,7 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady)
     console.log('[FlowV2] Truy cap trang chu Flow...');
     await page.goto('https://labs.google/fx/vi/tools/flow', { waitUntil: 'domcontentloaded' });
     await delay(3000);
+    await dismissConsentDialog(page);
 
     try {
       const errorBackBtn = page.locator('button:has-text("Quay lại dự án"), button:has-text("Quay lai du an")');
@@ -671,6 +684,7 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady)
       if (await newProjBtn.count() > 0 && await newProjBtn.isVisible()) {
         await newProjBtn.click();
         await delay(3000);
+        await dismissConsentDialog(page);
       }
     } catch (error) {
       console.log(`[FlowV2] Bo qua buoc tao du an moi: ${error.message}`);
@@ -955,6 +969,7 @@ async function runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideo
     console.log('[FlowVideo] Truy cập trang chủ Flow...');
     await page.goto('https://labs.google/fx/vi/tools/flow', { waitUntil: 'domcontentloaded' });
     await delay(3000);
+    await dismissConsentDialog(page);
 
     // Bỏ qua lỗi & tạo dự án mới
     try {
@@ -967,6 +982,7 @@ async function runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideo
       if (await newProjBtn.count() > 0 && await newProjBtn.isVisible()) {
         await newProjBtn.click();
         await delay(3000);
+        await dismissConsentDialog(page);
       }
     } catch (e) {
       console.log(`[FlowVideo] Bỏ qua bước tạo dự án mới: ${e.message}`);

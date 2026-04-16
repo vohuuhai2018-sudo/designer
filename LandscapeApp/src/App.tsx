@@ -2854,9 +2854,6 @@ Hãy nhìn trực tiếp vào hình ảnh khoanh vùng thiết kế (File 2) mà
   Trắng → vùng rải sỏi, vật liệu trang trí sáng
   Nâu → lối đi, đá bước chân`;
 
-  const defaultModernPrompt = systemContent.promptHoHienDai || defaultBasicPrompt;
-  const defaultTuongDaPrompt = systemContent.promptTuongDa || defaultBasicPrompt;
-
   const tabs = [
     { id: 'ho_co_dien', label: 'Hồ Koi Cổ Điển', color: 'var(--accent)', key: 'promptBasic' },
     { id: 'ho_hien_dai', label: 'Hồ Koi Hiện Đại', color: '#3b82f6', key: 'promptHoHienDai' },
