@@ -2661,6 +2661,179 @@ function AIStudioContent({ onFeedback }: { onFeedback: (msg: string) => void }) 
   );
 }
 
+// --- PROMPT EDITOR VIEW ---
+function PromptEditorView({ systemContent, onSystemContentUpdate, onSync, onFeedback }: {
+  systemContent: any;
+  onSystemContentUpdate: (c: any) => void;
+  onSync: () => Promise<boolean>;
+  onFeedback: (msg: string) => void;
+}) {
+  const defaultBasicPrompt = `ROLE: Landscape visualization expert (STRICT image-to-image transformation)
+
+====================================================
+OBJECTIVE
+====================================================
+
+Transform the real site (Image 1) into a built landscape design
+inspired by the reference model (Image 2).
+
+IMPORTANT:
+- Image 1 = ONLY base image (camera angle, walls, space must remain EXACT)
+- Image 2 = DESIGN REFERENCE ONLY (style, material, composition language)
+- DO NOT copy layout or scale from Image 2
+
+====================================================
+CORE DESIGN TRANSLATION (CRITICAL)
+====================================================
+
+From Image 2, extract ONLY:
+- Natural stone composition
+- Waterfall flowing naturally across rocks (if water features requested)
+- Integration between stone + plants
+- High-end garden feeling
+
+DO NOT copy:
+- Full size or full layout
+- Large mountain scale
+
+====================================================
+SITE ADAPTATION (VERY IMPORTANT)
+====================================================
+
+Adapt the design from Image 2 to fit the REAL residential yard in Image 1.
+- Scale DOWN all elements to match the real space
+- Keep proportions realistic to this yard size
+- Ensure the design feels buildable and not oversized
+
+====================================================
+OVERALL HARMONY
+====================================================
+
+- High-end residential garden
+- Balanced composition
+- Not crowded
+- Photorealistic, built project look
+- Correct scale, believable materials
+- NO CGI look, NO oversized elements`;
+
+  const defaultAdvancedPrompt = `Bạn là chuyên gia concept cảnh quan. Nhiệm vụ của bạn là tạo ra 1 hình ảnh phối cảnh photorealistic bám sát dữ liệu thực tế tôi cung cấp — không sáng tạo tuỳ tiện.
+
+═══ CÁCH ĐỌC ẢNH KHOANH VÙNG (File 2) ═══
+Hãy nhìn trực tiếp vào hình ảnh khoanh vùng thiết kế (File 2) mà tôi đính kèm.
+→ Chỉ xử lý đúng những vùng màu bạn thực sự nhìn thấy trong ảnh đó.
+→ Mỗi vùng màu tô là một khu vực công năng cần can thiệp.
+→ Nếu một loại công năng không có vùng màu tương ứng trong ảnh → TUYỆT ĐỐI không thêm vào.
+→ Khu vực không có màu khoanh vùng = giữ nguyên hiện trạng, không thay đổi.
+
+═══ GỢI Ý CÁCH HIỂU CÁC MÀU PHỔ BIẾN ═══
+  Đỏ / cam đậm → vị trí thác nước hoặc điểm nhấn nước rơi
+  Xanh dương / xanh da trời → vùng hồ nước, mặt nước
+  Tím / hoa cà → viền kè đá bao quanh hồ hoặc bồn
+  Xanh lá → cảnh quan, cây cối, thảm cỏ
+  Vàng → hệ thống lọc / hầm kỹ thuật
+  Trắng → vùng rải sỏi, vật liệu trang trí sáng
+  Nâu → lối đi, đá bước chân`;
+
+  const [basicPrompt, setBasicPrompt] = useState(systemContent.promptBasic || defaultBasicPrompt);
+  const [advancedPrompt, setAdvancedPrompt] = useState(systemContent.promptAdvanced || defaultAdvancedPrompt);
+  const [editingTab, setEditingTab] = useState<'basic' | 'advanced'>('basic');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    const updated = { ...systemContent, promptBasic: basicPrompt, promptAdvanced: advancedPrompt };
+    onSystemContentUpdate(updated);
+    onFeedback('Đang lưu prompt...');
+    const success = await onSync();
+    setIsSaving(false);
+    onFeedback(success ? '✅ Đã lưu prompt thành công!' : '❌ Lỗi khi lưu prompt.');
+  };
+
+  const handleReset = (type: 'basic' | 'advanced') => {
+    if (!window.confirm('Bạn có chắc muốn khôi phục prompt mặc định?')) return;
+    if (type === 'basic') setBasicPrompt(defaultBasicPrompt);
+    else setAdvancedPrompt(defaultAdvancedPrompt);
+    onFeedback('Đã khôi phục prompt mặc định. Nhấn LƯU để áp dụng.');
+  };
+
+  return (
+    <div style={{ padding: '20px 0' }}>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <button
+          onClick={() => setEditingTab('basic')}
+          style={{
+            padding: '10px 20px', borderRadius: '12px', fontWeight: 800, fontSize: '0.9rem', border: 'none', cursor: 'pointer',
+            background: editingTab === 'basic' ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+            color: editingTab === 'basic' ? '#000' : '#fff',
+          }}
+        >
+          Prompt Gói Cơ bản
+        </button>
+        <button
+          onClick={() => setEditingTab('advanced')}
+          style={{
+            padding: '10px 20px', borderRadius: '12px', fontWeight: 800, fontSize: '0.9rem', border: 'none', cursor: 'pointer',
+            background: editingTab === 'advanced' ? '#6366f1' : 'rgba(255,255,255,0.08)',
+            color: '#fff',
+          }}
+        >
+          Prompt Gói Nâng cao / Premium
+        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
+          <button
+            onClick={() => handleReset(editingTab)}
+            style={{ padding: '10px 16px', borderRadius: '12px', background: 'rgba(255,60,60,0.1)', color: '#ff4d4f', border: '1px solid #ff4d4f', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}
+          >
+            <RefreshCcw size={14} /> Khôi phục mặc định
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            style={{ padding: '10px 24px', borderRadius: '12px', background: 'var(--accent)', color: '#000', fontWeight: 800, fontSize: '0.9rem', border: 'none', cursor: isSaving ? 'wait' : 'pointer' }}
+          >
+            {isSaving ? 'Đang lưu...' : '💾 LƯU PROMPT'}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', padding: '20px' }}>
+        <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: editingTab === 'basic' ? 'var(--accent)' : '#6366f1' }}>
+            {editingTab === 'basic' ? '📝 Master Prompt — Gói Cơ bản (Image-to-Image)' : '📝 Master Prompt — Gói Nâng cao / Premium (Annotation-based)'}
+          </h3>
+          <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
+            {editingTab === 'basic' ? basicPrompt.length : advancedPrompt.length} ký tự
+          </span>
+        </div>
+        <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '12px', lineHeight: '1.5' }}>
+          {editingTab === 'basic'
+            ? 'Prompt này dùng cho Gói Cơ bản — AI sẽ biến đổi ảnh thực tế (Image 1) theo phong cách mẫu tham khảo (Image 2). Hệ thống tự động thêm thông tin khách hàng, file đính kèm.'
+            : 'Prompt này dùng cho Gói Nâng cao & Premium — AI sẽ đọc ảnh khoanh vùng màu để bố trí các hạng mục. Hệ thống tự động thêm thông tin dự án, lựa chọn mẫu, file đính kèm.'}
+        </p>
+        <textarea
+          value={editingTab === 'basic' ? basicPrompt : advancedPrompt}
+          onChange={e => editingTab === 'basic' ? setBasicPrompt(e.target.value) : setAdvancedPrompt(e.target.value)}
+          style={{
+            width: '100%',
+            minHeight: '500px',
+            background: 'rgba(0,0,0,0.4)',
+            color: '#e2e8f0',
+            border: '1px solid rgba(255,255,255,0.15)',
+            borderRadius: '12px',
+            padding: '16px',
+            fontFamily: "'Be Vietnam Pro', monospace",
+            fontSize: '0.85rem',
+            lineHeight: '1.7',
+            resize: 'vertical',
+            outline: 'none',
+          }}
+          spellCheck={false}
+        />
+      </div>
+    </div>
+  );
+}
+
 // --- ADMIN VIEW ---
 function AdminView({
   projects, isLoading, systemContent, onSystemContentUpdate, onSync, onBack, onUpdateProject, onDeleteProject, onDeleteAllProjects, onGenerateAiImage
@@ -2676,7 +2849,7 @@ function AdminView({
   onDeleteAllProjects: () => Promise<number>;
   onGenerateAiImage: (id: string, payload: any) => Promise<Project>;
 }) {
-  const [activeTab, setActiveTab] = useState<'projects' | 'resources'>('projects');
+  const [activeTab, setActiveTab] = useState<'projects' | 'resources' | 'prompt'>('projects');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [actionFeedback, setActionFeedback] = useState('');
   const [showDesigner, setShowDesigner] = useState(false);
@@ -2950,6 +3123,40 @@ function AdminView({
       ?? project.note?.match(/https?:\/\/[^\s\n]+/);
     const modelUrl = modelMatch ? modelMatch[1] ?? modelMatch[0] : null;
     const customNote = project.note?.replace(/\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?/i, '').trim();
+
+    // Use custom prompt from admin if available
+    if (isBasic && systemContent.promptBasic) {
+      const dynamicParts = [
+        '',
+        '====================================================',
+        `PROJECT DATA — ${project.customerName} | ${project.service}`,
+        '====================================================',
+        '',
+        ...(customNote ? [`CUSTOMER REQUEST: "${customNote}"`, ''] : []),
+        ...(modelUrl ? [`REFERENCE MODEL (Image 2): ${modelUrl}`, ''] : []),
+        '====================================================',
+        'ATTACHED FILES',
+        '====================================================',
+        '',
+        ...buildAiAssetLines(project),
+      ].join('\n');
+      return systemContent.promptBasic + '\n' + dynamicParts;
+    }
+
+    if (!isBasic && systemContent.promptAdvanced) {
+      const dynamicParts = [
+        '',
+        '═══ DỮ LIỆU DỰ ÁN ═══',
+        `Khách hàng: ${project.customerName}`,
+        `Gói dịch vụ: ${project.service}`,
+        '',
+        ...(hasNote ? [`═══ YÊU CẦU CỦA KHÁCH ═══`, `"${project.note}"`, ''] : []),
+        '═══ FILE ĐÍNH KÈM ═══',
+        '',
+        ...buildAiAssetLines(project),
+      ].join('\n');
+      return systemContent.promptAdvanced + '\n' + dynamicParts;
+    }
 
     if (isBasic) {
       const noteContent = (project.note || '').toLowerCase();
@@ -3590,7 +3797,8 @@ function AdminView({
             <button onClick={onBack} className="btn-back-premium"><ChevronLeft size={18} /> Về trang chủ</button>
             <div className="admin-tabs-luxe">
                <button className={activeTab === 'projects' ? 'active' : ''} onClick={() => setActiveTab('projects')}><Folder size={18} /> QUẢN LÝ DỰ ÁN</button>
-               <button className={activeTab === 'resources' ? 'active' : ''} onClick={() => setActiveTab('resources')}><Layers size={18} /> KHO TÀI NGUYÊN & LOGIC</button>
+               <button className={activeTab === 'resources' ? 'active' : ''} onClick={() => setActiveTab('resources')}><Layers size={18} /> TÀI NGUYÊN</button>
+               <button className={activeTab === 'prompt' ? 'active' : ''} onClick={() => setActiveTab('prompt')}><Bot size={18} /> PROMPT AI</button>
             </div>
           </div>
           <div className="admin-title-section">
@@ -3616,12 +3824,21 @@ function AdminView({
         </header>
 
         {activeTab === 'resources' && (
-          <AssetManagerView 
-            systemContent={systemContent} 
-            onSystemContentUpdate={onSystemContentUpdate} 
+          <AssetManagerView
+            systemContent={systemContent}
+            onSystemContentUpdate={onSystemContentUpdate}
             onSync={onSync}
-            onFeedback={setActionFeedback} 
-            onClose={() => setActiveTab('projects')} 
+            onFeedback={setActionFeedback}
+            onClose={() => setActiveTab('projects')}
+          />
+        )}
+
+        {activeTab === 'prompt' && (
+          <PromptEditorView
+            systemContent={systemContent}
+            onSystemContentUpdate={onSystemContentUpdate}
+            onSync={onSync}
+            onFeedback={setActionFeedback}
           />
         )}
 
