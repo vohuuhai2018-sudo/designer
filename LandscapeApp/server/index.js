@@ -477,7 +477,7 @@ const ProjectSchema = new mongoose.Schema({
       completedAt: Date,
       tasks: [{
         taskId: String,
-        type: String,
+        type: { type: String },
         label: String,
         status: { type: String, default: 'pending' },
         url: String,
