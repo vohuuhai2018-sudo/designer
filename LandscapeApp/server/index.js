@@ -8,7 +8,7 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { runChatGptAutomation } = require('./chatgptAutomation');
 const { runFlowAutomation, runFlowVideoAutomation } = require('./flowAutomation');
 const { generateLandscapePrompt } = require('./geminiPromptService');
-const { runPass2Tasks, initPass2State, PASS2_TASKS } = require('./pass2Automation');
+const { runPass2Tasks, runSinglePass2Task, initPass2State, PASS2_TASKS } = require('./pass2Automation');
 
 // Helper để tìm Link ảnh mẫu nếu FrontEnd chỉ gửi ID (hoặc fix cho các ca cũ)
 function resolveThacUrl(selections) {
@@ -501,16 +501,26 @@ global._projectModelReady = true; // Cho phép resumePendingProjects chạy
 // Helper: Upload to Cloudinary
 const uploadToCloudinary = async (fileStr) => {
   if (!fileStr || fileStr.startsWith('http')) return fileStr;
-  try {
-    const uploadResponse = await cloudinary.uploader.upload(fileStr, {
-      folder: 'landscape_app',
-      resource_type: 'auto' // handles both images and videos
-    });
-    return uploadResponse.secure_url;
-  } catch (err) {
-    console.error('Cloudinary upload error:', err);
-    return fileStr; // Fallback to original
+
+  const opts = {
+    folder: 'landscape_app',
+    resource_type: 'auto',  // Cloudinary tự detect image/video
+    timeout: 600000          // 10 min — video có thể lâu do upload + encoding
+  };
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await cloudinary.uploader.upload(fileStr, opts);
+      if (res?.secure_url) return res.secure_url;
+      console.error(`Cloudinary upload attempt ${attempt}: response missing secure_url`, res);
+    } catch (err) {
+      const isTimeout = err?.http_code === 499 || err?.name === 'TimeoutError';
+      console.error(`Cloudinary upload attempt ${attempt} failed${isTimeout ? ' (timeout)' : ''}:`, err?.message || err);
+    }
+    if (attempt < 3) await new Promise(r => setTimeout(r, 2000));
   }
+  console.error(`Cloudinary: bỏ cuộc sau 3 lần với file ${fileStr}`);
+  return fileStr;
 };
 
 // API Routes
@@ -940,11 +950,28 @@ app.post('/api/projects/:id/pass2', async (req, res) => {
           onVideoReady: handleVideoUpload,
           onTaskEvent: handleTaskEvent
         });
+        // Sweep: task nào status='done' mà url=null coi như thất bại (thường do Cloudinary upload lỗi)
+        const after = await Project.findOne({ id: req.params.id });
+        const tasks = after?.pass2Results?.tasks || [];
+        for (const t of tasks) {
+          if (t.status === 'done' && !t.url) {
+            await Project.findOneAndUpdate(
+              { id: req.params.id, 'pass2Results.tasks.taskId': t.taskId },
+              { $set: {
+                'pass2Results.tasks.$.status': 'failed',
+                'pass2Results.tasks.$.error': 'Upload Cloudinary thất bại (timeout). Bấm Thử lại.'
+              }}
+            );
+            console.warn(`[Pass2] task ${t.taskId} done nhưng thiếu url → đánh dấu failed.`);
+          }
+        }
+        const fresh = await Project.findOne({ id: req.params.id });
+        const allOk = (fresh?.pass2Results?.tasks || []).every(t => t.status === 'done' && t.url);
         await Project.findOneAndUpdate(
           { id: req.params.id },
-          { $set: { 'pass2Results.status': 'done', 'pass2Results.completedAt': new Date() } }
+          { $set: { 'pass2Results.status': allOk ? 'done' : 'failed', 'pass2Results.completedAt': new Date() } }
         );
-        console.log(`[Pass2] project ${req.params.id} HOÀN TẤT.`);
+        console.log(`[Pass2] project ${req.params.id} HOÀN TẤT (tổng: ${allOk ? 'done' : 'failed'}).`);
       } catch (err) {
         console.error(`[Pass2] project ${req.params.id} lỗi tổng:`, err);
         await Project.findOneAndUpdate(
@@ -956,6 +983,106 @@ app.post('/api/projects/:id/pass2', async (req, res) => {
   } catch (err) {
     console.error('Pass 2 start error:', err);
     res.status(500).json({ error: err.message || 'Không thể khởi động Pass 2.' });
+  }
+});
+
+// PASS 2 — retry 1 task bị fail
+app.post('/api/projects/:id/pass2/retry', async (req, res) => {
+  try {
+    const { taskId } = req.body || {};
+    if (!taskId) return res.status(400).json({ error: 'Thiếu taskId.' });
+
+    const project = await Project.findOne({ id: req.params.id });
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+    if (!project.pass2Results) return res.status(400).json({ error: 'Project chưa có pass2Results.' });
+
+    const taskDef = PASS2_TASKS.find(t => t.id === taskId);
+    if (!taskDef) return res.status(400).json({ error: `Không tìm thấy task ${taskId}.` });
+
+    const existing = project.pass2Results.tasks.find(t => t.taskId === taskId);
+    if (existing?.status === 'running') {
+      return res.status(409).json({ error: 'Task đang chạy, vui lòng chờ.' });
+    }
+
+    // Reset task về pending + url=null, set overall status = running
+    await Project.findOneAndUpdate(
+      { id: req.params.id, 'pass2Results.tasks.taskId': taskId },
+      { $set: {
+        'pass2Results.status': 'running',
+        'pass2Results.completedAt': null,
+        'pass2Results.tasks.$.status': 'pending',
+        'pass2Results.tasks.$.url': null,
+        'pass2Results.tasks.$.error': null
+      }}
+    );
+
+    res.json({ ok: true, message: `Đang thử lại task ${taskId}` });
+
+    (async () => {
+      const { referenceImageUrl, dimensions } = project.pass2Results;
+
+      const handleImageUpload = async (task, localPath) => {
+        const url = await uploadToCloudinary(localPath);
+        if (!url || !url.startsWith('http')) return;
+        await Project.findOneAndUpdate(
+          { id: req.params.id, 'pass2Results.tasks.taskId': task.id },
+          { $set: { 'pass2Results.tasks.$.url': url } }
+        );
+      };
+      const handleVideoUpload = async (task, localPath) => {
+        const url = await uploadToCloudinary(localPath);
+        if (!url || !url.startsWith('http')) return;
+        await Project.findOneAndUpdate(
+          { id: req.params.id, 'pass2Results.tasks.taskId': task.id },
+          { $set: { 'pass2Results.tasks.$.url': url } }
+        );
+      };
+      const handleTaskEvent = async (evt) => {
+        const setOps = { 'pass2Results.tasks.$.status': evt.status };
+        if (evt.chatUrl) setOps['pass2Results.tasks.$.chatUrl'] = evt.chatUrl;
+        setOps['pass2Results.tasks.$.error'] = evt.error || null;
+        await Project.findOneAndUpdate(
+          { id: req.params.id, 'pass2Results.tasks.taskId': evt.taskId },
+          { $set: setOps }
+        );
+      };
+
+      try {
+        await runSinglePass2Task({
+          task: taskDef,
+          referenceImageUrl,
+          dimensions,
+          onImageReady: handleImageUpload,
+          onVideoReady: handleVideoUpload,
+          onTaskEvent: handleTaskEvent
+        });
+        // Post-check: nếu done nhưng url null → failed
+        const after = await Project.findOne({ id: req.params.id });
+        const t = after?.pass2Results?.tasks?.find(x => x.taskId === taskId);
+        if (t?.status === 'done' && !t.url) {
+          await Project.findOneAndUpdate(
+            { id: req.params.id, 'pass2Results.tasks.taskId': taskId },
+            { $set: {
+              'pass2Results.tasks.$.status': 'failed',
+              'pass2Results.tasks.$.error': 'Upload Cloudinary thất bại (timeout). Bấm Thử lại.'
+            }}
+          );
+        }
+        // Cập nhật overall status
+        const fresh = await Project.findOne({ id: req.params.id });
+        const allOk = (fresh?.pass2Results?.tasks || []).every(tk => tk.status === 'done' && tk.url);
+        await Project.findOneAndUpdate(
+          { id: req.params.id },
+          { $set: { 'pass2Results.status': allOk ? 'done' : 'failed', 'pass2Results.completedAt': new Date() } }
+        );
+        console.log(`[Pass2][retry ${taskId}] xong (tổng: ${allOk ? 'done' : 'failed'}).`);
+      } catch (err) {
+        console.error(`[Pass2][retry ${taskId}] lỗi:`, err);
+      }
+    })();
+  } catch (err) {
+    console.error('Pass 2 retry error:', err);
+    res.status(500).json({ error: err.message || 'Không thể thử lại.' });
   }
 });
 

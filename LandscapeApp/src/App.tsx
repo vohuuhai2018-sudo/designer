@@ -2435,6 +2435,22 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                          </div>
                        )}
                        <div style={{ padding: '6px 8px', fontSize: '0.65rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600, textAlign: 'center' }}>{task.label}</div>
+                       {(task.status === 'failed' || (task.status === 'done' && !task.url)) && (
+                         <button
+                           onClick={async () => {
+                             try {
+                               const res = await apiFetch(`/api/projects/${projectId}/pass2/retry`, {
+                                 method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                 body: JSON.stringify({ taskId: task.taskId })
+                               });
+                               if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Retry failed'); }
+                             } catch (e: any) { alert(`Lỗi: ${e.message}`); }
+                           }}
+                           style={{ width: '100%', padding: '6px', border: 'none', background: '#facc15', color: '#000', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer' }}
+                         >
+                           🔄 Thử lại
+                         </button>
+                       )}
                      </div>
                    ))}
                  </div>
@@ -4510,6 +4526,25 @@ function AdminView({
                                 </div>
                                 {task.error && (
                                   <div style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#ef4444', background: 'rgba(239,68,68,0.05)' }}>{task.error}</div>
+                                )}
+                                {(task.status === 'failed' || (task.status === 'done' && !task.url)) && (
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        const res = await apiFetch(`/api/projects/${selectedProject.id}/pass2/retry`, {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ taskId: task.taskId })
+                                        });
+                                        const data = await res.json();
+                                        if (!res.ok) throw new Error(data.error || 'Retry failed');
+                                        setActionFeedback(`Đang thử lại: ${task.label}`);
+                                      } catch (e: any) { setActionFeedback(`Lỗi: ${e.message}`); }
+                                    }}
+                                    style={{ width: '100%', padding: '6px', border: 'none', background: '#facc15', color: '#000', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer' }}
+                                  >
+                                    🔄 Thử lại
+                                  </button>
                                 )}
                               </div>
                             ))}

@@ -44,6 +44,51 @@ function initPass2State(referenceImageUrl, dimensions) {
   };
 }
 
+async function runSinglePass2Task({
+  task,
+  referenceImageUrl,
+  dimensions,
+  onImageReady,
+  onVideoReady,
+  onTaskEvent
+}) {
+  const width = dimensions?.width || 4;
+  const length = dimensions?.length || 4;
+  const refAsset = { url: referenceImageUrl, label: 'pass2_reference' };
+
+  try {
+    await onTaskEvent?.({ taskId: task.id, status: 'running', error: null });
+    const prompt = await loadPrompt(task.promptFile, { WIDTH: width, LENGTH: length });
+
+    if (task.type === 'image') {
+      const result = await runFlowAutomation({
+        prompt,
+        assets: [refAsset],
+        variantCount: 1,
+        onImageReady: async (localPath) => {
+          try { await onImageReady?.(task, localPath); } catch (e) { console.error(`[Pass2][${task.id}] image upload error:`, e.message); }
+        }
+      });
+      await onTaskEvent?.({ taskId: task.id, status: 'done', chatUrl: result?.chatUrl });
+      return { taskId: task.id, status: 'done', chatUrl: result?.chatUrl };
+    } else {
+      const result = await runFlowVideoAutomation({
+        prompt,
+        imageUrl: referenceImageUrl,
+        onVideoReady: async (localPath) => {
+          try { await onVideoReady?.(task, localPath); } catch (e) { console.error(`[Pass2][${task.id}] video upload error:`, e.message); }
+        }
+      });
+      await onTaskEvent?.({ taskId: task.id, status: 'done', chatUrl: result?.chatUrl });
+      return { taskId: task.id, status: 'done', chatUrl: result?.chatUrl };
+    }
+  } catch (err) {
+    console.error(`[Pass2][${task.id}] FAILED:`, err?.message || err);
+    await onTaskEvent?.({ taskId: task.id, status: 'failed', error: err?.message || String(err) });
+    return { taskId: task.id, status: 'failed', error: err?.message || String(err) };
+  }
+}
+
 async function runPass2Tasks({
   referenceImageUrl,
   dimensions,
@@ -55,51 +100,16 @@ async function runPass2Tasks({
     throw new Error('Thiếu referenceImageUrl cho Pass 2.');
   }
 
-  const width = dimensions?.width || 4;
-  const length = dimensions?.length || 4;
-  const refAsset = { url: referenceImageUrl, label: 'pass2_reference' };
-
-  const tasks = PASS2_TASKS.map(async (task) => {
-    try {
-      await onTaskEvent?.({ taskId: task.id, status: 'running' });
-
-      const prompt = await loadPrompt(task.promptFile, { WIDTH: width, LENGTH: length });
-
-      if (task.type === 'image') {
-        const result = await runFlowAutomation({
-          prompt,
-          assets: [refAsset],
-          variantCount: 1,
-          onImageReady: async (localPath) => {
-            try { await onImageReady?.(task, localPath); } catch (e) { console.error(`[Pass2][${task.id}] image upload error:`, e.message); }
-          }
-        });
-        await onTaskEvent?.({ taskId: task.id, status: 'done', chatUrl: result?.chatUrl });
-        return { taskId: task.id, status: 'done', chatUrl: result?.chatUrl };
-      } else {
-        const result = await runFlowVideoAutomation({
-          prompt,
-          imageUrl: referenceImageUrl,
-          onVideoReady: async (localPath) => {
-            try { await onVideoReady?.(task, localPath); } catch (e) { console.error(`[Pass2][${task.id}] video upload error:`, e.message); }
-          }
-        });
-        await onTaskEvent?.({ taskId: task.id, status: 'done', chatUrl: result?.chatUrl });
-        return { taskId: task.id, status: 'done', chatUrl: result?.chatUrl };
-      }
-    } catch (err) {
-      console.error(`[Pass2][${task.id}] FAILED:`, err?.message || err);
-      await onTaskEvent?.({ taskId: task.id, status: 'failed', error: err?.message || String(err) });
-      return { taskId: task.id, status: 'failed', error: err?.message || String(err) };
-    }
-  });
-
-  const results = await Promise.allSettled(tasks);
+  const promises = PASS2_TASKS.map(task => runSinglePass2Task({
+    task, referenceImageUrl, dimensions, onImageReady, onVideoReady, onTaskEvent
+  }));
+  const results = await Promise.allSettled(promises);
   return results.map(r => r.status === 'fulfilled' ? r.value : { status: 'failed', error: r.reason?.message });
 }
 
 module.exports = {
   PASS2_TASKS,
   initPass2State,
-  runPass2Tasks
+  runPass2Tasks,
+  runSinglePass2Task
 };

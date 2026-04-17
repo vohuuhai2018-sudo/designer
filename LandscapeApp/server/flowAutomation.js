@@ -23,8 +23,26 @@ async function dismissConsentDialog(page) {
       await agreeBtn.click();
       await delay(1000);
       console.log('[Flow] Đã bấm "Tôi đồng ý" trên dialog thông báo.');
+      return true;
     }
   } catch (_) {}
+  return false;
+}
+
+// Background watcher: check dialog consent mỗi 3s trong suốt thời gian tab hoạt động
+function startDialogWatcher(page, label = 'tab') {
+  let stopped = false;
+  (async () => {
+    while (!stopped) {
+      try {
+        if (page.isClosed && page.isClosed()) break;
+        const clicked = await dismissConsentDialog(page);
+        if (clicked) console.log(`[DialogWatcher][${label}] Tự tắt dialog giữa chừng.`);
+      } catch (_) {}
+      await delay(3000);
+    }
+  })();
+  return () => { stopped = true; };
 }
 
 function resolveBrowserExecutable() {
@@ -913,11 +931,13 @@ async function runFlowAutomation({ prompt, assets, onImageReady, variantCount = 
 
     console.log(`[AUTO-FLOW] Mở tab mới cho Flow (đang có ${_activeTabCount} tab hoạt động)...`);
 
+    const stopWatcher = startDialogWatcher(page, 'image');
     try {
       const { outputPaths, chatUrl } = await runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady, variantCount);
       console.log(`[AUTO-FLOW] Hoàn tất. Lấy được ${outputPaths.length}/${variantCount} ảnh.`);
       return { outputPaths, chatUrl };
     } finally {
+      stopWatcher();
       _activeTabCount = Math.max(0, _activeTabCount - 1);
       console.log(`[AUTO-FLOW] Tab đã xong, còn ${_activeTabCount} tab hoạt động.`);
       // page.close() đã được gọi trong runFlowVariantV2
@@ -949,11 +969,13 @@ async function runFlowVideoAutomation({ prompt, imageUrl, onVideoReady }) {
 
     console.log(`[AUTO-VIDEO] Mở tab mới cho Flow Video (đang có ${_activeTabCount} tab hoạt động)...`);
 
+    const stopWatcher = startDialogWatcher(page, 'video');
     try {
       const result = await runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideoReady);
       console.log(`[AUTO-VIDEO] Hoàn tất. Video: ${result.videoPath ? 'OK' : 'KHÔNG CÓ'}`);
       return result;
     } finally {
+      stopWatcher();
       _activeTabCount = Math.max(0, _activeTabCount - 1);
       console.log(`[AUTO-VIDEO] Tab đã xong, còn ${_activeTabCount} tab hoạt động.`);
       scheduleIdleClose();
