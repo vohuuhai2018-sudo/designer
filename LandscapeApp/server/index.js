@@ -363,6 +363,7 @@ mongoose.connect(process.env.MONGO_URI, {
     console.log('✅ [DATABASE] Đã kết nối MongoDB Atlas');
     // Khôi phục các project bị bỏ dở sau khi restart server
     // setTimeout(resumePendingProjects, 5000); // ⛔ Tạm dừng khôi phục ChatGPT cũ theo yêu cầu khách hàng
+    setTimeout(sweepStuckPass2, 3000);
   })
   .catch(err => console.error('MongoDB connection error:', err));
 
@@ -497,6 +498,30 @@ const SystemContentSchema = new mongoose.Schema({
 const SystemContent = mongoose.model('SystemContent', SystemContentSchema);
 
 global._projectModelReady = true; // Cho phép resumePendingProjects chạy
+
+// Startup sweep: mark task pass2 bị stuck 'running' (do server restart giữa chừng) → failed
+// để user có thể bấm Thử lại
+async function sweepStuckPass2() {
+  try {
+    const r = await Project.updateMany(
+      { 'pass2Results.status': 'running' },
+      {
+        $set: {
+          'pass2Results.status': 'failed',
+          'pass2Results.completedAt': new Date(),
+          'pass2Results.tasks.$[t].status': 'failed',
+          'pass2Results.tasks.$[t].error': 'Server restart giữa chừng. Bấm Thử lại.'
+        }
+      },
+      { arrayFilters: [{ 't.status': { $in: ['running', 'pending'] }, 't.url': null }] }
+    );
+    if (r.matchedCount > 0) {
+      console.log(`🧹 [STARTUP] Pass2 sweep: mark ${r.matchedCount} project có task stuck → failed.`);
+    }
+  } catch (err) {
+    console.error('Startup pass2 sweep lỗi:', err.message);
+  }
+}
 
 // Helper: Upload to Cloudinary
 const uploadToCloudinary = async (fileStr) => {
