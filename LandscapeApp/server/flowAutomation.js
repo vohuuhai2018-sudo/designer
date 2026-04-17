@@ -775,18 +775,18 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
       await page.keyboard.press('Enter');
     }
 
-    console.log(`[FlowV2] Dang cho Google Flow sinh ket qua ${targetCount} anh...`);
+    console.log(`[FlowV2] Dang cho Google Flow sinh ket qua ${targetCount} anh (timeout 6 phut)...`);
     try {
       await page.waitForFunction(({ oldSources, need }) => {
         const currentImages = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
         const newImages = currentImages.filter(img => !oldSources.includes(img.src));
         return newImages.length >= need;
-      }, { oldSources: existingImgSources, need: targetCount }, { timeout: 240000 });
+      }, { oldSources: existingImgSources, need: targetCount }, { timeout: 360000 });
     } catch (error) {
       console.log(`[FlowV2] Het thoi gian cho ${targetCount} anh moi, se xu ly nhung anh da co: ${error.message}`);
     }
 
-    await delay(15000);
+    await delay(20000);
 
     const newResultsInDom = await page.evaluate((oldSources) => {
       const currentImages = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
