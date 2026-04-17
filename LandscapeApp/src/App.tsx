@@ -4174,6 +4174,18 @@ function AdminView({
                 <div className="section-header luxe"><User size={24} color="var(--accent)" /> <h3>Hồ sơ khách hàng</h3></div>
                 <div className="profile-identity">
                   <div className="id-group">
+                    <label>ID dự án</label>
+                    <div className="id-value" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                      <span style={{ color: 'var(--accent)' }}>{selectedProject.id}</span>
+                      <button
+                        onClick={() => copyText(selectedProject.id, 'Đã copy ID dự án.')}
+                        style={{ padding: '2px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', fontSize: '0.7rem', cursor: 'pointer' }}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  <div className="id-group">
                     <label>Họ và tên khách hàng</label>
                     <div className="id-value">{selectedProject.customerName}</div>
                   </div>
@@ -4410,8 +4422,11 @@ function AdminView({
                   {/* PASS 2 — BỔ SUNG 7 OUTPUT TỪ 1 PA ĐƯỢC CHỌN */}
                   {selectedProject.status === 'done' && selectedProject.aiResults && selectedProject.aiResults.length > 0 && (
                     <div style={{ marginTop: '24px', background: 'rgba(250,204,21,0.06)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(250,204,21,0.25)' }}>
-                      <h4 style={{ color: '#facc15', fontWeight: 800, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        Pass 2 — Bổ sung (3 góc chụp + 2 bản vẽ + 2 video)
+                      <h4 style={{ color: '#facc15', fontWeight: 800, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span>Pass 2 — Bổ sung (3 góc chụp + 2 bản vẽ + 2 video)</span>
+                        <span style={{ marginLeft: 'auto', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.55)', fontFamily: 'monospace', background: 'rgba(0,0,0,0.3)', padding: '3px 8px', borderRadius: '6px' }}>
+                          ID: {selectedProject.id}
+                        </span>
                       </h4>
                       <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', marginBottom: '12px' }}>
                         Chọn 1 ảnh PA làm reference, nhập kích thước khu vực (m), hệ thống sẽ mở 7 tab Flow song song để tạo bổ sung.
