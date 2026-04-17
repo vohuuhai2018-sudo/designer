@@ -1011,6 +1011,19 @@ async function runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideo
           }
         }
 
+        // Chọn tab "Thành phần" (không phải Khung hình)
+        const thanhPhanTab = page.locator('button.flow_tab_slider_trigger').filter({ hasText: /chrome_extensionThành phần/ }).first();
+        if (await thanhPhanTab.count() > 0) {
+          const isSelected = await thanhPhanTab.getAttribute('aria-selected');
+          if (isSelected !== 'true') {
+            await thanhPhanTab.click();
+            await delay(800);
+            console.log('[FlowVideo] Đã chọn chế độ Thành phần.');
+          } else {
+            console.log('[FlowVideo] Đã đang ở chế độ Thành phần.');
+          }
+        }
+
         // Chọn 16:9
         const ratio169 = page.locator('button.flow_tab_slider_trigger').filter({ hasText: /16:9/ }).first();
         if (await ratio169.count() > 0) {
@@ -1070,22 +1083,27 @@ async function runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideo
       await page.keyboard.press('Enter');
     }
 
-    // === BƯỚC 7: Chờ video sinh ra (timeout 10 phút vì video mất lâu) ===
+    // === BƯỚC 7: Chờ video sinh ra HOÀN TẤT (timeout 10 phút) ===
     console.log('[FlowVideo] Đang chờ Google Flow sinh video... (có thể mất 3-10 phút)');
     try {
+      // Chờ video xuất hiện với src chứa 'media.getMediaUrlRedirect' (dấu hiệu video đã render xong)
       await page.waitForFunction((oldVideos) => {
         const videos = Array.from(document.querySelectorAll('video'));
-        const newVideos = videos.filter(v => {
+        const ready = videos.filter(v => {
           const src = v.src || v.currentSrc || '';
-          return src && !oldVideos.includes(src) && (v.offsetWidth > 100);
+          // Video mới, có URL API Flow, và đã load metadata (readyState >= 1)
+          return src
+            && !oldVideos.includes(src)
+            && src.includes('media.getMediaUrlRedirect');
         });
-        return newVideos.length >= 1;
-      }, existingVideos, { timeout: 600000 }); // 10 phút
+        return ready.length >= 1;
+      }, existingVideos, { timeout: 600000 });
+      console.log('[FlowVideo] ✅ Video URL đã xuất hiện!');
     } catch (e) {
       console.log(`[FlowVideo] Hết thời gian chờ video: ${e.message}`);
     }
 
-    await delay(10000); // Chờ thêm để video load hoàn toàn
+    await delay(5000); // Chờ thêm để URL ổn định
 
     // === BƯỚC 8: Tải video ===
     console.log('[FlowVideo] Tìm và tải video kết quả...');
@@ -1093,7 +1111,7 @@ async function runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideo
       const videos = Array.from(document.querySelectorAll('video'));
       return videos.filter(v => {
         const src = v.src || v.currentSrc || '';
-        return src && !oldVideos.includes(src) && (v.offsetWidth > 100);
+        return src && !oldVideos.includes(src) && src.includes('media.getMediaUrlRedirect');
       }).map(v => ({
         src: v.src || v.currentSrc || '',
         poster: v.poster || '',
