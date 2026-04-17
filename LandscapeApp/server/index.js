@@ -8,6 +8,7 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { runChatGptAutomation } = require('./chatgptAutomation');
 const { runFlowAutomation, runFlowVideoAutomation } = require('./flowAutomation');
 const { generateLandscapePrompt } = require('./geminiPromptService');
+const { runPass2Tasks, initPass2State, PASS2_TASKS } = require('./pass2Automation');
 
 // Helper để tìm Link ảnh mẫu nếu FrontEnd chỉ gửi ID (hoặc fix cho các ca cũ)
 function resolveThacUrl(selections) {
@@ -463,7 +464,29 @@ const ProjectSchema = new mongoose.Schema({
   extraAssets: [String],
   workflowBranch: String,
   finalImage: String,
-  aiResults: [String]
+  aiResults: [String],
+  pass2Results: {
+    type: new mongoose.Schema({
+      referenceImageUrl: String,
+      dimensions: {
+        width: Number,
+        length: Number
+      },
+      status: { type: String, default: 'pending' },
+      startedAt: Date,
+      completedAt: Date,
+      tasks: [{
+        taskId: String,
+        type: String,
+        label: String,
+        status: { type: String, default: 'pending' },
+        url: String,
+        chatUrl: String,
+        error: String
+      }]
+    }, { _id: false }),
+    default: null
+  }
 });
 const Project = mongoose.model('Project', ProjectSchema);
 
@@ -851,6 +874,88 @@ app.post('/api/projects/:id/generate-video', async (req, res) => {
   } catch (err) {
     console.error('Video generation error:', err);
     res.status(500).json({ error: err.message || 'Không thể tạo video.' });
+  }
+});
+
+// PASS 2 — gen 3 camera angles + 2 drawings + 2 videos from 1 chosen PA
+app.post('/api/projects/:id/pass2', async (req, res) => {
+  try {
+    const { referenceImageUrl, dimensions } = req.body || {};
+    if (!referenceImageUrl || !referenceImageUrl.startsWith('http')) {
+      return res.status(400).json({ error: 'Thiếu referenceImageUrl hợp lệ (ảnh PA đã chọn).' });
+    }
+
+    const project = await Project.findOne({ id: req.params.id });
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    if (project.pass2Results?.status === 'running') {
+      return res.status(409).json({ error: 'Pass 2 đang chạy cho dự án này, vui lòng chờ.' });
+    }
+
+    const initial = initPass2State(referenceImageUrl, dimensions);
+    await Project.findOneAndUpdate(
+      { id: req.params.id },
+      { $set: { pass2Results: initial } },
+      { new: true }
+    );
+
+    res.json({ ok: true, message: 'Pass 2 đã bắt đầu', pass2Results: initial });
+
+    (async () => {
+      const handleImageUpload = async (task, localPath) => {
+        const url = await uploadToCloudinary(localPath);
+        if (!url || !url.startsWith('http')) return;
+        console.log(`[Pass2][${task.id}] +image ${url}`);
+        await Project.findOneAndUpdate(
+          { id: req.params.id, 'pass2Results.tasks.taskId': task.id },
+          { $set: { 'pass2Results.tasks.$.url': url } }
+        );
+      };
+
+      const handleVideoUpload = async (task, localPath) => {
+        const url = await uploadToCloudinary(localPath);
+        if (!url || !url.startsWith('http')) return;
+        console.log(`[Pass2][${task.id}] video ${url}`);
+        await Project.findOneAndUpdate(
+          { id: req.params.id, 'pass2Results.tasks.taskId': task.id },
+          { $set: { 'pass2Results.tasks.$.url': url } }
+        );
+      };
+
+      const handleTaskEvent = async (evt) => {
+        const setOps = { 'pass2Results.tasks.$.status': evt.status };
+        if (evt.chatUrl) setOps['pass2Results.tasks.$.chatUrl'] = evt.chatUrl;
+        if (evt.error) setOps['pass2Results.tasks.$.error'] = evt.error;
+        await Project.findOneAndUpdate(
+          { id: req.params.id, 'pass2Results.tasks.taskId': evt.taskId },
+          { $set: setOps }
+        );
+      };
+
+      try {
+        await runPass2Tasks({
+          referenceImageUrl,
+          dimensions,
+          onImageReady: handleImageUpload,
+          onVideoReady: handleVideoUpload,
+          onTaskEvent: handleTaskEvent
+        });
+        await Project.findOneAndUpdate(
+          { id: req.params.id },
+          { $set: { 'pass2Results.status': 'done', 'pass2Results.completedAt': new Date() } }
+        );
+        console.log(`[Pass2] project ${req.params.id} HOÀN TẤT.`);
+      } catch (err) {
+        console.error(`[Pass2] project ${req.params.id} lỗi tổng:`, err);
+        await Project.findOneAndUpdate(
+          { id: req.params.id },
+          { $set: { 'pass2Results.status': 'failed', 'pass2Results.completedAt': new Date() } }
+        );
+      }
+    })();
+  } catch (err) {
+    console.error('Pass 2 start error:', err);
+    res.status(500).json({ error: err.message || 'Không thể khởi động Pass 2.' });
   }
 });
 

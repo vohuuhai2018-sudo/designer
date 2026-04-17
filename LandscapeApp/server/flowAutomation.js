@@ -663,9 +663,11 @@ async function fillPromptBox(promptBox, prompt) {
   console.log(`[FlowV2] Prompt da vao o chat (${currentValue.trim().length} ky tu).`);
 }
 
-async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady) {
+async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady, variantCount = 4) {
   const outputPaths = [];
   let chatUrl = 'https://labs.google/fx/vi/tools/flow';
+  const targetCount = variantCount === 1 ? 1 : 4;
+  const variantLabel = `x${targetCount}`;
 
   try {
     console.log('[FlowV2] Truy cap trang chu Flow...');
@@ -692,9 +694,9 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady)
 
     chatUrl = page.url();
 
-    // === ĐẢM BẢO CHẾ ĐỘ HÌNH ẢNH + x4 TRƯỚC KHI LÀM GÌ KHÁC ===
+    // === ĐẢM BẢO CHẾ ĐỘ HÌNH ẢNH + ${variantLabel} TRƯỚC KHI LÀM GÌ KHÁC ===
     try {
-      console.log('[FlowV2] Cau hinh che do Hinh anh + x4...');
+      console.log(`[FlowV2] Cau hinh che do Hinh anh + ${variantLabel}...`);
       const configBtn = page.locator('button').filter({ hasText: /Video.*x|Hình ảnh.*x|Nano.*x|crop/ }).first();
       if (await configBtn.count() > 0) {
         await configBtn.click();
@@ -713,12 +715,12 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady)
           }
         }
 
-        // Chọn x4
-        const x4Btn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: /^x4$/ }).first();
-        if (await x4Btn.count() > 0) {
-          await x4Btn.click();
+        // Chọn variant count (x1 hoặc x4)
+        const variantBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: new RegExp(`^${variantLabel}$`) }).first();
+        if (await variantBtn.count() > 0) {
+          await variantBtn.click();
           await delay(500);
-          console.log('[FlowV2] Da chon x4.');
+          console.log(`[FlowV2] Da chon ${variantLabel}.`);
         }
 
         // Đóng config panel bằng click lại config button (toggle)
@@ -755,15 +757,15 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady)
       await page.keyboard.press('Enter');
     }
 
-    console.log('[FlowV2] Dang cho Google Flow sinh ket qua anh...');
+    console.log(`[FlowV2] Dang cho Google Flow sinh ket qua ${targetCount} anh...`);
     try {
-      await page.waitForFunction((oldSources) => {
+      await page.waitForFunction(({ oldSources, need }) => {
         const currentImages = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
         const newImages = currentImages.filter(img => !oldSources.includes(img.src));
-        return newImages.length >= 4;
-      }, existingImgSources, { timeout: 240000 });
+        return newImages.length >= need;
+      }, { oldSources: existingImgSources, need: targetCount }, { timeout: 240000 });
     } catch (error) {
-      console.log(`[FlowV2] Het thoi gian cho 4 anh moi, se xu ly nhung anh da co: ${error.message}`);
+      console.log(`[FlowV2] Het thoi gian cho ${targetCount} anh moi, se xu ly nhung anh da co: ${error.message}`);
     }
 
     await delay(15000);
@@ -784,7 +786,7 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady)
     console.log(`[FlowV2] Tim thay ${newResultsInDom.length} anh ket qua moi.`);
 
     let processedCount = 0;
-    for (let index = 0; index < Math.min(newResultsInDom.length, 4); index += 1) {
+    for (let index = 0; index < Math.min(newResultsInDom.length, targetCount); index += 1) {
       const item = newResultsInDom[index];
       const outputPath = path.join(tempDir, `flow_result_${Date.now()}_${index}.png`);
 
@@ -829,7 +831,7 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady)
       }
     }
 
-    console.log(`[FlowV2] Hoan tat: ${processedCount}/4 anh da tai va upload thanh cong.`);
+    console.log(`[FlowV2] Hoan tat: ${processedCount}/${targetCount} anh da tai va upload thanh cong.`);
     await page.close().catch(() => null);
     return { outputPaths, chatUrl };
   } catch (error) {
@@ -892,7 +894,7 @@ function scheduleIdleClose() {
   }, IDLE_CLOSE_MS);
 }
 
-async function runFlowAutomation({ prompt, assets, onImageReady }) {
+async function runFlowAutomation({ prompt, assets, onImageReady, variantCount = 4 }) {
   const tempDir = path.join(os.tmpdir(), `landscape-flow-${Date.now()}`);
   await ensureDirectory(tempDir);
 
@@ -912,8 +914,8 @@ async function runFlowAutomation({ prompt, assets, onImageReady }) {
     console.log(`[AUTO-FLOW] Mở tab mới cho Flow (đang có ${_activeTabCount} tab hoạt động)...`);
 
     try {
-      const { outputPaths, chatUrl } = await runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady);
-      console.log(`[AUTO-FLOW] Hoàn tất. Lấy được ${outputPaths.length}/4 ảnh.`);
+      const { outputPaths, chatUrl } = await runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady, variantCount);
+      console.log(`[AUTO-FLOW] Hoàn tất. Lấy được ${outputPaths.length}/${variantCount} ảnh.`);
       return { outputPaths, chatUrl };
     } finally {
       _activeTabCount = Math.max(0, _activeTabCount - 1);

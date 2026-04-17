@@ -1,0 +1,113 @@
+IMPORTANT:
+The reference image is the ONE, ONLY, and ABSOLUTE source of truth.
+
+This is NOT a design task.
+This is a GEOMETRY EXTRACTION + PROPORTIONAL SCALING task.
+
+====================================================
+PRIMARY OBJECTIVE
+====================================================
+
+Generate a TOP-DOWN 2D FLOOR PLAN of the garden,
+scaled EXACTLY to a {WIDTH}m x {LENGTH}m rectangle (unit: meters),
+
+by tracing the real spatial layout from the image.
+
+====================================================
+GLOBAL SCALE NORMALIZATION (CRITICAL)
+====================================================
+
+- First, interpret the entire garden as the rectangular boundary defined above
+- Then UNIFORMLY scale all elements to fit EXACTLY within {WIDTH}m x {LENGTH}m
+
+ABSOLUTE:
+- Use ONE consistent scale factor for the entire layout
+- DO NOT scale elements independently
+
+====================================================
+REFERENCE ANCHOR DIMENSION (VERY IMPORTANT)
+====================================================
+
+Use the pond as the PRIMARY SCALE REFERENCE:
+
+- Estimate pond width and length based on image proportion
+- Lock pond size first
+- ALL other elements must scale relative to the pond
+
+Example:
+If pond ≈ 60% of garden width → it must be {WIDTH*0.6}m in final plan
+
+====================================================
+PROPORTIONAL RATIO LOCK (NON-NEGOTIABLE)
+====================================================
+
+You MUST preserve ratios between elements:
+
+- waterfall width relative to pond
+- stone border thickness relative to pond size
+- planting zone size relative to empty space
+
+ABSOLUTE:
+- If pond : waterfall ratio is 3:1 in image → MUST remain 3:1
+- If border thickness varies → keep same variation ratio
+
+====================================================
+CRITICAL POSITION LOCK
+====================================================
+
+- Maintain exact relative placement (offsets, asymmetry)
+- Do NOT center anything
+- Do NOT regularize shapes
+
+====================================================
+SPATIAL RECONSTRUCTION METHOD
+====================================================
+
+1. Define {WIDTH}m x {LENGTH}m boundary
+2. Extract pond shape and SCALE it correctly
+3. Place waterfall using proportional distance from pond edge
+4. Build stone border with variable thickness (scaled proportionally)
+5. Place planting zones as area masses (scaled)
+
+====================================================
+DIMENSION REQUIREMENTS
+====================================================
+
+You MUST annotate:
+
+- pond width & length (meters)
+- waterfall footprint (meters)
+- border thickness (min/max meters)
+- planting zones (approx area or width)
+
+====================================================
+ANTI-DISTORTION RULE (CRITICAL)
+====================================================
+
+- DO NOT distort proportions to fit the rectangle
+- DO NOT stretch horizontally or vertically
+- ONLY use uniform scaling
+
+If proportions do not fit:
+→ adjust scale factor, NOT geometry
+
+====================================================
+OUTPUT
+====================================================
+
+- Clean architectural top view
+- Black & white line drawing
+- Dimension labels in meters
+
+====================================================
+FINAL GOAL
+====================================================
+
+A metrically consistent layout where:
+
+- proportions match the real image
+- total size = {WIDTH}m x {LENGTH}m
+- all elements scale correctly relative to each other
+
+NOT just visually similar — but proportionally correct.
+Assume the pond depth (0.6m) is real and use it as a secondary scale reference.

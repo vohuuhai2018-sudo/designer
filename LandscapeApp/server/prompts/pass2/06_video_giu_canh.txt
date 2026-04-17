@@ -1,0 +1,109 @@
+Use the uploaded image as the ONE AND ONLY visual reference.
+
+PRIMARY TASK:
+Generate a short, ultra-photorealistic video
+by extending this real-life photograph in time,
+as if it were recorded by a stationary or gently moving camera on site.
+
+The scene already exists in real life.
+This task is NOT to redesign, reinterpret, or enhance the scene,
+but ONLY to introduce natural, physically plausible motion.
+
+====================================================
+ABSOLUTE CONSTRAINTS — NON-NEGOTIABLE
+====================================================
+
+- Do NOT add any new objects, elements, plants, stones, people, animals, light sources, or background details
+- Do NOT remove or hide any existing elements
+- Do NOT change geometry, layout, scale, proportions, distances, or spatial relationships
+- Do NOT modify the design, composition, or functional intent of the scene
+- Do NOT reconstruct or imagine parts that are not visible
+- Do NOT extend, complete, or infer occluded or cropped elements
+- Preserve the exact camera framing, perspective, and composition
+
+UNKNOWN OR PARTIALLY VISIBLE AREAS:
+- If any object is partially visible or occluded, do NOT guess or complete its shape
+- Preserve ambiguity exactly as in the original image
+- Unknown geometry must remain unknown
+
+====================================================
+ALLOWED MOTION (REAL-WORLD PHYSICS ONLY)
+====================================================
+
+Only the following natural motions are allowed:
+
+WATER:
+- Continuous, gravity-driven waterfall flow
+- Subtle water surface ripples
+- Natural reflection and refraction changes
+- Soft foam movement where water contacts stone
+- No exaggerated splashes or stylized motion
+
+VEGETATION:
+- Very subtle leaf and branch movement caused by light wind
+- Natural, irregular motion (not synchronized)
+- No bending, stretching, or reshaping of plants
+
+LIGHT & SHADOW:
+- Gentle, realistic changes in light reflection
+- Soft shadow movement consistent with outdoor daylight
+- No dramatic lighting shifts
+
+ATMOSPHERE:
+- Calm outdoor environment
+- No fog, mist, smoke, rain, or additional weather effects
+
+====================================================
+STRICTLY FORBIDDEN MOTION
+====================================================
+
+- No camera shake
+- No cinematic camera moves
+- No dolly, crane, orbit, or zoom unless extremely subtle and realistic
+- No artificial slow motion
+- No dramatic parallax
+- No depth hallucination
+- No object deformation
+
+====================================================
+CAMERA BEHAVIOR
+====================================================
+
+- Camera must feel like a real tripod or handheld camera at rest
+- If any movement exists:
+  - extremely slow
+  - physically plausible
+  - minimal micro motion only
+- No wide-angle distortion
+- No cinematic framing
+- No stylized motion blur
+
+====================================================
+MATERIAL & SURFACE BEHAVIOR
+====================================================
+
+- Stone surfaces must remain rigid and unchanged
+- Wood must remain static with only light interaction
+- Glass (if present) must show subtle reflection changes only
+- No material morphing or enhancement
+
+====================================================
+STYLE & QUALITY
+====================================================
+
+- Ultra-photorealistic real-life video
+- Natural color, neutral tone
+- No HDR exaggeration
+- No cinematic grading
+- No artificial enhancement
+
+====================================================
+FINAL OUTPUT REQUIREMENT
+====================================================
+
+The resulting video must look like
+a real video recording taken at the actual location,
+with the camera capturing natural environmental motion only.
+
+If any element appears added, altered, guessed, or creatively interpreted,
+the result is incorrect.

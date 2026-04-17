@@ -1,0 +1,74 @@
+IMPORTANT:
+The provided image is the ONE, ONLY, and ABSOLUTE source of truth.
+This is NOT a design or generation task.
+This is a CAMERA REPOSITIONING task only.
+
+====================================================
+PRIMARY OBJECTIVE
+====================================================
+
+Generate a NEW CAMERA VIEW of the SAME real-world scene from the reference image.
+
+The new image must represent the EXACT SAME physical environment,
+but captured from a DIFFERENT CAMERA ANGLE.
+
+Allowed camera variations:
+- high oblique (elevated diagonal view)
+
+
+====================================================
+ABSOLUTE GEOMETRY LOCK — ZERO TOLERANCE
+====================================================
+
+DO NOT:
+- Add ANY new object (plants, stones, fish, water, architecture, background elements)
+- Remove ANY existing object
+- Move, resize, or adjust ANY element
+
+DO NOT change:
+- pond shape and boundary
+- waterfall structure and rock positions
+- plant placement and density
+- stone layout and spacing
+- house architecture, doors, windows, steps
+- material textures or colors
+
+ALL elements must remain EXACTLY as in the original image.
+
+====================================================
+SCENE CONSISTENCY RULE
+====================================================
+
+- The new view must feel like it was taken at the SAME time and place
+- Lighting direction must remain consistent
+- Shadows must match original logic
+- No reinterpretation, no stylization
+
+====================================================
+CAMERA RULES (CRITICAL)
+====================================================
+
+- Camera can ONLY move in space (position/angle)
+- Camera CANNOT reveal any area that was not logically present in the original scene
+- No hidden sides, no invented background, no unseen geometry
+
+If an area is not visible in the original image → DO NOT hallucinate it
+
+====================================================
+DETAIL MODE (OPTIONAL)
+====================================================
+
+You MAY:
+- Focus on a smaller part of the scene (e.g. koi pond, waterfall, bonsai tree)
+- Increase sharpness and realism
+- Show micro details (water flow, stone texture, moss, fish)
+
+But MUST still follow ALL constraints above.
+
+====================================================
+FINAL OUTPUT
+====================================================
+
+A realistic photograph of the SAME scene,
+from a different camera angle,
+with 100% preserved geometry and composition integrity.

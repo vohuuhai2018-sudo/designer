@@ -100,6 +100,26 @@ interface Project {
   finalImage?: string;
   aiResults?: string[];
   deviceId?: string;
+  pass2Results?: Pass2Results | null;
+}
+
+interface Pass2Task {
+  taskId: string;
+  type: 'image' | 'video';
+  label: string;
+  status: 'pending' | 'running' | 'done' | 'failed';
+  url?: string | null;
+  chatUrl?: string | null;
+  error?: string | null;
+}
+
+interface Pass2Results {
+  referenceImageUrl: string;
+  dimensions: { width: number; length: number };
+  status: 'pending' | 'running' | 'done' | 'failed';
+  startedAt?: string;
+  completedAt?: string | null;
+  tasks: Pass2Task[];
 }
 
 type ProjectUpdate = Partial<Pick<Project, 'status' | 'workflowBranch' | 'finalImage' | 'aiResults'>>;
@@ -2172,6 +2192,11 @@ function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewRe
 }
 
 function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isRetrying = false }: { projectId: string; service: string; onReset: () => void; retryCount?: number; onRetry?: () => void; isRetrying?: boolean }) {
+  const [pass2Picked, setPass2Picked] = useState('');
+  const [pass2W, setPass2W] = useState('4');
+  const [pass2L, setPass2L] = useState('4');
+  const [pass2Starting, setPass2Starting] = useState(false);
+  const [pass2Msg, setPass2Msg] = useState('');
   const [project, setProject] = useState<Project | null>(null);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
 
@@ -2322,6 +2347,100 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                  )}
                </button>
              )}
+
+             {/* PASS 2 CTA — chỉ hiện khi chưa chạy */}
+             {!project?.pass2Results && allImages.length > 0 && (
+               <div style={{ marginBottom: '10px', padding: '14px', borderRadius: '14px', background: 'rgba(250,204,21,0.08)', border: '2px solid rgba(250,204,21,0.4)', textAlign: 'left' }}>
+                 <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#facc15', marginBottom: '8px', textAlign: 'center' }}>
+                   Tiếp tục tạo bổ sung (7 bản)
+                 </p>
+                 <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', marginBottom: '10px', textAlign: 'center' }}>
+                   Chọn 1 phương án ưng ý nhất, hệ thống sẽ tạo thêm:<br />
+                   3 góc chụp · 2 bản vẽ · 2 video
+                 </p>
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginBottom: '10px' }}>
+                   {allImages.slice(0, 8).map((url, i) => {
+                     const isOldImg = retryCount > 0 && i < previousImages.length;
+                     const label = retryCount > 0
+                       ? (isOldImg ? `L1-${i + 1}` : `L2-${i - previousImages.length + 1}`)
+                       : `PA${i + 1}`;
+                     return (
+                       <div key={i} onClick={() => setPass2Picked(url)} style={{
+                         position: 'relative', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer',
+                         border: pass2Picked === url ? '3px solid #facc15' : '2px solid rgba(255,255,255,0.15)',
+                         opacity: pass2Picked === url ? 1 : 0.55, transition: 'all 0.15s', aspectRatio: '1'
+                       }}>
+                         <img src={url} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '0.55rem', padding: '2px', textAlign: 'center', fontWeight: 700 }}>{label}</div>
+                       </div>
+                     );
+                   })}
+                 </div>
+                 <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+                   <input type="number" min="1" step="0.5" value={pass2W} onChange={e => setPass2W(e.target.value)} placeholder="Ngang (m)"
+                     style={{ flex: 1, padding: '8px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', fontSize: '0.8rem', textAlign: 'center' }} />
+                   <span style={{ color: 'rgba(255,255,255,0.4)', alignSelf: 'center' }}>×</span>
+                   <input type="number" min="1" step="0.5" value={pass2L} onChange={e => setPass2L(e.target.value)} placeholder="Dài (m)"
+                     style={{ flex: 1, padding: '8px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', fontSize: '0.8rem', textAlign: 'center' }} />
+                 </div>
+                 <button
+                   disabled={!pass2Picked || pass2Starting}
+                   onClick={async () => {
+                     if (!pass2Picked) return;
+                     setPass2Starting(true);
+                     setPass2Msg('');
+                     try {
+                       const res = await apiFetch(`/api/projects/${projectId}/pass2`, {
+                         method: 'POST', headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ referenceImageUrl: pass2Picked, dimensions: { width: parseFloat(pass2W) || 4, length: parseFloat(pass2L) || 4 } })
+                       });
+                       const data = await res.json();
+                       if (!res.ok) throw new Error(data.error || 'Không khởi động được.');
+                       setPass2Msg('Đã bắt đầu tạo! Vui lòng giữ trang, kết quả sẽ hiện bên dưới.');
+                     } catch (e: any) { setPass2Msg(`Lỗi: ${e.message}`); }
+                     finally { setPass2Starting(false); }
+                   }}
+                   style={{
+                     width: '100%', padding: '12px', borderRadius: '12px', fontSize: '0.9rem', fontWeight: 800,
+                     border: 'none', cursor: !pass2Picked || pass2Starting ? 'not-allowed' : 'pointer',
+                     background: pass2Picked ? '#facc15' : 'rgba(255,255,255,0.1)',
+                     color: pass2Picked ? '#000' : 'rgba(255,255,255,0.5)'
+                   }}
+                 >
+                   {pass2Starting ? 'Đang khởi động...' : '✨ Tiếp tục tạo bổ sung'}
+                 </button>
+                 {pass2Msg && <p style={{ fontSize: '0.75rem', color: pass2Msg.startsWith('Lỗi') ? '#ef4444' : '#22c55e', marginTop: '8px', textAlign: 'center' }}>{pass2Msg}</p>}
+               </div>
+             )}
+
+             {/* PASS 2 PROGRESS + RESULTS */}
+             {project?.pass2Results && (
+               <div style={{ marginBottom: '10px', padding: '14px', borderRadius: '14px', background: 'rgba(250,204,21,0.06)', border: '1px solid rgba(250,204,21,0.25)', textAlign: 'left' }}>
+                 <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#facc15', marginBottom: '8px', textAlign: 'center' }}>
+                   Kết quả bổ sung — {project.pass2Results.tasks?.filter(t => t.status === 'done').length || 0}/7 xong
+                   {project.pass2Results.status === 'running' && ' · đang xử lý...'}
+                   {project.pass2Results.status === 'done' && ' · ✅ Hoàn tất'}
+                   {project.pass2Results.status === 'failed' && ' · ❌ Lỗi'}
+                 </p>
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                   {project.pass2Results.tasks?.map(task => (
+                     <div key={task.taskId} style={{ borderRadius: '8px', overflow: 'hidden', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                       {task.url ? (
+                         task.type === 'video'
+                           ? <video src={task.url} controls style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block', background: '#000' }} />
+                           : <img src={task.url} alt={task.label} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }} />
+                       ) : (
+                         <div style={{ aspectRatio: '16/10', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>
+                           {task.status === 'failed' ? '❌' : task.status === 'running' ? '⏳ Đang tạo...' : '... chờ'}
+                         </div>
+                       )}
+                       <div style={{ padding: '6px 8px', fontSize: '0.65rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600, textAlign: 'center' }}>{task.label}</div>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             )}
+
              <button className="btn-primary main-cta" onClick={onReset} style={{ fontSize: '0.95rem', padding: '14px' }}>
                Tạo Dự Án Mới
              </button>
@@ -3000,6 +3119,10 @@ function AdminView({
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [videoPrompt, setVideoPrompt] = useState('');
   const [selectedVideoImage, setSelectedVideoImage] = useState('');
+  const [selectedPass2Image, setSelectedPass2Image] = useState('');
+  const [pass2Width, setPass2Width] = useState('4');
+  const [pass2Length, setPass2Length] = useState('4');
+  const [isStartingPass2, setIsStartingPass2] = useState(false);
   const [draggedItem, setDraggedItem] = useState<DesignerLibraryItem | null>(null);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [isDeletingAllProjects, setIsDeletingAllProjects] = useState(false);
@@ -3019,6 +3142,21 @@ function AdminView({
       return latestProject;
     });
   }, [projects, selectedProject?.id]);
+
+  // Pass 2 polling — khi đang chạy thì refresh project mỗi 5s để cập nhật trạng thái task
+  useEffect(() => {
+    const pass2Status = selectedProject?.pass2Results?.status;
+    if (!selectedProject || (pass2Status !== 'running' && pass2Status !== 'pending')) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await apiFetch(`/api/projects/${selectedProject.id}`);
+        if (!res.ok) return;
+        const fresh = await res.json();
+        setSelectedProject(fresh);
+      } catch { /* ignore */ }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [selectedProject?.id, selectedProject?.pass2Results?.status]);
 
   // --- HELPERS ---
   const getAssetInfo = (id: string, category: 'THAC' | 'KE' | 'CANH' | 'HO'): { name: string, url: string } | null => {
@@ -4250,6 +4388,134 @@ function AdminView({
                           <><VideoIcon size={18} /> Tạo Video AI</>
                         )}
                       </button>
+                    </div>
+                  )}
+
+                  {/* PASS 2 — BỔ SUNG 7 OUTPUT TỪ 1 PA ĐƯỢC CHỌN */}
+                  {selectedProject.status === 'done' && selectedProject.aiResults && selectedProject.aiResults.length > 0 && (
+                    <div style={{ marginTop: '24px', background: 'rgba(250,204,21,0.06)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(250,204,21,0.25)' }}>
+                      <h4 style={{ color: '#facc15', fontWeight: 800, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        Pass 2 — Bổ sung (3 góc chụp + 2 bản vẽ + 2 video)
+                      </h4>
+                      <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', marginBottom: '12px' }}>
+                        Chọn 1 ảnh PA làm reference, nhập kích thước khu vực (m), hệ thống sẽ mở 7 tab Flow song song để tạo bổ sung.
+                      </p>
+
+                      {/* Picker ảnh PA */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '8px', marginBottom: '12px' }}>
+                        {selectedProject.aiResults.filter((url: string) => !url.endsWith('.mp4') && !url.includes('/video/')).map((url: string, i: number) => (
+                          <div
+                            key={i}
+                            onClick={() => setSelectedPass2Image(url)}
+                            style={{
+                              borderRadius: '10px', overflow: 'hidden', cursor: 'pointer',
+                              border: selectedPass2Image === url ? '3px solid #facc15' : '2px solid rgba(255,255,255,0.1)',
+                              opacity: selectedPass2Image === url ? 1 : 0.6,
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <img src={url} alt={`PA ${i+1}`} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }} />
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Kích thước mặt bằng */}
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                        <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>Chiều ngang (m)</span>
+                          <input type="number" min="1" step="0.5" value={pass2Width} onChange={e => setPass2Width(e.target.value)}
+                            style={{ padding: '10px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.85rem' }} />
+                        </label>
+                        <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>Chiều dài (m)</span>
+                          <input type="number" min="1" step="0.5" value={pass2Length} onChange={e => setPass2Length(e.target.value)}
+                            style={{ padding: '10px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.85rem' }} />
+                        </label>
+                      </div>
+
+                      {/* Nút chạy */}
+                      <button
+                        disabled={!selectedPass2Image || isStartingPass2 || selectedProject.pass2Results?.status === 'running'}
+                        onClick={async () => {
+                          if (!selectedPass2Image) return;
+                          setIsStartingPass2(true);
+                          setActionFeedback('Đang khởi động Pass 2 (7 tab Flow song song)...');
+                          try {
+                            const width = parseFloat(pass2Width) || 4;
+                            const length = parseFloat(pass2Length) || 4;
+                            const res = await apiFetch(`/api/projects/${selectedProject.id}/pass2`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ referenceImageUrl: selectedPass2Image, dimensions: { width, length } })
+                            });
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.error || 'Không khởi động được Pass 2.');
+                            setActionFeedback('Pass 2 đã khởi động. Tiến độ sẽ tự cập nhật.');
+                            if (data.pass2Results) {
+                              setSelectedProject(prev => prev ? { ...prev, pass2Results: data.pass2Results } : prev);
+                            }
+                          } catch (e: any) {
+                            setActionFeedback(`Lỗi: ${e.message}`);
+                          } finally {
+                            setIsStartingPass2(false);
+                          }
+                        }}
+                        style={{
+                          width: '100%', padding: '14px', borderRadius: '12px', fontWeight: 800, fontSize: '0.9rem',
+                          border: 'none', cursor: (!selectedPass2Image || isStartingPass2 || selectedProject.pass2Results?.status === 'running') ? 'not-allowed' : 'pointer',
+                          background: selectedPass2Image && selectedProject.pass2Results?.status !== 'running' ? '#facc15' : 'rgba(255,255,255,0.08)',
+                          color: selectedPass2Image && selectedProject.pass2Results?.status !== 'running' ? '#000' : '#fff',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                        }}
+                      >
+                        {selectedProject.pass2Results?.status === 'running' ? (
+                          <><RefreshCcw size={18} className="spin" /> Đang chạy Pass 2...</>
+                        ) : isStartingPass2 ? (
+                          <><RefreshCcw size={18} className="spin" /> Đang khởi động...</>
+                        ) : (
+                          <>Chạy Pass 2 (7 output)</>
+                        )}
+                      </button>
+
+                      {/* Kết quả Pass 2 */}
+                      {selectedProject.pass2Results && (
+                        <div style={{ marginTop: '16px' }}>
+                          <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginBottom: '10px' }}>
+                            Trạng thái: <b style={{ color: selectedProject.pass2Results.status === 'done' ? '#22c55e' : selectedProject.pass2Results.status === 'failed' ? '#ef4444' : '#facc15' }}>{selectedProject.pass2Results.status}</b>
+                            {' · '}
+                            {selectedProject.pass2Results.tasks?.filter(t => t.status === 'done').length || 0}/7 xong
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
+                            {selectedProject.pass2Results.tasks?.map(task => (
+                              <div key={task.taskId} style={{ borderRadius: '10px', overflow: 'hidden', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                {task.url ? (
+                                  task.type === 'video' ? (
+                                    <video src={task.url} controls style={{ width: '100%', display: 'block' }} />
+                                  ) : (
+                                    <img src={task.url} alt={task.label} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }} />
+                                  )
+                                ) : (
+                                  <div style={{ aspectRatio: '16/10', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>
+                                    {task.status === 'failed' ? '❌ Lỗi' : task.status === 'running' ? 'Đang chạy...' : 'Chờ...'}
+                                  </div>
+                                )}
+                                <div style={{ padding: '8px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ fontSize: '0.75rem', color: '#fff', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.label}</span>
+                                  <span style={{
+                                    fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px',
+                                    background: task.status === 'done' ? 'rgba(34,197,94,0.2)' : task.status === 'failed' ? 'rgba(239,68,68,0.2)' : task.status === 'running' ? 'rgba(250,204,21,0.2)' : 'rgba(255,255,255,0.05)',
+                                    color: task.status === 'done' ? '#22c55e' : task.status === 'failed' ? '#ef4444' : task.status === 'running' ? '#facc15' : 'rgba(255,255,255,0.4)',
+                                    fontWeight: 700, textTransform: 'uppercase'
+                                  }}>{task.status}</span>
+                                </div>
+                                {task.error && (
+                                  <div style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#ef4444', background: 'rgba(239,68,68,0.05)' }}>{task.error}</div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

@@ -1,0 +1,120 @@
+Use the uploaded image as the ONE AND ONLY visual reference.
+
+PRIMARY TASK:
+Generate a short, ultra-photorealistic video
+that captures a natural transition from daytime to nighttime,
+as if the scene were recorded continuously on site by a stationary camera.
+
+The scene already exists in real life.
+This task is NOT to redesign, reinterpret, or enhance the scene,
+but ONLY to introduce physically accurate time progression and natural environmental motion.
+
+====================================================
+ABSOLUTE CONSTRAINTS — NON-NEGOTIABLE
+====================================================
+
+- Do NOT add any new objects, elements, plants, stones, people, animals, or structures
+- Do NOT remove or hide any existing elements
+- Do NOT change geometry, layout, scale, proportions, distances, or spatial relationships
+- Do NOT modify the design, composition, or functional intent of the scene
+- Do NOT reconstruct or imagine parts that are not visible
+- Do NOT extend, complete, or infer occluded or cropped elements
+- Preserve the exact camera framing, perspective, and composition
+
+UNKNOWN OR PARTIALLY VISIBLE AREAS:
+- If any object is partially visible or occluded, do NOT guess or complete its shape
+- Preserve ambiguity exactly as in the original image
+- Unknown geometry must remain unknown
+
+====================================================
+TIME TRANSITION (DAY → NIGHT) — PHYSICALLY ACCURATE
+====================================================
+
+LIGHTING TRANSITION:
+- Gradual reduction of sunlight intensity over time
+- Warm daylight slowly shifts to softer golden-hour tones, then to cool dusk tones, and finally to nighttime lighting
+- Sky illumination fades naturally (no sudden changes)
+- Shadows become longer, softer, and eventually disappear into ambient darkness
+
+NIGHT ENVIRONMENT:
+- Existing built-in light sources in the scene (e.g., wall lamps, interior lights if visible) may gradually turn on naturally
+- Light emission must be realistic, soft, and physically accurate
+- No new artificial lights may be added
+
+REFLECTIONS:
+- Water reflections adapt naturally to changing light conditions
+- Daytime reflections transition into darker, softer night reflections
+- Subtle highlights from existing lights may appear on water surface at night
+
+====================================================
+ALLOWED MOTION (REAL-WORLD PHYSICS ONLY)
+====================================================
+
+WATER:
+- Continuous, gravity-driven waterfall flow
+- Subtle ripples across pond surface
+- Natural reflection and refraction changes as lighting shifts
+- Soft foam movement at stone contact points
+
+VEGETATION:
+- Very subtle leaf and branch movement caused by light wind
+- Natural, irregular motion (no repetition or synchronization)
+
+LIGHT & SHADOW:
+- Smooth, continuous evolution of light and shadow due to time change
+- No abrupt lighting jumps or unrealistic transitions
+
+ATMOSPHERE:
+- Calm outdoor environment
+- No fog, mist, smoke, rain, or added weather effects
+
+====================================================
+STRICTLY FORBIDDEN MOTION
+====================================================
+
+- No camera shake
+- No cinematic camera moves
+- No dolly, crane, orbit, or zoom
+- No artificial slow motion
+- No dramatic parallax
+- No depth hallucination
+- No object deformation
+- No stylized lighting effects (e.g., bloom, glow exaggeration)
+
+====================================================
+CAMERA BEHAVIOR
+====================================================
+
+- Camera must remain fixed like a real tripod shot
+- No movement or only imperceptible micro drift
+- No reframing, no cropping change, no lens distortion
+
+====================================================
+MATERIAL & SURFACE BEHAVIOR
+====================================================
+
+- Stone, concrete, and architectural elements remain completely rigid
+- Wood and plants react only to light and minimal wind
+- Glass surfaces (if present) show natural reflection changes only
+- No material enhancement or stylization
+
+====================================================
+STYLE & QUALITY
+====================================================
+
+- Ultra-photorealistic real-life video
+- Natural color progression from day to night
+- No HDR exaggeration
+- No cinematic color grading
+- No artificial enhancement
+
+====================================================
+FINAL OUTPUT REQUIREMENT
+====================================================
+
+The resulting video must look like
+a real continuous recording at the actual location,
+capturing a natural and physically accurate transition from day to night.
+
+If any element appears added, altered, guessed, or stylized,
+the result is incorrect.

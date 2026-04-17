@@ -1,0 +1,150 @@
+IMPORTANT:
+The uploaded image is the ONE, ONLY, and ABSOLUTE source of truth.
+
+PRIMARY OBJECTIVE:
+Create a professional landscape analysis collage board
+focusing ONLY on landscape elements (softscape + waterscape + natural hardscape).
+
+This is NOT an architectural analysis.
+This is NOT a building analysis.
+This is strictly a LANDSCAPE-ONLY study.
+
+Aspect ratio: 3:4
+Resolution: Ultra-high resolution (4K)
+
+====================================================
+ABSOLUTE FILTER — LANDSCAPE ONLY (HARD LOCK)
+====================================================
+
+ONLY INCLUDE:
+- Plants (bonsai, shrubs, flowers, grass)
+- Water elements (pond, waterfall, surface water)
+- Natural stones (rock, stepping stones, stone edging)
+- Koi fish
+
+STRICTLY EXCLUDE:
+- House facade
+- Columns
+- Doors
+- Windows
+- Glass
+- Railings
+- Walls
+- Paving related to building structure
+- Any architectural or construction-related elements
+
+ABSOLUTE RULE:
+If it belongs to architecture → REMOVE COMPLETELY.
+If it belongs to landscape → KEEP.
+
+No mixing.
+
+====================================================
+TOP SECTION — LANDSCAPE ELEMENT GRID
+====================================================
+
+Create a collage grid (2 rows x 5–6 columns):
+
+Include ONLY landscape elements extracted from the image:
+- Bonsai (Tùng la hán)
+- Flower clusters (Cúc đỏ, Cúc vàng)
+- Koi fish
+- Pond water surface
+- Waterfall rocks
+- Ground shrubs / moss
+- Natural stepping stones (if visually part of garden, not architecture)
+
+DO NOT include:
+- columns
+- doors
+- walls
+- glass
+- building materials
+
+Each item:
+- Original texture preserved (no enhancement)
+- Label in Vietnamese + English
+- 3–5 color dots sampled from the object
+
+====================================================
+MIDDLE SECTION — LANDSCAPE COMPOSITION ANALYSIS
+====================================================
+
+Use the original image as base, but:
+
+- Visually suppress or fade OUT architectural background (low opacity or masked)
+- Highlight ONLY landscape composition:
+
+Focus on:
+- Pond boundary (Hồ koi)
+- Waterfall rock structure
+- Bonsai focal point
+- Stone edging (kè đá tự nhiên)
+- Plant clusters (mảng cây)
+
+Use:
+- soft masking
+- transparency layering
+- subtle outlines
+
+DO NOT label or highlight any architectural element.
+
+====================================================
+ECOLOGICAL / NATURAL RELATIONSHIP LAYER
+====================================================
+
+Only show relationships between landscape elements:
+
+- Water flow direction (waterfall → pond)
+- Fish movement inside pond
+- Plant grouping zones
+
+Use:
+- minimal dotted lines (light gray)
+
+STRICTLY FORBIDDEN:
+- insects
+- birds
+- animals not visible
+- artificial ecosystem storytelling
+
+====================================================
+BOTTOM SECTION — LANDSCAPE SENSORY ANALYSIS
+====================================================
+
+Create a horizontal chart:
+
+Categories:
+- Visual (thị giác)
+- Texture (bề mặt tự nhiên)
+- Water movement
+- Plant density
+- Light reflection on water
+
+Design:
+- minimalist icons
+- color dots sampled from landscape ONLY
+- clean layout
+
+====================================================
+STYLE & AESTHETIC
+====================================================
+
+- Landscape architecture board style
+- Clean collage
+- Natural color
+- Documentary realism
+- No stylization
+- No HDR
+- No cinematic effect
+
+====================================================
+FINAL OUTPUT REQUIREMENT
+====================================================
+
+The final board must read as a PURE LANDSCAPE ANALYSIS.
+
+There must be ZERO presence of architectural elements.
+
+If any column, door, wall, glass, or building detail appears,
+the result is incorrect.
