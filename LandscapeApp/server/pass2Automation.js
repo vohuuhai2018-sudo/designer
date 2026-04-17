@@ -44,44 +44,98 @@ function initPass2State(referenceImageUrl, dimensions) {
   };
 }
 
+async function _runAttempt(task, prompt, referenceImageUrl, onImageReady, onVideoReady) {
+  const refAsset = { url: referenceImageUrl, label: 'pass2_reference' };
+
+  if (task.type === 'image') {
+    let uploadedCount = 0;
+    const result = await runFlowAutomation({
+      prompt,
+      assets: [refAsset],
+      variantCount: 1,
+      onImageReady: async (localPath) => {
+        try {
+          await onImageReady?.(task, localPath);
+          uploadedCount++;
+        } catch (e) {
+          console.error(`[Pass2][${task.id}] image upload error:`, e.message);
+        }
+      }
+    });
+    const outputCount = result?.outputPaths?.length || 0;
+    return {
+      success: outputCount > 0 && uploadedCount > 0,
+      outputCount,
+      uploadedCount,
+      chatUrl: result?.chatUrl
+    };
+  } else {
+    let uploadedCount = 0;
+    let videoLocalPath = null;
+    const result = await runFlowVideoAutomation({
+      prompt,
+      imageUrl: referenceImageUrl,
+      onVideoReady: async (localPath) => {
+        videoLocalPath = localPath;
+        try {
+          await onVideoReady?.(task, localPath);
+          uploadedCount++;
+        } catch (e) {
+          console.error(`[Pass2][${task.id}] video upload error:`, e.message);
+        }
+      }
+    });
+    return {
+      success: !!videoLocalPath && uploadedCount > 0,
+      outputCount: videoLocalPath ? 1 : 0,
+      uploadedCount,
+      chatUrl: result?.chatUrl
+    };
+  }
+}
+
 async function runSinglePass2Task({
   task,
   referenceImageUrl,
   dimensions,
   onImageReady,
   onVideoReady,
-  onTaskEvent
+  onTaskEvent,
+  maxAttempts = 2  // 1 lần chính + 1 retry tự động
 }) {
   const width = dimensions?.width || 4;
   const length = dimensions?.length || 4;
-  const refAsset = { url: referenceImageUrl, label: 'pass2_reference' };
 
   try {
     await onTaskEvent?.({ taskId: task.id, status: 'running', error: null });
     const prompt = await loadPrompt(task.promptFile, { WIDTH: width, LENGTH: length });
 
-    if (task.type === 'image') {
-      const result = await runFlowAutomation({
-        prompt,
-        assets: [refAsset],
-        variantCount: 1,
-        onImageReady: async (localPath) => {
-          try { await onImageReady?.(task, localPath); } catch (e) { console.error(`[Pass2][${task.id}] image upload error:`, e.message); }
+    let lastError = null;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const r = await _runAttempt(task, prompt, referenceImageUrl, onImageReady, onVideoReady);
+        if (r.success) {
+          await onTaskEvent?.({ taskId: task.id, status: 'done', chatUrl: r.chatUrl });
+          return { taskId: task.id, status: 'done', chatUrl: r.chatUrl, attempts: attempt };
         }
-      });
-      await onTaskEvent?.({ taskId: task.id, status: 'done', chatUrl: result?.chatUrl });
-      return { taskId: task.id, status: 'done', chatUrl: result?.chatUrl };
-    } else {
-      const result = await runFlowVideoAutomation({
-        prompt,
-        imageUrl: referenceImageUrl,
-        onVideoReady: async (localPath) => {
-          try { await onVideoReady?.(task, localPath); } catch (e) { console.error(`[Pass2][${task.id}] video upload error:`, e.message); }
-        }
-      });
-      await onTaskEvent?.({ taskId: task.id, status: 'done', chatUrl: result?.chatUrl });
-      return { taskId: task.id, status: 'done', chatUrl: result?.chatUrl };
+        lastError = `Attempt ${attempt}: Flow không tạo được kết quả (outputCount=${r.outputCount}, uploaded=${r.uploadedCount}).`;
+        console.warn(`[Pass2][${task.id}] ${lastError}`);
+      } catch (innerErr) {
+        lastError = `Attempt ${attempt}: ${innerErr?.message || innerErr}`;
+        console.error(`[Pass2][${task.id}] ${lastError}`);
+      }
+      if (attempt < maxAttempts) {
+        console.log(`[Pass2][${task.id}] Tự động retry lần ${attempt + 1}/${maxAttempts}...`);
+        await new Promise(r => setTimeout(r, 3000));
+      }
     }
+
+    await onTaskEvent?.({
+      taskId: task.id,
+      status: 'failed',
+      error: lastError || 'Không có kết quả sau tất cả lần thử.'
+    });
+    return { taskId: task.id, status: 'failed', error: lastError };
   } catch (err) {
     console.error(`[Pass2][${task.id}] FAILED:`, err?.message || err);
     await onTaskEvent?.({ taskId: task.id, status: 'failed', error: err?.message || String(err) });
