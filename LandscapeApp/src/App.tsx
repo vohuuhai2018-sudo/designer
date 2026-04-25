@@ -5,6 +5,7 @@ import {
   Image as ImageIcon, 
   CheckCircle2, 
   RefreshCcw,
+  RefreshCw,
   ArrowRight, 
   User, 
   Send, 
@@ -13,7 +14,6 @@ import {
   ChevronLeft,
   Camera,
   Layers,
-  Palette,
   X,
   ShieldCheck,
   Phone,
@@ -30,6 +30,7 @@ import {
   MessageCircle,
   Zap,
   Sparkles,
+  Infinity,
   Video as VideoIcon,
   Crown,
   Play,
@@ -37,7 +38,13 @@ import {
   Loader2,
   Share2,
   Waves,
-  Ruler
+  Ruler,
+  Sprout,
+  Map,
+  Coffee,
+  Droplets,
+  Home,
+  Settings
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -48,6 +55,65 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // --- API HELPER ---
 // Tự động thêm header ngrok-skip-browser-warning để bỏ qua trang cảnh báo ngrok free tier
+const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: string, style?: any, className?: string }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !src) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const img = new Image();
+    const watermark = new Image();
+    
+    img.crossOrigin = "anonymous";
+    watermark.crossOrigin = "anonymous";
+
+    let loadedCount = 0;
+    const onLoaded = () => {
+      loadedCount++;
+      if (loadedCount === 2) {
+        // Cấu hình kích thước canvas theo ảnh gốc để không mất nét
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+
+        // 1. Vẽ ảnh gốc
+        ctx.drawImage(img, 0, 0);
+
+        // 2. Cấu hình Logo "nướng" vào ảnh
+        const wmWidth = canvas.width * 0.45; // 45% chiều rộng ảnh
+        const wmHeight = (watermark.naturalHeight / watermark.naturalWidth) * wmWidth;
+        const x = canvas.width - wmWidth - (canvas.width * 0.02); // Cách lề 2%
+        const y = canvas.height - wmHeight - (canvas.height * 0.02);
+
+        ctx.globalAlpha = 0.85;
+        // Hiệu ứng đổ bóng trực tiếp vào pixels
+        ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+        ctx.shadowBlur = 15;
+        ctx.shadowOffsetX = 5;
+        ctx.shadowOffsetY = 5;
+        
+        ctx.drawImage(watermark, x, y, wmWidth, wmHeight);
+      }
+    };
+
+    img.onload = onLoaded;
+    watermark.onload = onLoaded;
+    
+    img.src = src;
+    watermark.src = '/assets/CHU KY _ HAI VO.png';
+  }, [src]);
+
+  return (
+    <div className={`image-watermark-wrapper ${className || ''}`} style={style} onContextMenu={(e) => e.preventDefault()}>
+      <canvas ref={canvasRef} title={alt} />
+      <div className="security-overlay" />
+    </div>
+  );
+};
+
 function apiFetch(path: string, options?: RequestInit): Promise<Response> {
   const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
   return fetch(url, {
@@ -60,7 +126,8 @@ function apiFetch(path: string, options?: RequestInit): Promise<Response> {
 }
 
 // --- TYPES ---
-type AppView = 'welcome' | 'upload' | 'editor' | 'service' | 'plan' | 'submit' | 'success' | 'admin' | 'login' | 'basic_selection' | 'my_projects';
+type AppView = 'welcome' | 'upload' | 'editor' | 'service' | 'plan' | 'submit' | 'success' | 'admin' | 'login' | 'basic_selection' | 'my_projects' | 'branch_selection';
+type MainBranch = 'landscape' | 'architecture' | 'interior';
 
 // Device ID — định danh thiết bị thay cho đăng nhập
 function getDeviceId(): string {
@@ -74,10 +141,28 @@ function getDeviceId(): string {
 type WorkflowBranch = 'manual_design' | 'chatgpt_image';
 
 interface Selection {
-  thac?: string;
   ho?: string;
+  ho_hien_dai?: string;
+  tuong_da?: string;
+  tuong_cay?: string;
+  farm?: string;
+  cafe?: string;
+  ho_boi?: string;
   ke?: string[];
   canh?: string[];
+  thac?: string;
+  thacName?: string;
+  thacUrl?: string;
+  nha_pho?: string;
+  biet_thu?: string;
+  nha_cap_4?: string;
+  nha_vuon?: string;
+  nha_tien_che?: string;
+  hien_dai?: string;
+  tan_co_dien?: string;
+  indochine?: string;
+  wabi_sabi?: string;
+  tan_co_dien_go?: string;
 }
 
 interface Project {
@@ -85,7 +170,6 @@ interface Project {
   timestamp: string;
   customerName: string;
   customerPhone: string;
-  customerEmail?: string;
   rawImage: string;
   annotatedImage: string;
   referenceModelUrl?: string;
@@ -94,13 +178,13 @@ interface Project {
   status: 'pending' | 'processing' | 'done';
   note?: string;
   extraAssets?: string[];
-  dimensions?: { width: string; depth: string; height: string };
   basicCategory?: string;
   workflowBranch?: WorkflowBranch;
   finalImage?: string;
   aiResults?: string[];
   deviceId?: string;
   pass2Results?: Pass2Results | null;
+  interiorPairs?: { siteImage: string; referenceImage: string }[];
 }
 
 interface Pass2Task {
@@ -228,60 +312,226 @@ const ASSETS = {
     },
   ],
   KE: [
-    { id: 'ke_vanmay', name: 'Kè đá vân mây' },
-    { id: 'ke_cothach', name: 'Kè đá cổ thạch' },
-    { id: 'ke_lua', name: 'Kè đá lũa' },
-    { id: 'ke_hoacuong', name: 'Thành đá hoa cương' },
+    { 
+      id: 'group_ke_da', 
+      name: 'Kè đá hệ thống',
+      variants: [
+        { id: 'sys-ke-01', name: 'Kè hệ thống 01', url: '/assets/KÈ/ChatGPT Image 12_44_41 10 thg 4, 2026.png' },
+        { id: 'sys-ke-02', name: 'Kè hệ thống 02', url: '/assets/KÈ/ChatGPT Image 12_43_04 10 thg 4, 2026.png' }
+      ]
+    },
   ],
   CANH: [
-    { id: 'canh_bush_stone', name: 'Cỏ nhung và đá điểm cây bụi' },
-    { id: 'canh_hill', name: 'Thêm đồi' },
-    { id: 'canh_stone_lamp', name: 'Thêm đèn đá' },
-    { id: 'canh_pine', name: 'Thêm tùng la hán' },
-    { id: 'canh_shade_tree', name: 'Thêm cây bóng mát' },
-    { id: 'canh_gravel', name: 'Thêm rải sỏi' },
-    { id: 'canh_stepping_stone', name: 'Thêm đá bước dạo' }
+    { 
+      id: 'group_canh_quan', 
+      name: 'Cảnh quan hệ thống',
+      variants: [
+        { id: 'sys-canh-01', name: 'Cảnh quan mẫu 01', url: '/assets/CANH/ChatGPT Image 12_48_58 10 thg 4, 2026.png' }
+      ]
+    }
   ],
   HO: [
     {
-      id: 'ho_koi_standard',
-      url: 'https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=1200',
-      name: 'Hồ Koi tiêu chuẩn',
+      id: 'ho_co_dien',
+      url: '/assets/Cảnh quan/1. HO KOI SAN VUON CO DIEN_THUMB.png',
+      name: 'Hồ Koi Cổ Điển',
       variants: [
-        { id: 'ho_koi_v1', url: 'https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=1200', name: 'Mẫu hồ số 01' }
+        { id: 'ho_co_dien_v1', url: '/assets/Cảnh quan/1. HO KOI SAN VUON CO DIEN_THUMB.png', name: 'Mẫu hồ số 01' }
       ]
     }
   ],
   HO_HIEN_DAI: [
     {
-      id: 'ho_hd_default',
-      url: 'https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=1200',
+      id: 'ho_hien_dai_root',
+      url: '/assets/Cảnh quan/2. HO KOI SAN VUON HIEN DAI_THUMB.png',
       name: 'Hồ Koi Hiện Đại',
       variants: [
-        { id: 'ho_hd_v1', url: 'https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=1200', name: 'Mẫu Hiện Đại 01' }
+        { id: 'ho_hien_dai_v1', url: '/assets/Cảnh quan/2. HO KOI SAN VUON HIEN DAI_THUMB.png', name: 'Mẫu hồ số 01' }
       ]
     }
   ],
   TUONG_DA: [
     {
-      id: 'tuong_da_default',
-      url: 'https://images.unsplash.com/photo-1598902108854-10e335adac99?q=80&w=1200',
-      name: 'Tường Đá Nhân Tạo',
+      id: 'tuong_da_root',
+      url: '/assets/Cảnh quan/3. TUONG DA TRANG TRI _THUMB.png',
+      name: 'Tường Đá Trang Trí',
       variants: [
-        { id: 'tuong_da_v1', url: 'https://images.unsplash.com/photo-1598902108854-10e335adac99?q=80&w=1200', name: 'Mẫu Tường Đá 01' }
+        { id: 'tuong_da_v1', url: '/assets/Cảnh quan/3. TUONG DA TRANG TRI _THUMB.png', name: 'Mẫu tường đá 01' }
       ]
     }
   ],
-  CAFE_SAN_VUON: [
+  TUONG_CAY: [
     {
-      id: 'cafe_default',
-      url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1200',
-      name: 'Cà Phê Sân Vườn',
+      id: 'tuong_cay_root',
+      url: '/assets/Cảnh quan/4. TUONG CAY_THUMB.png',
+      name: 'Tường Cây',
       variants: [
-        { id: 'cafe_v1', url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1200', name: 'Mẫu Cà Phê 01' }
+        { id: 'tuong_cay_v1', url: '/assets/Cảnh quan/4. TUONG CAY_THUMB.png', name: 'Mẫu tường cây 01' }
       ]
     }
-  ]
+  ],
+  FARM: [
+    {
+      id: 'farm_root',
+      url: '/assets/Cảnh quan/5. QUY HOACH FARM_THUMB.png',
+      name: 'Quy Hoạch Farm',
+      variants: [
+        { id: 'farm_v1', url: '/assets/Cảnh quan/5. QUY HOACH FARM_THUMB.png', name: 'Mẫu farm 01' }
+      ]
+    }
+  ],
+  CAFE: [
+    {
+      id: 'cafe_root',
+      url: '/assets/Cảnh quan/6. CANH QUAN CA PHE_THUMB.png',
+      name: 'Cảnh Quan Cafe',
+      variants: [
+        { id: 'cafe_v1', url: '/assets/Cảnh quan/6. CANH QUAN CA PHE_THUMB.png', name: 'Mẫu cafe 01' }
+      ]
+    }
+  ],
+  HO_BOI: [
+    {
+      id: 'ho_boi_root',
+      url: '/assets/Cảnh quan/7. HO BOI THIEN NHIEN_THUMB.png',
+      name: 'Hồ Bơi Thiên Nhiên',
+      variants: [
+        { id: 'ho_boi_v1', url: '/assets/Cảnh quan/7. HO BOI THIEN NHIEN_THUMB.png', name: 'Mẫu hồ bơi 01' }
+      ]
+    }
+  ],
+  // Architecture
+  NHA_PHO: [
+    {
+      id: 'nha_pho_root',
+      url: '/assets/Kiến trúc/1. NHA PHO_THUMB.png',
+      name: 'Nhà Phố Hiện Đại',
+      variants: [
+        { id: 'nha_pho_v1', url: '/assets/Kiến trúc/1. NHA PHO_THUMB.png', name: 'Mẫu nhà phố 01' }
+      ]
+    }
+  ],
+  BIET_THU: [
+    {
+      id: 'biet_thu_root',
+      url: '/assets/Kiến trúc/2. BIET THU_THUMB.png',
+      name: 'Biệt Thự Sang Trọng',
+      variants: [
+        { id: 'biet_thu_v1', url: '/assets/Kiến trúc/2. BIET THU_THUMB.png', name: 'Mẫu biệt thự 01' }
+      ]
+    }
+  ],
+  NHA_CAP_4: [
+    {
+      id: 'nha_cap_4_root',
+      url: '/assets/Kiến trúc/3. NHA CAP 4_THUMB.png',
+      name: 'Nhà Cấp 4',
+      variants: [
+        { id: 'nha_cap_4_v1', url: '/assets/Kiến trúc/3. NHA CAP 4_THUMB.png', name: 'Mẫu nhà cấp 4 01' }
+      ]
+    }
+  ],
+  NHA_VUON: [
+    {
+      id: 'nha_vuon_root',
+      url: '/assets/Kiến trúc/4. NHA VUON_THUMB.png',
+      name: 'Nhà Vườn',
+      variants: [
+        { id: 'nha_vuon_v1', url: '/assets/Kiến trúc/4. NHA VUON_THUMB.png', name: 'Mẫu nhà vườn 01' }
+      ]
+    }
+  ],
+  NHA_TIEN_CHE: [
+    {
+      id: 'nha_tien_che_root',
+      url: '/assets/Kiến trúc/5. NHA TIEN CHE_THUMB.png',
+      name: 'Nhà Tiền Chế',
+      variants: [
+        { id: 'nha_tien_che_v1', url: '/assets/Kiến trúc/5. NHA TIEN CHE_THUMB.png', name: 'Mẫu nhà tiền chế 01' }
+      ]
+    }
+  ],
+  // Interior — each variant needs `images` array for 4-photo combo flow
+  HIEN_DAI: [
+    {
+      id: 'hien_dai_root',
+      url: '/assets/Nội thất/1. HIEN DAI _ THUMB.png',
+      name: 'Nội Thất Hiện Đại',
+      images: [
+        '/assets/Nội thất/1. HIEN DAI _ THUMB.png',
+        '/assets/Nội thất/1. HIEN DAI _ THUMB.png',
+        '/assets/Nội thất/1. HIEN DAI _ THUMB.png',
+        '/assets/Nội thất/1. HIEN DAI _ THUMB.png'
+      ],
+      variants: [
+        { id: 'hien_dai_v1', url: '/assets/Nội thất/1. HIEN DAI _ THUMB.png', name: 'Mẫu hiện đại 01', images: ['/assets/Nội thất/1. HIEN DAI _ THUMB.png', '/assets/Nội thất/1. HIEN DAI _ THUMB.png', '/assets/Nội thất/1. HIEN DAI _ THUMB.png', '/assets/Nội thất/1. HIEN DAI _ THUMB.png'] }
+      ]
+    }
+  ],
+  TAN_CO_DIEN: [
+    {
+      id: 'tan_co_dien_root',
+      url: '/assets/Nội thất/2. TAN CO DIEN_THUMB.png',
+      name: 'Tân Cổ Điển',
+      images: [
+        '/assets/Nội thất/2. TAN CO DIEN_THUMB.png',
+        '/assets/Nội thất/2. TAN CO DIEN_THUMB.png',
+        '/assets/Nội thất/2. TAN CO DIEN_THUMB.png',
+        '/assets/Nội thất/2. TAN CO DIEN_THUMB.png'
+      ],
+      variants: [
+        { id: 'tan_co_dien_v1', url: '/assets/Nội thất/2. TAN CO DIEN_THUMB.png', name: 'Mẫu tân cổ điển 01', images: ['/assets/Nội thất/2. TAN CO DIEN_THUMB.png', '/assets/Nội thất/2. TAN CO DIEN_THUMB.png', '/assets/Nội thất/2. TAN CO DIEN_THUMB.png', '/assets/Nội thất/2. TAN CO DIEN_THUMB.png'] }
+      ]
+    }
+  ],
+  INDOCHINE: [
+    {
+      id: 'indochine_root',
+      url: '/assets/Nội thất/3. INDOCHINE_THUMB.png',
+      name: 'Indochine',
+      images: [
+        '/assets/Nội thất/3. INDOCHINE_THUMB.png',
+        '/assets/Nội thất/3. INDOCHINE_THUMB.png',
+        '/assets/Nội thất/3. INDOCHINE_THUMB.png',
+        '/assets/Nội thất/3. INDOCHINE_THUMB.png'
+      ],
+      variants: [
+        { id: 'indochine_v1', url: '/assets/Nội thất/3. INDOCHINE_THUMB.png', name: 'Mẫu Indochine 01', images: ['/assets/Nội thất/3. INDOCHINE_THUMB.png', '/assets/Nội thất/3. INDOCHINE_THUMB.png', '/assets/Nội thất/3. INDOCHINE_THUMB.png', '/assets/Nội thất/3. INDOCHINE_THUMB.png'] }
+      ]
+    }
+  ],
+  WABI_SABI: [
+    {
+      id: 'wabi_sabi_root',
+      url: '/assets/Nội thất/4. WABI SABI_THUMB.png',
+      name: 'Wabi Sabi',
+      images: [
+        '/assets/Nội thất/4. WABI SABI_THUMB.png',
+        '/assets/Nội thất/4. WABI SABI_THUMB.png',
+        '/assets/Nội thất/4. WABI SABI_THUMB.png',
+        '/assets/Nội thất/4. WABI SABI_THUMB.png'
+      ],
+      variants: [
+        { id: 'wabi_sabi_v1', url: '/assets/Nội thất/4. WABI SABI_THUMB.png', name: 'Mẫu Wabi Sabi 01', images: ['/assets/Nội thất/4. WABI SABI_THUMB.png', '/assets/Nội thất/4. WABI SABI_THUMB.png', '/assets/Nội thất/4. WABI SABI_THUMB.png', '/assets/Nội thất/4. WABI SABI_THUMB.png'] }
+      ]
+    }
+  ],
+  TAN_CO_DIEN_GO: [
+    {
+      id: 'tan_co_dien_go_root',
+      url: '/assets/Nội thất/5. NOI THAT GO_THUMB.png',
+      name: 'Tân Cổ Điển Gỗ',
+      images: [
+        '/assets/Nội thất/5. NOI THAT GO_THUMB.png',
+        '/assets/Nội thất/5. NOI THAT GO_THUMB.png',
+        '/assets/Nội thất/5. NOI THAT GO_THUMB.png',
+        '/assets/Nội thất/5. NOI THAT GO_THUMB.png'
+      ],
+      variants: [
+        { id: 'tan_co_dien_go_v1', url: '/assets/Nội thất/5. NOI THAT GO_THUMB.png', name: 'Mẫu tân cổ điển gỗ 01', images: ['/assets/Nội thất/5. NOI THAT GO_THUMB.png', '/assets/Nội thất/5. NOI THAT GO_THUMB.png', '/assets/Nội thất/5. NOI THAT GO_THUMB.png', '/assets/Nội thất/5. NOI THAT GO_THUMB.png'] }
+      ]
+    }
+  ],
 };
 
 const SYSTEM_REFERENCE_LIBRARY: DesignerLibraryItem[] = [
@@ -344,6 +594,37 @@ const ANNOTATION_COLOR_RULES = [
   { color: 'Trắng', hex: '#ffffff', meaning: 'Vùng sỏi', instruction: 'Rải sỏi và vật liệu trang trí sáng màu.' }
 ] as const;
 
+// --- ERROR BOUNDARY ---
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: any, info: any) {
+    console.error('ErrorBoundary caught:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '40px', color: '#fff', background: '#1a1a2e', minHeight: '100vh', fontFamily: 'monospace' }}>
+          <h2 style={{ color: '#ff6b6b' }}>⚠️ Lỗi ứng dụng</h2>
+          <pre style={{ background: '#0d1117', padding: '20px', borderRadius: '12px', overflow: 'auto', fontSize: '14px', color: '#ff9999', marginTop: '20px' }}>
+            {this.state.error?.toString()}
+          </pre>
+          <button onClick={() => { this.setState({ hasError: false, error: null }); window.location.href = '/'; }}
+            style={{ marginTop: '20px', padding: '12px 24px', background: '#e2b170', color: '#000', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 700 }}>
+            Quay về trang chủ
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // --- MAIN APP ---
 export default function App() {
   const [view, setView] = useState<AppView>('welcome');
@@ -354,19 +635,53 @@ export default function App() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [service, setService] = useState('');
+  const [basicSubStep, setBasicSubStep] = useState<'category' | 'gallery'>('category');
   const [note, setNote] = useState('');
   const [referenceModelUrl, setReferenceModelUrl] = useState('');
-  const [customerEmail, setCustomerEmail] = useState('');
   const [extraAssets, setExtraAssets] = useState<string[]>([]);
-  const [dimensions, setDimensions] = useState({ width: '', depth: '', height: '' });
   const [basicCategory, setBasicCategory] = useState('ho_co_dien');
+  const [templateSelected, setTemplateSelected] = useState(false);
   const [historySize, setHistorySize] = useState(0);
   const [viewNotification, setViewNotification] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [submittedProjectId, setSubmittedProjectId] = useState<string>('');
   const [retryCount, setRetryCount] = useState(0);
+  const [interiorComboImages, setInteriorComboImages] = useState<string[]>([]);
+  const [interiorSiteImages, setInteriorSiteImages] = useState<string[]>([]);
+
+  // --- PRIVACY SHIELD & SECURITY ---
+  useEffect(() => {
+    const handleBlur = () => document.body.classList.add('privacy-locked');
+    const handleFocus = () => document.body.classList.remove('privacy-locked');
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') document.body.classList.add('privacy-locked');
+      else document.body.classList.remove('privacy-locked');
+    };
+
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'PrintScreen' || (e.ctrlKey && e.key === 'p')) {
+        document.body.classList.add('privacy-locked');
+        setTimeout(() => document.body.classList.remove('privacy-locked'), 2000);
+        alert("Nội dung bản quyền thuộc về Sơn Hải Landscape. Vui lòng không sao chép.");
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // --- SIMPLE ROUTING ---
   useEffect(() => {
@@ -389,49 +704,61 @@ export default function App() {
   }, []);
 
   // --- SYSTEM DYNAMIC CONTENT ---
+  const SYSTEM_DEFAULTS = {
+    tips: {
+      title: "MẸO CHỤP ẢNH",
+      items: ["Vị trí giống mẫu chọn", "Bao quát không gian", "Góc rộng chính diện"],
+      sampleImage: "/assets/sample_angle.jpg"
+    },
+    plans: [
+      { id: "basic", name: "Gói Cơ bản", header: "1. GÓI CƠ BẢN", sub: "KTS thiết kế 1 bản vẽ 3D chuẩn hóa (1 tấm hình chất lượng cao).", media: [{ type: 'image', url: "https://images.unsplash.com/photo-1516455590571-18256e5bb4ff?q=80&w=1200" }] },
+      { id: "advanced", name: "Gói Nâng cao", header: "2. GÓI NÂNG CAO", sub: "1 Bản vẽ thiết kế chuẩn + 1 Video diễn họa 3D sống động.", media: [{ type: 'image', url: "https://images.unsplash.com/photo-1613545325278-f24b0cae1224?q=80&w=1200" }, { type: 'video', url: "https://assets.mixkit.co/videos/preview/mixkit-residential-house-with-a-pool-and-green-landscaping-12270-large.mp4" }] },
+      { id: "premium", name: "Gói Premium", header: "3. GÓI PREMIUM (TRỌN BỘ 3D)", sub: "Thiết kế 3D toàn diện, xuất 6 góc nhìn đẹp nhất + 1 Video 4K diễn họa chi tiết.", media: [
+        { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=1" },
+        { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=2" },
+        { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=3" },
+        { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=4" },
+        { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=5" },
+        { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=6" },
+        { type: 'video', url: "https://assets.mixkit.co/videos/preview/mixkit-modern-apartment-building-with-green-garden-and-pool-21272-large.mp4" }
+      ]}
+    ],
+    library: ASSETS
+  };
+
   const [systemContent, setSystemContent] = useState(() => {
-    const defaults = {
-      tips: {
-        title: "MẸO CHỤP ẢNH",
-        items: ["Bao quát toàn bộ không gian.", "Đứng chính diện, tránh nghiêng.", "Ảnh rõ nét, không rung mờ."],
-        sampleImage: "/assets/sample_angle.jpg"
-      },
-      plans: [
-        { id: "basic", name: "Gói Cơ bản", header: "1. GÓI CƠ BẢN", sub: "KTS thiết kế 1 bản vẽ 3D chuẩn hóa (1 tấm hình chất lượng cao).", media: [{ type: 'image', url: "https://images.unsplash.com/photo-1516455590571-18256e5bb4ff?q=80&w=1200" }] },
-        { id: "advanced", name: "Gói Nâng cao", header: "2. GÓI NÂNG CAO", sub: "1 Bản vẽ thiết kế chuẩn + 1 Video diễn họa 3D sống động.", media: [{ type: 'image', url: "https://images.unsplash.com/photo-1613545325278-f24b0cae1224?q=80&w=1200" }, { type: 'video', url: "https://assets.mixkit.co/videos/preview/mixkit-residential-house-with-a-pool-and-green-landscaping-12270-large.mp4" }] },
-        { id: "premium", name: "Gói Premium", header: "3. GÓI PREMIUM (TRỌN BỘ 3D)", sub: "Thiết kế 3D toàn diện, xuất 6 góc nhìn đẹp nhất + 1 Video 4K diễn họa chi tiết.", media: [
-          { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=1" },
-          { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=2" },
-          { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=3" },
-          { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=4" },
-          { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=5" },
-          { type: 'image', url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&sig=6" },
-          { type: 'video', url: "https://assets.mixkit.co/videos/preview/mixkit-modern-apartment-building-with-green-garden-and-pool-21272-large.mp4" }
-        ]}
-      ],
-      library: ASSETS
-    };
     const saved = localStorage.getItem('sh_system_content');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        return { ...defaults, ...parsed };
-      } catch(e) { return defaults; }
+        return { ...SYSTEM_DEFAULTS, ...parsed, tips: SYSTEM_DEFAULTS.tips };
+      } catch(e) { return SYSTEM_DEFAULTS; }
     }
-    return defaults;
+    return SYSTEM_DEFAULTS;
   });
 
-  // --- LOAD SYSTEM CONTENT FROM SERVER ---
+  const fetchSystemContent = async () => {
+    try {
+      const res = await apiFetch('/api/system-content');
+      if (res.ok) {
+        const data = await res.json();
+        setSystemContent((prev: any) => ({
+          ...prev,
+          ...data,
+          tips: SYSTEM_DEFAULTS.tips
+        }));
+      }
+    } catch (err) {
+      console.error('Lỗi khi tải cấu hình hệ thống:', err);
+    }
+  };
+
   useEffect(() => {
-    apiFetch('/api/system-content')
-      .then(res => res.json())
-      .then(data => {
-        if (data) {
-          setSystemContent((prev: any) => ({ ...prev, ...data }));
-        }
-      })
-      .catch(err => console.error('Failed to load system content:', err));
+    fetchSystemContent();
   }, []);
+
+  const [mainBranch, setMainBranch] = useState<MainBranch>('landscape');
+
 
   // --- AUTO-SAVE DRAFT TO LOCALSTORAGE ---
   useEffect(() => {
@@ -546,15 +873,28 @@ export default function App() {
     setAnnotatedImage(resized);
   };
 
+  // Handler khi user chọn 1 mẫu thiết kế trong BasicSelectionView
+  const handleBasicSelect = (url: string, category?: string, images?: string[]) => {
+    setReferenceModelUrl(url);
+    setTemplateSelected(true);
+    if (category) setBasicCategory(category);
+    // Nếu là nội thất có combo 4 hình, lưu lại danh sách ảnh combo
+    if (images && images.length > 0) {
+      setInteriorComboImages(images);
+      // Khởi tạo mảng ảnh hiện trạng tương ứng (rỗng)
+      setInteriorSiteImages(new Array(images.length).fill(''));
+    } else {
+      setInteriorComboImages([]);
+      setInteriorSiteImages([]);
+    }
+    setView('upload');
+  };
+
   const handleSubmit = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
     // Final compression of annotated image if needed
-    
-    const selectedThacVariant = selections.thac 
-      ? ASSETS.THAC.flatMap(c => c.variants || []).find(v => v.id === selections.thac)
-      : null;
 
     const projectData = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
@@ -562,21 +902,17 @@ export default function App() {
       deviceId: getDeviceId(),
       customerName,
       customerPhone,
-      customerEmail,
       rawImage,
       annotatedImage,
       referenceModelUrl: referenceModelUrl || extractSelectedModelUrl(note) || undefined,
-      selections: {
-        ...selections,
-        thacUrl: selectedThacVariant?.url,
-        thacName: selectedThacVariant?.name
-      },
+      selections,
       service,
       note,
       extraAssets,
-      dimensions: (dimensions.width || dimensions.depth || dimensions.height) ? dimensions : undefined,
       basicCategory: service === 'Gói Cơ bản' ? basicCategory : undefined,
-      status: 'pending' as const
+      mainBranch: mainBranch,
+      status: 'pending' as const,
+      interiorPairs: interiorComboImages.length > 0 ? interiorSiteImages.map((site, i) => ({ siteImage: site, referenceImage: interiorComboImages[i] })).filter(p => p.siteImage) : undefined
     };
 
     try {
@@ -604,23 +940,25 @@ export default function App() {
     setSelections({ ke: [], canh: [] });
     setCustomerName('');
     setCustomerPhone('');
-    setCustomerEmail('');
     setService('');
     setNote('');
     setReferenceModelUrl('');
     setExtraAssets([]);
-    setDimensions({ width: '', depth: '', height: '' });
     setBasicCategory('ho_co_dien');
+    setTemplateSelected(false);
     setSubmittedProjectId('');
     setRetryCount(0);
+    setInteriorComboImages([]);
+    setInteriorSiteImages([]);
     setView('welcome');
   };
 
   const canGoNext = () => {
     switch (view) {
-      case 'upload': return !!rawImage;
+      case 'upload': return interiorComboImages.length > 0 ? interiorSiteImages.some(img => !!img) : !!rawImage;
       case 'editor': return historySize > 1 || note.trim().length > 0;
-      case 'service': return !!selections.thac;
+      case 'service': return !!(selections.ho || selections.ho_hien_dai || selections.tuong_da || selections.tuong_cay || selections.farm || selections.cafe || selections.ho_boi);
+      case 'basic_selection': return templateSelected;
       case 'plan': return !!service;
       case 'submit': return !!customerName && !!customerPhone;
       default: return true;
@@ -631,40 +969,40 @@ export default function App() {
     if (!canGoNext()) {
       if (view === 'editor') setViewNotification("Anh/Chị vui lòng hãy thực hiện thao tác khoanh vùng trên ảnh hoặc viết mô tả ý tưởng chi tiết nhé!");
       if (view === 'service') setViewNotification("Anh/Chị vui lòng hãy chọn một mẫu thiết kế mà mình ưng ý nhất nhé!");
+      if (view === 'basic_selection') setViewNotification("Anh/Chị vui lòng hãy chọn một mẫu thiết kế mà mình ưng ý nhất nhé!");
       return;
     }
     if (view === 'plan') {
-      if (service === 'Gói Cơ bản') setView('basic_selection');
-      else setView('upload');
+      setView('submit');
     }
     else if (view === 'basic_selection') setView('upload');
     else if (view === 'upload') {
-      if (service === 'Gói Cơ bản') setView('submit');
-      else setView('editor');
+      setView('plan');
     }
-    else if (view === 'editor') setView('service');
-    else if (view === 'service') setView('submit');
     else if (view === 'submit') handleSubmit();
   };
 
   const handleGlobalBack = () => {
-    if (view === 'plan') setView('welcome');
-    else if (view === 'basic_selection') setView('plan');
+    if (view === 'plan') setView('upload');
+    else if (view === 'basic_selection') {
+      if (basicSubStep === 'gallery') {
+        setBasicSubStep('category');
+      } else {
+        setView('welcome');
+      }
+    }
     else if (view === 'upload') {
-      if (service === 'Gói Cơ bản') setView('basic_selection');
-      else setView('plan');
+      setTemplateSelected(false);
+      setBasicSubStep('gallery');
+      setView('basic_selection');
     }
-    else if (view === 'editor') setView('upload');
-    else if (view === 'service') setView('editor');
-    else if (view === 'submit') {
-      if (service === 'Gói Cơ bản') setView('upload');
-      else setView('service');
-    }
+    else if (view === 'submit') setView('plan');
   };
 
   const showGlobalNav = ['upload', 'editor', 'service', 'plan', 'submit', 'basic_selection'].includes(view);
 
   return (
+    <ErrorBoundary>
     <>
       {showGlobalNav && (
         <div className={`global-nav-premium ${view === 'plan' ? 'wider' : ''}`}>
@@ -696,11 +1034,14 @@ export default function App() {
         </div>
       )}
 
-      <div className={`container ${(view as any) === 'admin' || (view as any) === 'login' ? 'full-width' : ''} ${view === 'plan' ? 'wider' : ''}`}>
+      <div className={`container ${['admin', 'login', 'welcome'].includes(view as any) ? 'full-width' : ''} ${view === 'plan' ? 'wider' : ''}`}>
         <AnimatePresence mode="wait">
         {view === 'welcome' && (
           <WelcomeView
-            onStart={() => setView('plan')}
+            onStart={(branch) => {
+              setMainBranch(branch);
+              setView('basic_selection');
+            }}
             onAdmin={() => {
                if (isAdminAuthenticated) setView('admin');
                else setView('login' as any);
@@ -720,11 +1061,13 @@ export default function App() {
         {view === 'basic_selection' && (
           <BasicSelectionView
             systemContent={systemContent}
-            onSelect={(imgUrl, category) => {
-              setReferenceModelUrl(imgUrl);
-              if (category) setBasicCategory(category);
-              handleGlobalNext();
-            }}
+            mainBranch={mainBranch}
+            subStep={basicSubStep}
+            setSubStep={setBasicSubStep}
+            selectedCategory={basicCategory}
+            onCategoryChange={setBasicCategory}
+            onSelect={handleBasicSelect}
+            onBack={() => setView('plan')}
           />
         )}
         {view === 'upload' && (
@@ -733,12 +1076,21 @@ export default function App() {
             onUpload={handleUpload} 
             extraAssets={extraAssets}
             onExtraAssetsChange={setExtraAssets}
-            onProceed={() => service === 'Gói Cơ bản' ? setView('submit') : setView('editor')}
+            onProceed={handleGlobalNext}
             systemContent={systemContent}
             service={service}
             note={note}
             referenceModelUrl={referenceModelUrl}
             onNoteChange={setNote}
+            interiorComboImages={interiorComboImages}
+            interiorSiteImages={interiorSiteImages}
+            onInteriorSiteImageChange={(idx, img) => {
+              const newImages = [...interiorSiteImages];
+              newImages[idx] = img;
+              setInteriorSiteImages(newImages);
+            }}
+            mainBranch={mainBranch}
+            selectedCategory={basicCategory}
           />
         )}
         {view === 'editor' && (
@@ -763,17 +1115,14 @@ export default function App() {
           />
         )}
         {view === 'plan' && (
-          <PlanSelectionView 
-            service={service} 
+          <PlanSelectionView
+            service={service}
             systemContent={systemContent}
+            mainBranch={mainBranch}
             onServiceChange={(s) => {
               setService(s);
-              if (s === 'Gói Cơ bản') {
-                setView('basic_selection');
-              } else {
-                setView('upload'); // Jump immediately
-              }
-            }} 
+              setView('submit');
+            }}
           />
         )}
         {view === 'submit' && (
@@ -782,12 +1131,9 @@ export default function App() {
             onNameChange={setCustomerName}
             customerPhone={customerPhone}
             onPhoneChange={setCustomerPhone}
-            customerEmail={customerEmail}
-            onEmailChange={setCustomerEmail}
-            dimensions={dimensions}
-            onDimensionsChange={setDimensions}
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
+            systemContent={systemContent}
           />
         )}
         {view === 'success' && (
@@ -795,33 +1141,25 @@ export default function App() {
             projectId={submittedProjectId}
             service={service}
             onReset={resetAll}
+            onBack={() => setView('my_projects')}
             retryCount={retryCount}
             onRetry={async () => {
               setRetryCount(prev => prev + 1);
               setIsSubmitting(true);
               try {
-                const selectedThacVariant = selections.thac
-                  ? ASSETS.THAC.flatMap(c => c.variants || []).find(v => v.id === selections.thac)
-                  : null;
                 const projectData = {
                   id: Date.now().toString(36) + Math.random().toString(36).slice(2),
                   timestamp: new Date().toISOString(),
                   deviceId: getDeviceId(),
                   customerName,
                   customerPhone,
-                  customerEmail,
                   rawImage,
                   annotatedImage,
                   referenceModelUrl: referenceModelUrl || extractSelectedModelUrl(note) || undefined,
-                  selections: {
-                    ...selections,
-                    thacUrl: selectedThacVariant?.url,
-                    thacName: selectedThacVariant?.name
-                  },
+                  selections,
                   service,
                   note,
                   extraAssets,
-                  dimensions: (dimensions.width || dimensions.depth || dimensions.height) ? dimensions : undefined,
                   status: 'pending' as const
                 };
                 const response = await apiFetch('/api/projects', {
@@ -857,6 +1195,7 @@ export default function App() {
             isLoading={isLoadingProjects}
             systemContent={systemContent}
             onSystemContentUpdate={setSystemContent}
+            onRefreshConfig={fetchSystemContent}
             onBack={resetAll}
             onUpdateProject={async (id, updates) => {
               const response = await apiFetch(`/api/projects/${id}`, {
@@ -905,6 +1244,7 @@ export default function App() {
         </AnimatePresence>
       </div>
     </>
+    </ErrorBoundary>
   );
 }
 
@@ -963,7 +1303,7 @@ function LoginView({ onSuccess, onBack }: { onSuccess: () => void, onBack: () =>
 
 // --- SUB-VIEWS ---
 
-function WelcomeView({ onStart, onAdmin, onMyProjects }: { onStart: () => void, onAdmin: () => void, onMyProjects: () => void }) {
+function WelcomeView({ onStart, onAdmin, onMyProjects }: { onStart: (branch: MainBranch) => void, onAdmin: () => void, onMyProjects: () => void }) {
   const [clickCount, setClickCount] = useState(0);
 
   const handleLogoClick = () => {
@@ -973,32 +1313,71 @@ function WelcomeView({ onStart, onAdmin, onMyProjects }: { onStart: () => void, 
       setClickCount(0);
     } else {
       setClickCount(newCount);
-      // Reset count after 2s of inactivity
       setTimeout(() => setClickCount(0), 2000);
     }
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view welcome-view">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view welcome-view welcome-v2">
+      <div className="founder-bg-overlay" />
       <div className="hero-content">
-        <div className="logo-badge" onClick={handleLogoClick} style={{ cursor: 'pointer', userSelect: 'none' }}>SƠN HẢI</div>
-        <h1>Kiến Tạo<br/><span className="gradient-text">Không Gian Sống</span></h1>
-        <p>Ứng dụng phác thảo cảnh quan chuyên nghiệp. Biến công trình thô thành tuyệt tác chỉ trong vài bước.</p>
-        <div className="features-grid">
-          <div className="feat-item"><div className="icon"><Camera /></div><span>Chụp ảnh thực tế</span></div>
-          <div className="feat-item"><div className="icon"><Palette /></div><span>Phác thảo ý tưởng</span></div>
-          <div className="feat-item"><div className="icon"><Layers /></div><span>Chọn mẫu đa dạng</span></div>
+        <div className="logo-tech-container" onClick={handleLogoClick}>
+           <img src="/assets/LOGO _ PNG.png" alt="Logo" className="main-logo-image" />
         </div>
-        <button className="btn-primary main-cta" onClick={onStart}>
-          Bắt đầu thiết kế <ArrowRight size={20} />
-        </button>
+        <h1 className="main-title-v3">Hệ thống thiết kế bản vẽ nhanh nhất Việt Nam</h1>
+        
+        <div className="branch-cta-group-v2">
+          <button className="btn-v2-main" onClick={() => onStart('landscape')}>
+            <div className="btn-v2-icon"><img src="/assets/LUỒNG THIẾT KẾ/1. THIET KE CANH QUAN.png" alt="Cảnh quan" className="full-width-icon" /></div>
+            <div className="btn-v2-text">
+              <strong>Thiết kế cảnh quan</strong>
+              <span>Hồ koi, sân vườn, farm, hồ bơi</span>
+            </div>
+            <img src="/assets/mui ten.png" alt="Arrow" className="arrow-float custom-arrow" />
+          </button>
+          
+          <button className="btn-v2-main" onClick={() => onStart('architecture')}>
+            <div className="btn-v2-icon"><img src="/assets/LUỒNG THIẾT KẾ/2. THIET KE KIEN TRUC.png" alt="Kiến trúc" className="full-width-icon" /></div>
+            <div className="btn-v2-text">
+              <strong>Thiết kế kiến trúc</strong>
+              <span>Nhà phố, biệt thự, nhà tiền chế</span>
+            </div>
+            <img src="/assets/mui ten.png" alt="Arrow" className="arrow-float custom-arrow" />
+          </button>
+
+          <button className="btn-v2-main" onClick={() => onStart('interior')}>
+            <div className="btn-v2-icon"><img src="/assets/LUỒNG THIẾT KẾ/3. THIET KE NOI THAT.png" alt="Nội thất" className="full-width-icon" /></div>
+            <div className="btn-v2-text">
+              <strong>Thiết kế nội thất</strong>
+              <span>Hiện đại, tân cổ điển, indochine</span>
+            </div>
+            <img src="/assets/mui ten.png" alt="Arrow" className="arrow-float custom-arrow" />
+          </button>
+        </div>
+
         <button
-          className="btn-secondary"
+          className="btn-my-projects-v2"
           onClick={onMyProjects}
-          style={{ marginTop: '12px', padding: '12px 32px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.15)', cursor: 'pointer', fontWeight: 600, fontSize: '1rem' }}
         >
-          Dự án của tôi
+          <FolderOpen size={22} /> <span>Dự án của bạn</span>
         </button>
+
+        <div className="process-flow-v3">
+          <div className="process-step">
+            <div className="step-icon"><img src="/assets/ICON TRANG CHU/1. CHON MAU.png" alt="Chọn mẫu đẹp" className="full-width-icon" /></div>
+            <span>Chọn mẫu đẹp</span>
+          </div>
+          <div className="step-arrow"><img src="/assets/mui ten.png" alt="->" className="custom-arrow-small" /></div>
+          <div className="process-step">
+            <div className="step-icon"><img src="/assets/ICON TRANG CHU/2. CHUP HIEN TRANG.png" alt="Chụp hiện trạng" className="full-width-icon" /></div>
+            <span>Chụp hiện trạng</span>
+          </div>
+          <div className="step-arrow"><img src="/assets/mui ten.png" alt="->" className="custom-arrow-small" /></div>
+          <div className="process-step">
+            <div className="step-icon"><img src="/assets/ICON TRANG CHU/3. NHAN BAN VE.png" alt="Nhận bản vẽ" className="full-width-icon" /></div>
+            <span>Nhận bản vẽ</span>
+          </div>
+        </div>
       </div>
     </motion.div>
   );
@@ -1006,7 +1385,9 @@ function WelcomeView({ onStart, onAdmin, onMyProjects }: { onStart: () => void, 
 
 function UploadView({ 
   rawImage, onUpload, extraAssets, onExtraAssetsChange, onProceed, systemContent,
-  service, note, referenceModelUrl, onNoteChange
+  service, note, referenceModelUrl, onNoteChange,
+  interiorComboImages, interiorSiteImages, onInteriorSiteImageChange, 
+  mainBranch, selectedCategory
 }: { 
   rawImage: string; 
   onUpload: (img: string) => void;
@@ -1018,10 +1399,38 @@ function UploadView({
   note?: string;
   referenceModelUrl?: string;
   onNoteChange?: (note: string) => void;
+  interiorComboImages?: string[];
+  interiorSiteImages?: string[];
+  onInteriorSiteImageChange?: (idx: number, img: string) => void;
+  mainBranch?: MainBranch;
+  selectedCategory?: string;
 }) {
+  const t = (key: string, defaultVal: string) => systemContent.uiText?.[key] || defaultVal;
   const fileRef = useRef<HTMLInputElement>(null);
   const multiFileRef = useRef<HTMLInputElement>(null);
+  const interiorFileRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [preview, setPreview] = useState<string>(rawImage || '');
+
+  const getDynamicPlaceholder = () => {
+    const categoryExamples: Record<string, string> = {
+      'ho': "Ví dụ:\n• Kích thước khu vườn khoảng 50m2 (10x5m)\n• Góc trái bố trí hồ cá koi 12m2, thác nước cao 1.2m đổ từ hòn non bộ\n• Chính giữa là lối đi lát đá tự nhiên trên thảm cỏ nhung Nhật\n• Phía sau hồ đặt tiểu cảnh và cây tùng la hán trang trí",
+      'ho_hien_dai': "Ví dụ:\n• Diện tích sân vườn 40m2 (8x5m)\n• Hồ cá koi thiết kế vuông vắn đặt sát tường rào bên phải\n• Sử dụng thác nước tràn hiện đại, ốp đá slate đen\n• Phía trước là sàn gỗ nhựa outdoor và bộ bàn ghế thư giãn",
+      'tuong_da': "Ví dụ:\n• Diện tích bức tường trang trí 15m2 (cao 3m, dài 5m)\n• Mảng đá tự nhiên ốp trung tâm, có khe suối nước chảy tuần hoàn\n• Hai bên bố trí dải cây dương xỉ và hệ thống đèn hắt sáng nghệ thuật\n• Phía dưới chân tường đặt bồn hoa hoặc bể cá cảnh nhỏ",
+      'tuong_cay': "Ví dụ:\n• Tường cây xanh đứng diện tích 12m2 (cao 3m, dài 4m)\n• Bố trí các loại cây nhiệt đới (dương xỉ, trầu bà, lan ý) xen kẽ tạo mảng màu\n• Lắp đặt hệ thống tưới tự động âm tường\n• Phía dưới chân tường rải sỏi trắng và đặt đèn spotlight hắt lên",
+      'farm': "Ví dụ:\n• Tổng diện tích quy hoạch 2000m2 (40x50m)\n• Cổng chính hướng Đông, lối vào rộng 4m\n• Khu trung tâm làm hồ nước điều hòa, xung quanh là các Bungalow nghỉ dưỡng\n• Phía sau bố trí vườn cây ăn trái và khu chăn nuôi tách biệt",
+      'cafe': "Ví dụ:\n• Sân vườn quán cafe diện tích 100m2 (10x10m)\n• Khu vực trung tâm đặt tiểu cảnh nước và cây tán rộng che mát\n• Các dãy bàn ghế bố trí dọc lối đi lát đá trang trí\n• Sử dụng đèn dây trang trí treo trên cao tạo không gian chill",
+      'ho_boi': "Ví dụ:\n• Kích thước hồ bơi 4x12m, sàn gỗ nhựa quanh hồ rộng 2m\n• Góc sau sân bố trí nhà chòi nghỉ (Gazebo) và khu tắm tráng\n• Hệ thống đèn âm nước và thác nước tràn từ thành hồ\n• Trồng các loại cây nhiệt đới (chuối cảnh, dừa) sát tường rào",
+      'nha_pho': "Ví dụ:\n• Khu đất diện tích 90m2 (5x18m), xây dựng 5x15m\n• Chừa sân trước 3m làm cổng và bồn hoa, sân sau 2m lấy thoáng\n• Tầng 1: Phòng khách mặt tiền, bếp phía sau kết nối sân vườn\n• Mặt tiền hiện đại với mảng kính lớn và lam gỗ tạo điểm nhấn",
+      'biet_thu': "Ví dụ:\n• Diện tích khu đất 300m2 (15x20m), xây dựng 150m2/sàn\n• Biệt thự nằm giữa tâm đất, sân vườn bao quanh 4 mặt\n• Sảnh đón sang trọng chính diện, gara để 2 ô tô bên hông trái\n• Tầng 2 có ban công rộng nhìn ra khu vực sân vườn phía trước",
+      'nha_cap_4': "Ví dụ:\n• Nhà cấp 4 diện tích 120m2 (8x15m), phong cách tối giản\n• Bố trí 3 phòng ngủ dọc bên phải, phòng khách và bếp bên trái\n• Hiên nhà rộng 2m phía trước để đặt ghế thư giãn\n• Sử dụng mái Nhật màu xanh đen, sơn tường màu trắng kem",
+      'nha_vuon': "Ví dụ:\n• Nhà vườn nghỉ dưỡng diện tích 150m2 trên khuôn viên 500m2\n• Nhà nằm phía sau đất để ưu tiên khoảng sân cỏ rộng phía trước\n• Bố trí hiên rộng bao quanh nhà kết nối trực tiếp với không gian xanh\n• Sử dụng vật liệu tự nhiên: đá ốp tường, mái ngói và khung cửa gỗ",
+      'nha_tien_che': "Ví dụ:\n• Nhà khung thép diện tích 60m2 (6x10m) làm Bungalow\n• Toàn bộ mặt tiền lắp kính cường lực lấy view nhìn ra sân vườn\n• Hiên gỗ rộng 3m phía trước tích hợp bồn cây xanh\n• Kết cấu thép sơn đen mờ, mái lợp tôn giả ngói cách nhiệt",
+    };
+    if (selectedCategory && categoryExamples[selectedCategory]) return categoryExamples[selectedCategory];
+    if (mainBranch === 'architecture') return "Ví dụ:\n• Diện tích xây dựng 100m2 (5x20m)\n• Tầng 1 làm phòng khách và bếp không gian mở\n• Mặt tiền hiện đại, ốp đá tự nhiên và có ban công xanh";
+    if (mainBranch === 'interior') return "Ví dụ:\n• Phòng khách chung cư 30m2, phong cách Hiện đại\n• Sofa chữ L đặt sát tường, tivi treo đối diện\n• Sử dụng tông màu trắng xám chủ đạo, đèn trần decor";
+    return "Ví dụ:\n• Diện tích sân vườn 40m2 (8x5m)\n• Góc trái làm hồ cá koi nhỏ, chính giữa là thảm cỏ\n• Bố trí cây xanh tầng cao ở góc và hoa bụi dọc lối đi";
+  };
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1031,6 +1440,17 @@ function UploadView({
       const result = ev.target?.result as string;
       setPreview(result);
       onUpload(result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleInteriorFile = (e: React.ChangeEvent<HTMLInputElement>, idx: number) => {
+    const file = e.target.files?.[0];
+    if (!file || !onInteriorSiteImageChange) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const result = ev.target?.result as string;
+      onInteriorSiteImageChange(idx, result);
     };
     reader.readAsDataURL(file);
   };
@@ -1055,109 +1475,139 @@ function UploadView({
     onExtraAssetsChange(extraAssets.filter((_, i) => i !== index));
   };
 
-  const basicModelUrl = service === 'Gói Cơ bản' ? (referenceModelUrl || extractSelectedModelUrl(note)) : null;
+  const basicModelUrl = referenceModelUrl || extractSelectedModelUrl(note);
+  const isInteriorCombo = interiorComboImages && interiorComboImages.length > 0;
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view upload-view nav-offset">
-      <h2 style={{marginTop: '2rem'}}>Tải ảnh hiện trạng công trình</h2>
+      <h2>{isInteriorCombo ? t('upload_title_interior', 'Tải ảnh hiện trạng công trình theo các góc tương ứng') : t('upload_title', 'Tải ảnh hiện trạng công trình')}</h2>
       
-      {basicModelUrl && (
-        <div style={{ marginBottom: '25px', display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(226, 177, 112, 0.05)', padding: '15px', borderRadius: '16px', border: '1px solid rgba(226, 177, 112, 0.2)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--accent)', fontWeight: 700 }}>
-            <CheckCircle2 size={20} />
-            <span>Mẫu Thiết Kế Bạn Đã Chọn</span>
-          </div>
-          <div style={{ display: 'flex', gap: '15px' }}>
-             <img src={basicModelUrl} style={{ width: '120px', height: '80px', objectFit: 'cover', borderRadius: '8px' }} />
-             <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)', margin: 0, lineHeight: 1.5 }}>
-               💡 <b>Gợi ý:</b> Hãy ráng chụp góc hiện trạng có <b>vị trí và hướng nhìn tương đồng</b> với mẫu này để bề mặt không gian được thiết kế hoàn hảo nhất nhé!
-             </p>
-          </div>
-        </div>
-      )}
-      <div className="upload-area" onClick={() => fileRef.current?.click()} style={{ border: preview ? 'none' : '3px dashed rgba(226,177,112,0.4)', borderRadius: '28px', background: '#0f172a' }}>
-        {preview ? (
-          <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-            <img src={preview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '28px' }} />
-            <div className="tag-overlay-premium">
-              <CheckCircle2 size={16} /> ẢNH CHÍNH ĐÃ TẢI
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="upload-circle"><Camera size={60} /></div>
-            <span className="upload-prompt" style={{ fontWeight: 800 }}>NHẤN ĐỂ CHỌN ẢNH CHÍNH</span>
-          </>
-        )}
-      </div>
+      {isInteriorCombo ? (
+        <div className="interior-upload-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginTop: '20px' }}>
+          {interiorComboImages.map((comboImg, idx) => (
+            <div key={idx} className="interior-upload-pair" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '15px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ marginBottom: '15px' }}>
+                <span style={{ color: 'var(--accent)', fontWeight: 700, fontSize: '0.9rem', marginBottom: '8px', display: 'block' }}>
+                  <CheckCircle2 size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }}/> 
+                  Ảnh Mẫu {idx + 1}_{['Phòng khách', 'Phòng ngủ', 'Phòng bếp', 'Phòng tắm'][idx] || 'Khác'}
+                </span>
+                <ProtectedImage src={comboImg} alt={`Combo ${idx}`} style={{ width: '100%', height: '140px', borderRadius: '12px' }} />
+              </div>
+              <div 
+                className="upload-area-mini" 
+                onClick={() => interiorFileRefs.current[idx]?.click()} 
+              >
+                {interiorSiteImages?.[idx] ? (
+                  <>
+                    <img src={interiorSiteImages[idx]} alt={`Site ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <div className="tag-overlay-premium">
+                      <CheckCircle2 size={12} /> ĐÃ TẢI ẢNH
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Camera size={32} style={{ marginBottom: '8px', color: 'rgba(255,255,255,0.5)' }} />
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.7)', textAlign: 'center', padding: '0 10px' }}>
+                      TẢI ẢNH HIỆN TRẠNG<br/>{['PHÒNG KHÁCH', 'PHÒNG NGỦ', 'PHÒNG BẾP', 'PHÒNG TẮM'][idx] || 'GÓC TƯƠNG TỰ'}
+                    </span>
+                  </>
+                )}
+              </div>
 
-      <input type="file" accept="image/*" ref={fileRef} onChange={handleFile} hidden />
-      
-      {!preview && (
-        <div className="upload-guide-side">
-          <div className="guide-content-left">
-            <div className="guide-header-side">
-              <Zap size={20} color="var(--accent)" />
-              <span>{systemContent.tips.title}</span>
+              <input type="file" accept="image/*" ref={el => { interiorFileRefs.current[idx] = el; }} onChange={(e) => handleInteriorFile(e, idx)} hidden />
             </div>
-            <ul className="guide-list-side">
-              {systemContent.tips.items.map((it: string, idx: number) => <li key={idx}>{it}</li>)}
-            </ul>
-          </div>
-          <div className="guide-visual-right">
-            <img src={systemContent.tips.sampleImage} alt="Guide" />
-          </div>
-        </div>
-      )}
-
-      {/* CONDITIONAL SECTION FOR ADDITIONAL ASSETS OR NOTE */}
-      {service === 'Gói Cơ bản' ? (
-        <div className="extra-assets-section-premium" style={{ marginTop: '20px' }}>
-          <div className="extra-header-premium">
-            <div className="extra-title-group">
-              <MessageCircle size={26} color="var(--accent)" />
-              <h3>Mô tả ý tưởng của bạn</h3>
-            </div>
-            <p className="extra-desc-premium">
-               Hãy cho chúng tôi biết bạn muốn không gian trông như thế nào — càng chi tiết, bản vẽ càng chính xác.
-            </p>
-          </div>
-          <textarea
-            className="luxe-textarea"
-            placeholder={"Ví dụ:\n• Diện tích khoảng 8×5m, muốn làm hồ cá koi cổ điển đá vân mây\n• Có lối đi rải sỏi trắng, cây tùng la hán và đèn đá\n• Thác nước nhỏ góc trái, bên phải trồng cây xanh\n• Phong cách Nhật Bản, tông trầm ấm..."}
-            value={note ? note.replace(/(\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?)/gi, '').replace(/^https?:\/\/\S+\n?/gm, '').trimStart() : ''}
-            onChange={(e) => {
-              if (onNoteChange) onNoteChange(e.target.value);
-            }}
-            style={{
-              width: '100%',
-              minHeight: '180px',
-              background: 'rgba(15, 23, 42, 0.8)',
-              color: '#fff',
-              border: '1.5px solid rgba(226,177,112,0.25)',
-              borderRadius: '16px',
-              padding: '18px',
-              marginTop: '15px',
-              fontSize: '1rem',
-              lineHeight: '1.7',
-              fontFamily: 'inherit',
-              resize: 'vertical',
-            }}
-          />
-          <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)', marginTop: '8px', textAlign: 'center', lineHeight: '1.5' }}>
-            Hệ thống AI sẽ tự động phân tích ảnh và yêu cầu của bạn để tạo bản vẽ phù hợp nhất.
-          </p>
+          ))}
         </div>
       ) : (
-        <div className="extra-assets-section-premium">
+        <>
+          <div className="upload-area" onClick={() => fileRef.current?.click()}>
+            {preview ? (
+              <>
+                <img src={preview} alt="Preview" />
+                <div className="change-image-overlay">
+                  <div className="change-image-btn">
+                    <RefreshCw size={20} />
+                    <span>Thay đổi ảnh</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="upload-circle"><Camera size={60} /></div>
+                <span className="upload-prompt">NHẤN ĐỂ CHỌN ẢNH CHÍNH</span>
+              </>
+            )}
+          </div>
+
+          <input type="file" accept="image/*" ref={fileRef} onChange={handleFile} hidden />
+
+          <div className="upload-guide-side">
+            <div className="guide-content-left">
+              <div className="guide-header-side">
+                <Zap size={24} color="#e2b170" />
+                <span>{systemContent.tips.title}</span>
+              </div>
+              <ul className="guide-list-side">
+                {systemContent.tips.items.map((it: string, idx: number) => <li key={idx}>{it}</li>)}
+              </ul>
+            </div>
+            <div className="guide-visual-right">
+              {basicModelUrl ? (
+                <div className="guide-template-side">
+                  <span className="guide-template-label">ẢNH MẪU ĐÃ CHỌN</span>
+                  <img src={basicModelUrl} alt="Selected Template" className="guide-template-img" />
+                </div>
+              ) : (
+                <img src={systemContent.tips.sampleImage} alt="Guide" className="guide-template-img" />
+              )}
+            </div>
+          </div>
+
+        </>
+      )}
+
+      {/* MÔ TẢ Ý TƯỞNG CHI TIẾT - LUÔN HIỆN */}
+      <div className="idea-desc-section" style={{ marginTop: '20px' }}>
+        <div className="idea-desc-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--accent)', fontWeight: 800 }}>
+            <CheckCircle2 size={32} />
+            <span style={{ fontSize: '1.6rem', fontWeight: 950, letterSpacing: '0.02em' }}>{t('upload_title_note', 'Mô tả ý tưởng chi tiết')}</span>
+          </div>
+        </div>
+        <textarea
+          className="luxe-textarea"
+          placeholder={getDynamicPlaceholder()}
+          value={note ? note.replace(/(\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?)/gi, '').replace(/^https?:\/\/\S+\n?/gm, '').trimStart() : ''}
+          onChange={(e) => {
+            if (onNoteChange) onNoteChange(e.target.value);
+          }}
+          style={{
+            width: '100%',
+            minHeight: '200px',
+            background: '#ffffff',
+            color: '#1a1a1a',
+            border: '1.5px solid #fed7aa',
+            borderRadius: '16px',
+            padding: '20px',
+            marginTop: '8px',
+            fontSize: '1.25rem',
+            lineHeight: '1.8',
+            fontFamily: 'inherit',
+            resize: 'vertical',
+          }}
+        />
+      </div>
+
+      {/* CONDITIONAL SECTION FOR ADDITIONAL ASSETS */}
+      {service !== 'Gói Cơ bản' && (
+        <div className="extra-assets-section-premium" style={{ marginTop: '20px' }}>
           <div className="extra-header-premium">
             <div className="extra-title-group">
               <Layers size={26} color="var(--accent)" />
               <h3>Hình ảnh, video và tài liệu liên quan</h3>
             </div>
             <p className="extra-desc-premium">
-              Gửi thêm để KTS hiểu ý bạn hơn: các góc chụp khác, video quay dự án, ảnh phác thảo tay, 
-              ảnh mẫu bạn yêu thích, video bạn mô tả yêu cầu trên giấy...
+              Gửi thêm ảnh, video, hoặc bản phác thảo để KTS hiểu rõ không gian và yêu cầu của bạn (áp dụng cho gói thiết kế chuyên nghiệp).
             </p>
           </div>
 
@@ -1192,9 +1642,9 @@ function UploadView({
         </div>
       )}
 
-      {preview && (
+      {(preview || (isInteriorCombo && interiorSiteImages && interiorSiteImages.some(img => img !== ''))) && (
         <button className="btn-primary main-cta" onClick={onProceed} style={{ marginTop: '20px', width: '100%' }}>
-          Dùng ảnh này để thiết kế <ArrowRight size={20} />
+          {t('upload_btn_next', 'Tiếp theo')} <ArrowRight size={20} />
         </button>
       )}
     </motion.div>
@@ -1435,55 +1885,38 @@ function ServiceView({
   onExtraAssetsChange: (assets: string[]) => void;
   systemContent: any;
 }) {
-  const lib = systemContent.library || ASSETS;
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [hoActiveCategory, setHoActiveCategory] = useState<string | null>(null);
+  const lib = (systemContent.library && Object.keys(systemContent.library).length > 0) ? systemContent.library : ASSETS;
+  const [hoActive, setHoActive] = useState<string | null>(null);
+  const [hoHienDaiActive, setHoHienDaiActive] = useState<string | null>(null);
+  const [tuongDaActive, setTuongDaActive] = useState<string | null>(null);
+  const [tuongCayActive, setTuongCayActive] = useState<string | null>(null);
+  const [farmActive, setFarmActive] = useState<string | null>(null);
+  const [cafeActive, setCafeActive] = useState<string | null>(null);
+  const [hoBoiActive, setHoBoiActive] = useState<string | null>(null);
   const mediaRef = useRef<HTMLInputElement>(null);
 
-  const selectedCategory = lib.THAC.find((cat: any) => 
-    cat.variants?.some((v: any) => v.id === selections.thac)
-  );
-
-  const handleThacSelect = (variantId: string) => {
-    onSelectionsChange({ ...selections, thac: variantId });
-    setActiveCategory(null); // Close the "tab"
+  const makeHandleSelect = (key: 'ho' | 'ho_hien_dai' | 'tuong_da' | 'tuong_cay' | 'farm' | 'cafe' | 'ho_boi', setActiveFn: (v: string | null) => void) => (variantId: string) => {
+    onSelectionsChange({ ...selections, [key]: variantId });
+    setActiveFn(null);
   };
-
-  const handleResetThac = (e: React.MouseEvent) => {
+  const makeHandleReset = (key: 'ho' | 'ho_hien_dai' | 'tuong_da' | 'tuong_cay' | 'farm' | 'cafe' | 'ho_boi') => (e: React.MouseEvent) => {
     e.stopPropagation();
-    onSelectionsChange({ ...selections, thac: undefined });
+    onSelectionsChange({ ...selections, [key]: undefined });
   };
+  const makeSelectedCategory = (libKey: string, selKey: keyof Selection) =>
+    (lib[libKey] || []).find((cat: any) => cat.variants?.some((v: any) => v.id === selections[selKey]));
 
-  const selectedHoCategory = (lib.HO || []).find((cat: any) => 
-    cat.variants?.some((v: any) => v.id === selections.ho)
-  );
-
-  const handleHoSelect = (variantId: string) => {
-    onSelectionsChange({ ...selections, ho: variantId });
-    setHoActiveCategory(null);
-  };
-
-  const handleResetHo = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onSelectionsChange({ ...selections, ho: undefined });
-  };
-
-  const toggleKe = (id: string) => {
-    const current = selections.ke || [];
-    const updated = current.includes(id) ? current.filter(k => k !== id) : [...current, id];
-    onSelectionsChange({ ...selections, ke: updated });
-  };
-
-  const toggleCanh = (id: string) => {
-    const current = selections.canh || [];
-    const updated = current.includes(id) ? current.filter(c => c !== id) : [...current, id];
-    onSelectionsChange({ ...selections, canh: updated });
-  };
+  const selectedHo = makeSelectedCategory('HO', 'ho');
+  const selectedHoHienDai = makeSelectedCategory('HO_HIEN_DAI', 'ho_hien_dai');
+  const selectedTuongDa = makeSelectedCategory('TUONG_DA', 'tuong_da');
+  const selectedTuongCay = makeSelectedCategory('TUONG_CAY', 'tuong_cay');
+  const selectedFarm = makeSelectedCategory('FARM', 'farm');
+  const selectedCafe = makeSelectedCategory('CAFE', 'cafe');
+  const selectedHoBoi = makeSelectedCategory('HO_BOI', 'ho_boi');
 
   const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    
     const promises = Array.from(files).map(file => {
       return new Promise<string>((resolve) => {
         const reader = new FileReader();
@@ -1491,7 +1924,6 @@ function ServiceView({
         reader.readAsDataURL(file);
       });
     });
-
     Promise.all(promises).then(results => {
       onExtraAssetsChange([...extraAssets, ...results]);
     });
@@ -1501,129 +1933,29 @@ function ServiceView({
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view service-view">
       <div className="selection-panel">
-        <div className="title-group" style={{textAlign: 'center', marginBottom: '2.5rem'}}>
-          <h2 style={{ fontSize: '2.2rem' }}>Chọn Mẫu Thiết Kế</h2>
-          <p style={{ fontSize: '1.1rem' }}>Tùy chỉnh phong cách đá và các hạng mục trang trí cho công trình.</p>
+        <div className="title-group" style={{textAlign: 'center', marginBottom: '2.5rem', marginTop: '20px'}}>
+          <h2 style={{ fontSize: '2.2rem' }}>Chọn mẫu thiết kế</h2>
+          <p style={{ fontSize: '1.1rem' }}>Hãy chọn một danh mục để thực hiện dự án của bạn.</p>
         </div>
+
+        {/* === 1. HỒ KOI SÂN VƯỜN CỔ ĐIỂN === */}
         <section className="asset-group">
           <div className="asset-group-header">
-            <h4>1. Chọn Kiểu Thác Nước</h4>
+            <h4>1. Hồ Koi Sân Vườn Cổ Điển</h4>
           </div>
-
           <AnimatePresence mode="wait">
-            {!activeCategory ? (
-              <motion.div 
-                key="cats"
-                initial={{ opacity: 0, x: -20 }} 
-                animate={{ opacity: 1, x: 0 }} 
-                exit={{ opacity: 0, x: 20 }}
-                className="category-grid"
-              >
-                {lib.THAC.map((cat: any) => {
-                  const isSelectedCat = selectedCategory?.id === cat.id;
-                  const hasSelectionGlobal = !!selections.thac;
-                  const isLocked = hasSelectionGlobal && !isSelectedCat;
-                  const displayImg = isSelectedCat 
-                    ? cat.variants?.find((v: any) => v.id === selections.thac)?.url 
-                    : cat.url;
-
-                  return (
-                    <button 
-                      key={cat.id} 
-                      className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`}
-                      onClick={() => !isLocked && setActiveCategory(cat.id)}
-                      disabled={isLocked}
-                    >
-                      <div className="cat-img">
-                        <img src={displayImg} alt={cat.name} />
-                        {isSelectedCat && (
-                          <div className="change-badge" onClick={handleResetThac}>
-                            <RefreshCcw size={12} /> Thay đổi
-                          </div>
-                        )}
-                      </div>
-                      <div className="picked-label-container">
-                        <span>{isSelectedCat ? cat.variants?.find((v: any) => v.id === selections.thac)?.name : cat.name}</span>
-                        {isSelectedCat && <div className="picked-status-mini"><CheckCircle2 size={14} /> Đã chọn</div>}
-                      </div>
-                    </button>
-                  );
-                })}
-              </motion.div>
-            ) : (
-              <motion.div 
-                key="vars"
-                initial={{ opacity: 0, x: 20 }} 
-                animate={{ opacity: 1, x: 0 }} 
-                exit={{ opacity: 0, x: -20 }}
-                className="variant-selection-inline"
-              >
-                <div className="inline-header">
-                  <button className="btn-back-premium" onClick={() => setActiveCategory(null)}>
-                    <ChevronLeft size={16} /> Quay lại chọn kiểu đá
-                  </button>
-                  <h5>Mẫu {lib.THAC.find((c: any) => c.id === activeCategory)?.name}</h5>
-                </div>
-                <div className="category-grid">
-                  {lib.THAC.find((c: any) => c.id === activeCategory)?.variants?.map((v: any) => (
-                    <button 
-                      key={v.id} 
-                      className={`category-card ${selections.thac === v.id ? 'picked' : ''}`}
-                      onClick={() => handleThacSelect(v.id)}
-                    >
-                      <div className="cat-img">
-                        <img src={v.url} alt={v.name} />
-                        {selections.thac === v.id && (
-                          <div className="check-badge-inline">
-                            <CheckCircle2 size={16} />
-                          </div>
-                        )}
-                      </div>
-                      <span>{v.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </section>
-
-        <section className="asset-group">
-          <div className="asset-group-header">
-            <h4>2. Chọn Kiểu Hồ Koi (Mẫu hồ)</h4>
-          </div>
-
-          <AnimatePresence mode="wait">
-            {!hoActiveCategory ? (
-              <motion.div 
-                key="ho-cats"
-                initial={{ opacity: 0, x: -20 }} 
-                animate={{ opacity: 1, x: 0 }} 
-                exit={{ opacity: 0, x: 20 }}
-                className="category-grid"
-              >
+            {!hoActive ? (
+              <motion.div key="ho-cats" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="category-grid">
                 {(lib.HO || []).map((cat: any) => {
-                  const isSelectedCat = selectedHoCategory?.id === cat.id;
-                  const hasSelectionGlobal = !!selections.ho;
-                  const isLocked = hasSelectionGlobal && !isSelectedCat;
-                  const displayImg = isSelectedCat 
-                    ? cat.variants?.find((v: any) => v.id === selections.ho)?.url 
-                    : cat.url;
-
+                  const isSelectedCat = selectedHo?.id === cat.id;
+                  const hasSel = !!selections.ho;
+                  const isLocked = hasSel && !isSelectedCat;
+                  const displayImg = isSelectedCat ? cat.variants?.find((v: any) => v.id === selections.ho)?.url : cat.url;
                   return (
-                    <button 
-                      key={cat.id} 
-                      className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`}
-                      onClick={() => !isLocked && setHoActiveCategory(cat.id)}
-                      disabled={isLocked}
-                    >
+                    <button key={cat.id} className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`} onClick={() => !isLocked && setHoActive(cat.id)} disabled={isLocked}>
                       <div className="cat-img">
                         <img src={displayImg} alt={cat.name} />
-                        {isSelectedCat && (
-                          <div className="change-badge" onClick={handleResetHo}>
-                            <RefreshCcw size={12} /> Thay đổi
-                          </div>
-                        )}
+                        {isSelectedCat && <div className="change-badge" onClick={(e) => makeHandleReset('ho')(e as any)}><RefreshCcw size={12} /> Thay đổi</div>}
                       </div>
                       <div className="picked-label-container">
                         <span>{isSelectedCat ? cat.variants?.find((v: any) => v.id === selections.ho)?.name : cat.name}</span>
@@ -1634,33 +1966,17 @@ function ServiceView({
                 })}
               </motion.div>
             ) : (
-              <motion.div 
-                key="ho-vars"
-                initial={{ opacity: 0, x: 20 }} 
-                animate={{ opacity: 1, x: 0 }} 
-                exit={{ opacity: 0, x: -20 }}
-                className="variant-selection-inline"
-              >
+              <motion.div key="ho-vars" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="variant-selection-inline">
                 <div className="inline-header">
-                  <button className="btn-back-premium" onClick={() => setHoActiveCategory(null)}>
-                    <ChevronLeft size={16} /> Quay lại chọn kiểu hồ
-                  </button>
-                  <h5>Mẫu {(lib.HO || []).find((c: any) => c.id === hoActiveCategory)?.name}</h5>
+                  <button className="btn-back-premium" onClick={() => setHoActive(null)}><ChevronLeft size={16} /> Quay lại</button>
+                  <h5>Mẫu {(lib.HO || []).find((c: any) => c.id === hoActive)?.name}</h5>
                 </div>
                 <div className="category-grid">
-                  {(lib.HO || []).find((c: any) => c.id === hoActiveCategory)?.variants?.map((v: any) => (
-                    <button 
-                      key={v.id} 
-                      className={`category-card ${selections.ho === v.id ? 'picked' : ''}`}
-                      onClick={() => handleHoSelect(v.id)}
-                    >
+                  {(lib.HO || []).find((c: any) => c.id === hoActive)?.variants?.map((v: any) => (
+                    <button key={v.id} className={`category-card ${selections.ho === v.id ? 'picked' : ''}`} onClick={() => makeHandleSelect('ho', setHoActive)(v.id)}>
                       <div className="cat-img">
                         <img src={v.url} alt={v.name} />
-                        {selections.ho === v.id && (
-                          <div className="check-badge-inline">
-                            <CheckCircle2 size={16} />
-                          </div>
-                        )}
+                        {selections.ho === v.id && <div className="check-badge-inline"><CheckCircle2 size={16} /></div>}
                       </div>
                       <span>{v.name}</span>
                     </button>
@@ -1671,45 +1987,307 @@ function ServiceView({
           </AnimatePresence>
         </section>
 
+        {/* === 2. HỒ KOI SÂN VƯỜN HIỆN ĐẠI === */}
         <section className="asset-group">
           <div className="asset-group-header">
-            <h4>3. Mẫu Kè Đá (Bờ hồ)</h4>
+            <h4>2. Hồ Koi Sân Vườn Hiện Đại</h4>
           </div>
-          <div className="checkbox-list">
-            {lib.KE.map((item: any) => (
-              <label key={item.id} className={`checkbox-item ${(selections.ke || []).includes(item.id) ? 'active' : ''}`}>
-                <div className="check-box" onClick={() => toggleKe(item.id)}>
-                  {(selections.ke || []).includes(item.id) && <CheckCircle2 size={16} />}
+          <AnimatePresence mode="wait">
+            {!hoHienDaiActive ? (
+              <motion.div key="ho-hd-cats" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="category-grid">
+                {(lib.HO_HIEN_DAI || []).map((cat: any) => {
+                  const isSelectedCat = selectedHoHienDai?.id === cat.id;
+                  const hasSel = !!selections.ho_hien_dai;
+                  const isLocked = hasSel && !isSelectedCat;
+                  const displayImg = isSelectedCat ? cat.variants?.find((v: any) => v.id === selections.ho_hien_dai)?.url : cat.url;
+                  return (
+                    <button key={cat.id} className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`} onClick={() => !isLocked && setHoHienDaiActive(cat.id)} disabled={isLocked}>
+                      <div className="cat-img">
+                        <img src={displayImg} alt={cat.name} />
+                        {isSelectedCat && <div className="change-badge" onClick={(e) => makeHandleReset('ho_hien_dai')(e as any)}><RefreshCcw size={12} /> Thay đổi</div>}
+                      </div>
+                      <div className="picked-label-container">
+                        <span>{isSelectedCat ? cat.variants?.find((v: any) => v.id === selections.ho_hien_dai)?.name : cat.name}</span>
+                        {isSelectedCat && <div className="picked-status-mini"><CheckCircle2 size={14} /> Đã chọn</div>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </motion.div>
+            ) : (
+              <motion.div key="ho-hd-vars" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="variant-selection-inline">
+                <div className="inline-header">
+                  <button className="btn-back-premium" onClick={() => setHoHienDaiActive(null)}><ChevronLeft size={16} /> Quay lại</button>
+                  <h5>Mẫu {(lib.HO_HIEN_DAI || []).find((c: any) => c.id === hoHienDaiActive)?.name}</h5>
                 </div>
-                <span onClick={() => toggleKe(item.id)}>{item.name}</span>
-              </label>
-            ))}
-          </div>
+                <div className="category-grid">
+                  {(lib.HO_HIEN_DAI || []).find((c: any) => c.id === hoHienDaiActive)?.variants?.map((v: any) => (
+                    <button key={v.id} className={`category-card ${selections.ho_hien_dai === v.id ? 'picked' : ''}`} onClick={() => makeHandleSelect('ho_hien_dai', setHoHienDaiActive)(v.id)}>
+                      <div className="cat-img">
+                        <img src={v.url} alt={v.name} />
+                        {selections.ho_hien_dai === v.id && <div className="check-badge-inline"><CheckCircle2 size={16} /></div>}
+                      </div>
+                      <span>{v.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </section>
 
+        {/* === 2. TƯỜNG ĐÁ TRANG TRÍ === */}
         <section className="asset-group">
           <div className="asset-group-header">
-            <h4>4. Tiểu Cảnh & Cây Xanh</h4>
+            <h4>3. Tường Đá Trang Trí</h4>
           </div>
-          <div className="checkbox-list">
-            {lib.CANH.map((item: any) => (
-              <label key={item.id} className={`checkbox-item ${(selections.canh || []).includes(item.id) ? 'active' : ''}`}>
-                <div className="check-box" onClick={() => toggleCanh(item.id)}>
-                  {(selections.canh || []).includes(item.id) && <CheckCircle2 size={16} />}
+          <AnimatePresence mode="wait">
+            {!tuongDaActive ? (
+              <motion.div key="td-cats" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="category-grid">
+                {(lib.TUONG_DA || []).map((cat: any) => {
+                  const isSelectedCat = selectedTuongDa?.id === cat.id;
+                  const hasSel = !!selections.tuong_da;
+                  const isLocked = hasSel && !isSelectedCat;
+                  const displayImg = isSelectedCat ? cat.variants?.find((v: any) => v.id === selections.tuong_da)?.url : cat.url;
+                  return (
+                    <button key={cat.id} className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`} onClick={() => !isLocked && setTuongDaActive(cat.id)} disabled={isLocked}>
+                      <div className="cat-img">
+                        <img src={displayImg} alt={cat.name} />
+                        {isSelectedCat && <div className="change-badge" onClick={(e) => makeHandleReset('tuong_da')(e as any)}><RefreshCcw size={12} /> Thay đổi</div>}
+                      </div>
+                      <div className="picked-label-container">
+                        <span>{isSelectedCat ? cat.variants?.find((v: any) => v.id === selections.tuong_da)?.name : cat.name}</span>
+                        {isSelectedCat && <div className="picked-status-mini"><CheckCircle2 size={14} /> Đã chọn</div>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </motion.div>
+            ) : (
+              <motion.div key="td-vars" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="variant-selection-inline">
+                <div className="inline-header">
+                  <button className="btn-back-premium" onClick={() => setTuongDaActive(null)}><ChevronLeft size={16} /> Quay lại</button>
+                  <h5>Mẫu {(lib.TUONG_DA || []).find((c: any) => c.id === tuongDaActive)?.name}</h5>
                 </div>
-                <span onClick={() => toggleCanh(item.id)}>{item.name}</span>
-              </label>
-            ))}
+                <div className="category-grid">
+                  {(lib.TUONG_DA || []).find((c: any) => c.id === tuongDaActive)?.variants?.map((v: any) => (
+                    <button key={v.id} className={`category-card ${selections.tuong_da === v.id ? 'picked' : ''}`} onClick={() => makeHandleSelect('tuong_da', setTuongDaActive)(v.id)}>
+                      <div className="cat-img">
+                        <img src={v.url} alt={v.name} />
+                        {selections.tuong_da === v.id && <div className="check-badge-inline"><CheckCircle2 size={16} /></div>}
+                      </div>
+                      <span>{v.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
+
+        {/* === 3. TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI === */}
+        <section className="asset-group">
+          <div className="asset-group-header">
+            <h4>4. Tường Cây & Vườn Nhiệt Đới</h4>
           </div>
+          <AnimatePresence mode="wait">
+            {!tuongCayActive ? (
+              <motion.div key="tc-cats" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="category-grid">
+                {(lib.TUONG_CAY || []).map((cat: any) => {
+                  const isSelectedCat = selectedTuongCay?.id === cat.id;
+                  const hasSel = !!selections.tuong_cay;
+                  const isLocked = hasSel && !isSelectedCat;
+                  const displayImg = isSelectedCat ? cat.variants?.find((v: any) => v.id === selections.tuong_cay)?.url : cat.url;
+                  return (
+                    <button key={cat.id} className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`} onClick={() => !isLocked && setTuongCayActive(cat.id)} disabled={isLocked}>
+                      <div className="cat-img">
+                        <img src={displayImg} alt={cat.name} />
+                        {isSelectedCat && <div className="change-badge" onClick={(e) => makeHandleReset('tuong_cay')(e as any)}><RefreshCcw size={12} /> Thay đổi</div>}
+                      </div>
+                      <div className="picked-label-container">
+                        <span>{isSelectedCat ? cat.variants?.find((v: any) => v.id === selections.tuong_cay)?.name : cat.name}</span>
+                        {isSelectedCat && <div className="picked-status-mini"><CheckCircle2 size={14} /> Đã chọn</div>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </motion.div>
+            ) : (
+              <motion.div key="tc-vars" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="variant-selection-inline">
+                <div className="inline-header">
+                  <button className="btn-back-premium" onClick={() => setTuongCayActive(null)}><ChevronLeft size={16} /> Quay lại</button>
+                  <h5>Mẫu {(lib.TUONG_CAY || []).find((c: any) => c.id === tuongCayActive)?.name}</h5>
+                </div>
+                <div className="category-grid">
+                  {(lib.TUONG_CAY || []).find((c: any) => c.id === tuongCayActive)?.variants?.map((v: any) => (
+                    <button key={v.id} className={`category-card ${selections.tuong_cay === v.id ? 'picked' : ''}`} onClick={() => makeHandleSelect('tuong_cay', setTuongCayActive)(v.id)}>
+                      <div className="cat-img">
+                        <img src={v.url} alt={v.name} />
+                        {selections.tuong_cay === v.id && <div className="check-badge-inline"><CheckCircle2 size={16} /></div>}
+                      </div>
+                      <span>{v.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
+
+        {/* === 4. QUY HOẠCH FARM & DU LỊCH === */}
+        <section className="asset-group">
+          <div className="asset-group-header">
+            <h4>5. Quy Hoạch Farm & Du Lịch</h4>
+          </div>
+          <AnimatePresence mode="wait">
+            {!farmActive ? (
+              <motion.div key="farm-cats" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="category-grid">
+                {(lib.FARM || []).map((cat: any) => {
+                  const isSelectedCat = selectedFarm?.id === cat.id;
+                  const hasSel = !!selections.farm;
+                  const isLocked = hasSel && !isSelectedCat;
+                  const displayImg = isSelectedCat ? cat.variants?.find((v: any) => v.id === selections.farm)?.url : cat.url;
+                  return (
+                    <button key={cat.id} className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`} onClick={() => !isLocked && setFarmActive(cat.id)} disabled={isLocked}>
+                      <div className="cat-img">
+                        <img src={displayImg} alt={cat.name} />
+                        {isSelectedCat && <div className="change-badge" onClick={(e) => makeHandleReset('farm')(e as any)}><RefreshCcw size={12} /> Thay đổi</div>}
+                      </div>
+                      <div className="picked-label-container">
+                        <span>{isSelectedCat ? cat.variants?.find((v: any) => v.id === selections.farm)?.name : cat.name}</span>
+                        {isSelectedCat && <div className="picked-status-mini"><CheckCircle2 size={14} /> Đã chọn</div>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </motion.div>
+            ) : (
+              <motion.div key="farm-vars" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="variant-selection-inline">
+                <div className="inline-header">
+                  <button className="btn-back-premium" onClick={() => setFarmActive(null)}><ChevronLeft size={16} /> Quay lại</button>
+                  <h5>Mẫu {(lib.FARM || []).find((c: any) => c.id === farmActive)?.name}</h5>
+                </div>
+                <div className="category-grid">
+                  {(lib.FARM || []).find((c: any) => c.id === farmActive)?.variants?.map((v: any) => (
+                    <button key={v.id} className={`category-card ${selections.farm === v.id ? 'picked' : ''}`} onClick={() => makeHandleSelect('farm', setFarmActive)(v.id)}>
+                      <div className="cat-img">
+                        <img src={v.url} alt={v.name} />
+                        {selections.farm === v.id && <div className="check-badge-inline"><CheckCircle2 size={16} /></div>}
+                      </div>
+                      <span>{v.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
+
+        {/* === 5. CẢNH QUAN QUÁN CÀ PHÊ === */}
+        <section className="asset-group">
+          <div className="asset-group-header">
+            <h4>6. Cảnh Quan Quán Cà Phê</h4>
+          </div>
+          <AnimatePresence mode="wait">
+            {!cafeActive ? (
+              <motion.div key="cafe-cats" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="category-grid">
+                {(lib.CAFE || []).map((cat: any) => {
+                  const isSelectedCat = selectedCafe?.id === cat.id;
+                  const hasSel = !!selections.cafe;
+                  const isLocked = hasSel && !isSelectedCat;
+                  const displayImg = isSelectedCat ? cat.variants?.find((v: any) => v.id === selections.cafe)?.url : cat.url;
+                  return (
+                    <button key={cat.id} className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`} onClick={() => !isLocked && setCafeActive(cat.id)} disabled={isLocked}>
+                      <div className="cat-img">
+                        <img src={displayImg} alt={cat.name} />
+                        {isSelectedCat && <div className="change-badge" onClick={(e) => makeHandleReset('cafe')(e as any)}><RefreshCcw size={12} /> Thay đổi</div>}
+                      </div>
+                      <div className="picked-label-container">
+                        <span>{isSelectedCat ? cat.variants?.find((v: any) => v.id === selections.cafe)?.name : cat.name}</span>
+                        {isSelectedCat && <div className="picked-status-mini"><CheckCircle2 size={14} /> Đã chọn</div>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </motion.div>
+            ) : (
+              <motion.div key="cafe-vars" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="variant-selection-inline">
+                <div className="inline-header">
+                  <button className="btn-back-premium" onClick={() => setCafeActive(null)}><ChevronLeft size={16} /> Quay lại</button>
+                  <h5>Mẫu {(lib.CAFE || []).find((c: any) => c.id === cafeActive)?.name}</h5>
+                </div>
+                <div className="category-grid">
+                  {(lib.CAFE || []).find((c: any) => c.id === cafeActive)?.variants?.map((v: any) => (
+                    <button key={v.id} className={`category-card ${selections.cafe === v.id ? 'picked' : ''}`} onClick={() => makeHandleSelect('cafe', setCafeActive)(v.id)}>
+                      <div className="cat-img">
+                        <img src={v.url} alt={v.name} />
+                        {selections.cafe === v.id && <div className="check-badge-inline"><CheckCircle2 size={16} /></div>}
+                      </div>
+                      <span>{v.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
+
+        {/* === 6. HỒ BƠI THIÊN NHIÊN === */}
+        <section className="asset-group">
+          <div className="asset-group-header">
+            <h4>7. Hồ Bơi Thiên Nhiên</h4>
+          </div>
+          <AnimatePresence mode="wait">
+            {!hoBoiActive ? (
+              <motion.div key="hb-cats" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="category-grid">
+                {(lib.HO_BOI || []).map((cat: any) => {
+                  const isSelectedCat = selectedHoBoi?.id === cat.id;
+                  const hasSel = !!selections.ho_boi;
+                  const isLocked = hasSel && !isSelectedCat;
+                  const displayImg = isSelectedCat ? cat.variants?.find((v: any) => v.id === selections.ho_boi)?.url : cat.url;
+                  return (
+                    <button key={cat.id} className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`} onClick={() => !isLocked && setHoBoiActive(cat.id)} disabled={isLocked}>
+                      <div className="cat-img">
+                        <img src={displayImg} alt={cat.name} />
+                        {isSelectedCat && <div className="change-badge" onClick={(e) => makeHandleReset('ho_boi')(e as any)}><RefreshCcw size={12} /> Thay đổi</div>}
+                      </div>
+                      <div className="picked-label-container">
+                        <span>{isSelectedCat ? cat.variants?.find((v: any) => v.id === selections.ho_boi)?.name : cat.name}</span>
+                        {isSelectedCat && <div className="picked-status-mini"><CheckCircle2 size={14} /> Đã chọn</div>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </motion.div>
+            ) : (
+              <motion.div key="hb-vars" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="variant-selection-inline">
+                <div className="inline-header">
+                  <button className="btn-back-premium" onClick={() => setHoBoiActive(null)}><ChevronLeft size={16} /> Quay lại</button>
+                  <h5>Mẫu {(lib.HO_BOI || []).find((c: any) => c.id === hoBoiActive)?.name}</h5>
+                </div>
+                <div className="category-grid">
+                  {(lib.HO_BOI || []).find((c: any) => c.id === hoBoiActive)?.variants?.map((v: any) => (
+                    <button key={v.id} className={`category-card ${selections.ho_boi === v.id ? 'picked' : ''}`} onClick={() => makeHandleSelect('ho_boi', setHoBoiActive)(v.id)}>
+                      <div className="cat-img">
+                        <img src={v.url} alt={v.name} />
+                        {selections.ho_boi === v.id && <div className="check-badge-inline"><CheckCircle2 size={16} /></div>}
+                      </div>
+                      <span>{v.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </section>
 
         <section className="asset-group" style={{ marginTop: '20px' }}>
           <div className="asset-group-header">
-            <h4>5. Mô tả ý tưởng chi tiết (Khuyến nghị)</h4>
+            <h4>Mô tả ý tưởng chi tiết (Khuyến nghị)</h4>
           </div>
           <div className="customer-request-area-v2">
-            <textarea 
-              placeholder="Anh/Chị hãy mô tả càng chi tiết càng tốt để KTS nắm rõ ý tưởng (Ví dụ: Phong cách Nhật hay Hiện đại, thác cao bao nhiêu, đá bo viền dày hay mỏng, muốn trồng bao nhiêu cây tùng...)"
+            <textarea
+              placeholder="Anh/Chị hãy mô tả càng chi tiết càng tốt để KTS nắm rõ ý tưởng..."
               value={note}
               onChange={e => onNoteChange(e.target.value)}
             />
@@ -1718,7 +2296,7 @@ function ServiceView({
 
         <section className="asset-group">
           <div className="asset-group-header-stacked">
-            <h4>6. Gửi hình ảnh/video thực tế</h4>
+            <h4>Gửi hình ảnh/video thực tế</h4>
             <div className="section-hint">
               Hãy đính kèm video/hình ảnh hiện trạng. <strong>Lưu ý:</strong> Anh/Chị hãy viết thêm yêu cầu cụ thể vào ô <strong>Mô tả chi tiết</strong> bên trên để KTS nắm rõ nhất ý tưởng của mình.
             </div>
@@ -1745,37 +2323,87 @@ function ServiceView({
   );
 }
 
-function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, onSelect: (url: string, category?: string) => void }) {
-  const [subStep, setSubStep] = useState<'category' | 'gallery'>('category');
+function BasicSelectionView({ 
+  systemContent, onSelect, mainBranch, subStep, setSubStep, onBack, 
+  selectedCategory, onCategoryChange 
+}: { 
+  systemContent: any, 
+  onSelect: (url: string, category?: string, images?: string[]) => void, 
+  mainBranch: MainBranch, 
+  subStep: 'category' | 'gallery', 
+  setSubStep: (v: 'category' | 'gallery') => void, 
+  onBack?: () => void,
+  selectedCategory: string,
+  onCategoryChange: (cat: string) => void
+}) {
+  const t = (key: string, defaultVal: string) => systemContent.uiText?.[key] || defaultVal;
   const [selectedImage, setSelectedImage] = useState<any>(null);
-  const [selectedCategory, setSelectedCategory] = useState('ho_co_dien');
 
-  const categories = [
-    { id: 'ho_co_dien', name: 'HỒ KOI SÂN VƯỜN CỔ ĐIỂN', icon: <Waves size={32} />, active: true, libraryKey: 'HO' },
-    { id: 'ho_hien_dai', name: 'HỒ KOI SÂN VƯỜN HIỆN ĐẠI', icon: <Monitor size={32} />, active: true, libraryKey: 'HO_HIEN_DAI' },
-    { id: 'tuong_da', name: 'TƯỜNG ĐÁ NHÂN TẠO', icon: <Layers size={32} />, active: true, libraryKey: 'TUONG_DA' },
-    { id: 'cafe_san_vuon', name: 'CÀ PHÊ SÂN VƯỜN', icon: <Crown size={32} />, active: true, libraryKey: 'CAFE_SAN_VUON' }
-  ];
+  const getBranchCategories = (branch: MainBranch) => {
+    if (branch === 'architecture') return [
+      { id: 'nha_pho', name: t('cat_architecture_nha_pho', 'Nhà phố hiện đại'), thumb: '/assets/Kiến trúc/1. NHA PHO_THUMB.png', active: true, libraryKey: 'NHA_PHO' },
+      { id: 'biet_thu', name: t('cat_architecture_biet_thu', 'Biệt thự sang trọng'), thumb: '/assets/Kiến trúc/2. BIET THU_THUMB.png', active: true, libraryKey: 'BIET_THU' },
+      { id: 'nha_cap_4', name: t('cat_architecture_nha_cap_4', 'Nhà cấp 4 tiện nghi'), thumb: '/assets/Kiến trúc/3. NHA CAP 4_THUMB.png', active: true, libraryKey: 'NHA_CAP_4' },
+      { id: 'nha_vuon', name: t('cat_architecture_nha_vuon', 'Nhà vườn nghỉ dưỡng'), thumb: '/assets/Kiến trúc/4. NHA VUON_THUMB.png', active: true, libraryKey: 'NHA_VUON' },
+      { id: 'nha_tien_che', name: t('cat_architecture_nha_tien_che', 'Nhà tiền chế độc đáo'), thumb: '/assets/Kiến trúc/5. NHA TIEN CHE_THUMB.png', active: true, libraryKey: 'NHA_TIEN_CHE' },
+    ];
+    if (branch === 'interior') return [
+      { id: 'hien_dai', name: t('cat_interior_hien_dai', 'Nội thất hiện đại'), thumb: '/assets/Nội thất/1. HIEN DAI _ THUMB.png', active: true, libraryKey: 'HIEN_DAI' },
+      { id: 'tan_co_dien', name: t('cat_interior_tan_co_dien', 'Tân cổ điển quý phái'), thumb: '/assets/Nội thất/2. TAN CO DIEN_THUMB.png', active: true, libraryKey: 'TAN_CO_DIEN' },
+      { id: 'indochine', name: t('cat_interior_indochine', 'Phong cách Indochine'), thumb: '/assets/Nội thất/3. INDOCHINE_THUMB.png', active: true, libraryKey: 'INDOCHINE' },
+      { id: 'wabi_sabi', name: t('cat_interior_wabi_sabi', 'Wabi sabi tối giản'), thumb: '/assets/Nội thất/4. WABI SABI_THUMB.png', active: true, libraryKey: 'WABI_SABI' },
+      { id: 'tan_co_dien_go', name: t('cat_interior_tan_co_dien_go', 'Tân cổ điển gỗ'), thumb: '/assets/Nội thất/5. NOI THAT GO_THUMB.png', active: true, libraryKey: 'TAN_CO_DIEN_GO' },
+    ];
+    return [
+      { id: 'ho', name: t('cat_landscape_ho', 'Hồ koi sân vườn cổ điển'), thumb: '/assets/Cảnh quan/1. HO KOI SAN VUON CO DIEN_THUMB.png', active: true, libraryKey: 'HO' },
+      { id: 'ho_hien_dai', name: t('cat_landscape_ho_hien_dai', 'Hồ koi sân vườn hiện đại'), thumb: '/assets/Cảnh quan/2. HO KOI SAN VUON HIEN DAI_THUMB.png', active: true, libraryKey: 'HO_HIEN_DAI' },
+      { id: 'tuong_da', name: t('cat_landscape_tuong_da', 'Tường đá trang trí'), thumb: '/assets/Cảnh quan/3. TUONG DA TRANG TRI _THUMB.png', active: true, libraryKey: 'TUONG_DA' },
+      { id: 'tuong_cay', name: t('cat_landscape_tuong_cay', 'Tường cây & vườn nhiệt đới'), thumb: '/assets/Cảnh quan/4. TUONG CAY_THUMB.png', active: true, libraryKey: 'TUONG_CAY' },
+      { id: 'farm', name: t('cat_landscape_farm', 'Quy hoạch farm & du lịch'), thumb: '/assets/Cảnh quan/5. QUY HOACH FARM_THUMB.png', active: true, libraryKey: 'FARM' },
+      { id: 'cafe', name: t('cat_landscape_cafe', 'Cảnh quan quán cà phê'), thumb: '/assets/Cảnh quan/6. CANH QUAN CA PHE_THUMB.png', active: true, libraryKey: 'CAFE' },
+      { id: 'ho_boi', name: t('cat_landscape_ho_boi', 'Hồ bơi thiên nhiên'), thumb: '/assets/Cảnh quan/7. HO BOI THIEN NHIEN_THUMB.png', active: true, libraryKey: 'HO_BOI' }
+    ];
+  };
 
-  // Lấy biến thể từ thư viện theo category đã chọn
-  const lib = systemContent.library || ASSETS;
+  const categories = getBranchCategories(mainBranch);
+  
+  useEffect(() => {
+    if (categories.length > 0 && !selectedCategory) {
+      onCategoryChange(categories[0].id);
+    }
+  }, [mainBranch, categories, selectedCategory, onCategoryChange]);
+
+  const lib = (systemContent.library && Object.keys(systemContent.library).length > 0) ? systemContent.library : ASSETS;
   const currentCat = categories.find(c => c.id === selectedCategory);
-  const libraryKey = currentCat?.libraryKey || 'HO';
+  const libraryKey = currentCat?.libraryKey || categories[0]?.libraryKey || 'HO';
   const galleryImages: any[] = [];
   (lib[libraryKey] || []).forEach((cat: any) => {
-    (cat.variants || []).forEach((v: any) => {
-      galleryImages.push(v);
-    });
+    if (cat.variants && cat.variants.length > 0) {
+      cat.variants.forEach((v: any) => {
+        galleryImages.push({ ...v, parentName: cat.name });
+      });
+    } else {
+      // Nếu không có biến thể, dùng chính mẫu cha làm mục gallery
+      galleryImages.push(cat);
+    }
   });
 
+
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="view basic-selection-view">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="view basic-selection-view nav-offset" style={{ alignItems: 'flex-start' }}>
        <div className="selection-panel">
-          <div className="title-group" style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <h2 style={{ fontSize: '2.5rem', fontWeight: 900 }}>{subStep === 'category' ? 'Phong Cách Bạn Muốn?' : 'Chọn Mẫu Bạn Ưng Ý Nhất'}</h2>
-            <p style={{ fontSize: '1.2rem', color: 'rgba(255,255,255,0.6)' }}>
-              {subStep === 'category' ? 'Hãy chọn một danh mục để xem các mẫu thiết kế thực tế.' : 'Nhấp vào hình ảnh để xem chi tiết và chốt mẫu yêu thích.'}
-            </p>
+          <div className="title-group" style={{ textAlign: 'left', marginBottom: '1.5rem', paddingLeft: '10px', width: '100%', marginTop: '40px' }}>
+            <h2 style={{ fontSize: '2.5rem', fontWeight: 900 }}>
+              {subStep === 'category' 
+                ? t('selection_title_cats', 'Chọn mẫu thiết kế') 
+                : t('selection_title_gallery', 'Nhấn chọn mẫu phù hợp')
+              }
+            </h2>
+            {subStep === 'category' && (
+              <p style={{ fontSize: '1.2rem', color: 'rgba(255,255,255,0.6)' }}>
+                {t('selection_sub_cats', 'Hãy chọn một danh mục để thực hiện dự án của bạn.')}
+              </p>
+            )}
           </div>
 
           <AnimatePresence mode="wait">
@@ -1793,11 +2421,15 @@ function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, o
                     className={`basic-cat-card ${!cat.active ? 'disabled' : ''}`}
                     onClick={() => {
                       if (!cat.active) return;
-                      setSelectedCategory(cat.id);
+                      onCategoryChange(cat.id);
                       setSubStep('gallery');
                     }}
                   >
-                    <div className="cat-icon-orb">{cat.icon}</div>
+                    {cat.thumb ? (
+                      <img src={cat.thumb} alt={cat.name} className="cat-thumb" />
+                    ) : (
+                      <div className="cat-icon-orb">{(cat as any).icon}</div>
+                    )}
                     <h3>{cat.name}</h3>
                     {!cat.active && <span className="cat-coming-soon">Sắp ra mắt</span>}
                     <div className="cat-arrow"><ArrowRight size={24} /></div>
@@ -1812,24 +2444,47 @@ function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, o
                 exit={{ opacity: 0, x: -50 }}
                 className="basic-gallery-container"
               >
-                <button className="btn-back-minimal" onClick={() => setSubStep('category')} style={{ marginBottom: '20px', color: 'var(--accent)', fontWeight: 800 }}>
-                  <ChevronLeft size={20} /> QUAY LẠI CHỌN PHONG CÁCH
-                </button>
+                {/* Nút quay lại đã được tích hợp vào global-nav bên trên */}
                 
-                <div className="full-width-gallery">
-                   {galleryImages.map((img, idx) => (
-                     <div 
-                       key={img.id || idx} 
-                       className="gallery-item-luxe"
-                       onClick={() => setSelectedImage(img)}
-                     >
-                       <img src={img.url} alt={img.name} />
-                       <div className="gallery-overlay">
-                          <CheckCircle2 size={40} className="check-icon" style={{ opacity: 0.5 }} />
-                          <span>Mẫu {img.name}</span>
+                <div className={mainBranch === 'interior' ? "interior-full-stack-gallery" : "full-width-gallery"}>
+                   {galleryImages.map((img, idx) => {
+                     const isInterior = mainBranch === 'interior';
+                     if (isInterior && img.images && img.images.length > 0) {
+                       return (
+                         <div key={img.id || idx} className="interior-combo-stack-card" onClick={() => setSelectedImage(img)}>
+                           <div className="combo-header-luxe">
+                             <span className="combo-badge">BỘ SƯU TẬP MẪU</span>
+                             <h3>{img.name}</h3>
+                           </div>
+                           <div className="combo-images-stack">
+                             {img.images.map((url: string, i: number) => (
+                               <div key={i} className="stack-image-frame">
+                                 <ProtectedImage src={url} alt={`${img.name} perspective ${i+1}`} />
+                               </div>
+                             ))}
+                           </div>
+                           <div className="combo-footer-action">
+                             <button className="btn-select-combo" onClick={(e) => { e.stopPropagation(); const url = img.url; const imgs = img.images; setSelectedImage(null); setTimeout(() => onSelect(url, selectedCategory, imgs), 150); }}>
+                               CHỌN PHONG CÁCH NÀY <CheckCircle2 size={18} />
+                             </button>
+                           </div>
+                         </div>
+                       );
+                     }
+                     return (
+                       <div 
+                         key={img.id || idx} 
+                         className={`gallery-item-luxe ${isInterior ? 'interior-item' : ''}`}
+                         onClick={() => setSelectedImage(img)}
+                       >
+                         <ProtectedImage src={img.url} alt={img.name} />
+                         <div className="gallery-overlay">
+                            <CheckCircle2 size={40} className="check-icon" style={{ opacity: 0.5 }} />
+                            <span>{img.name}</span>
+                         </div>
                        </div>
-                     </div>
-                   ))}
+                     );
+                   })}
                 </div>
               </motion.div>
             )}
@@ -1845,12 +2500,20 @@ function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, o
                 className="samples-modal-overlay" 
                 style={{ zIndex: 4000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                <div className="preview-modal-content" style={{ background: 'var(--primary)', width: '90%', maxWidth: '450px', borderRadius: '24px', overflow: 'hidden', border: '2px solid var(--accent)' }}>
-                  <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1.2' }}>
-                    <img src={selectedImage.url} alt={selectedImage.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div className="preview-modal-content" style={{ background: 'var(--primary)', width: '95%', maxWidth: mainBranch === 'interior' ? '900px' : '450px', borderRadius: '24px', overflow: 'hidden', border: '2px solid var(--accent)' }}>
+                  <div style={{ position: 'relative', width: '100%', aspectRatio: mainBranch === 'interior' ? 'auto' : '1/1.2' }}>
+                    {mainBranch === 'interior' && selectedImage.images ? (
+                      <div className="interior-preview-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', padding: '8px' }}>
+                        {selectedImage.images.map((url: string, i: number) => (
+                          <ProtectedImage key={i} src={url} alt={`${selectedImage.name} ${i+1}`} style={{ width: '100%', aspectRatio: '16/9', borderRadius: '8px' }} />
+                        ))}
+                      </div>
+                    ) : (
+                        <ProtectedImage src={selectedImage.url} alt={selectedImage.name} style={{ width: '100%', height: '100%' }} />
+                    )}
                     <button 
                       onClick={() => setSelectedImage(null)} 
-                      style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(0,0,0,0.5)', borderRadius: '50%', padding: '8px', color: '#fff' }}
+                      style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(0,0,0,0.5)', borderRadius: '50%', padding: '8px', color: '#fff', zIndex: 10 }}
                     >
                       <X size={24} />
                     </button>
@@ -1858,10 +2521,15 @@ function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, o
                   <div style={{ padding: '24px', textAlign: 'center' }}>
                     <h3 style={{ fontSize: '1.6rem', color: 'var(--accent)', marginBottom: '10px' }}>{selectedImage.name}</h3>
                     <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '24px', fontSize: '1rem' }}>Anh/Chị đã ưng ý mẫu phong cách này và muốn KTS dùng làm chuẩn tham khảo?</p>
-                    <button 
-                      className="btn-primary" 
+                    <button
+                      className="btn-primary"
                       style={{ width: '100%', fontSize: '1.2rem', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
-                      onClick={() => onSelect(selectedImage.url, selectedCategory)}
+                      onClick={() => {
+                        const url = selectedImage.url;
+                        const cats = selectedImage.images;
+                        setSelectedImage(null);
+                        setTimeout(() => onSelect(url, selectedCategory, cats), 150);
+                      }}
                     >
                       CHỐT MẪU NÀY <CheckCircle2 size={24} />
                     </button>
@@ -1875,22 +2543,28 @@ function BasicSelectionView({ systemContent, onSelect }: { systemContent: any, o
   );
 }
 
-function PlanSelectionView({ service, onServiceChange, systemContent }: {
+function PlanSelectionView({ service, onServiceChange, systemContent, mainBranch }: {
   service: string;
   onServiceChange: (s: string) => void;
   systemContent: any;
+  mainBranch: MainBranch;
 }) {
-  const [showSamples, setShowSamples] = useState(false);
-  const services = [
-    { id: 'basic', name: 'Gói Cơ bản', desc: 'KTS thiết kế cho bạn 1 tấm ảnh đúng yêu cầu', price: '199.000đ', icon: <ImageIcon size={32} />, color: '#e2b170' },
-    { id: 'advanced', name: 'Gói Nâng cao', desc: '1 bản vẽ chuẩn và thêm 1 video diễn họa', price: '299.000đ', icon: <VideoIcon size={32} />, color: '#6366f1' },
-    { id: 'premium', name: 'Gói Premium', desc: 'KTS thiết kế 3D chuyên sâu cho bạn', price: 'Báo giá Zalo', icon: <Crown size={32} />, color: '#a855f7' }
-  ];
+  const t = (key: string, defaultVal: string) => systemContent.uiText?.[key] || defaultVal;
+  const services = (mainBranch === 'landscape')
+    ? [
+        { id: 'basic', name: 'Gói Cơ bản', img: '/assets/GOI CANH QUAN/1. CO BAN.png', color: '#5eb44b' },
+        { id: 'advanced', name: 'Gói Nâng cao', img: '/assets/GOI CANH QUAN/2. NANG CAO.png', color: '#2a7fff' },
+        { id: 'premium', name: 'Gói Premium', img: '/assets/GOI CANH QUAN/3. CAO CAP.png', color: '#9146ff' }
+      ]
+    : [
+        { id: 'basic', name: 'Gói Cơ bản', img: '/assets/GOI KIEN TRUC - NOI THAT/1. CO BAN.png', color: '#5eb44b' },
+        { id: 'advanced', name: 'Gói Nâng cao', img: '/assets/GOI KIEN TRUC - NOI THAT/2. NANG CAO.png', color: '#2a7fff' },
+        { id: 'premium', name: 'Gói Premium', img: '/assets/GOI KIEN TRUC - NOI THAT/3. CAO CAP.png', color: '#9146ff' }
+      ];
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view plan-view">
-      <h2 style={{textAlign: 'center', marginBottom: '0.8rem', fontSize: '1.8rem'}}>Chọn Gói Giải Pháp</h2>
-      <p style={{textAlign: 'center', color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem', fontSize: '0.95rem'}}>Lựa chọn gói thiết kế phù hợp để hiện thực hóa ý tưởng của bạn.</p>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view plan-view nav-offset">
+      <h2 style={{textAlign: 'center', marginBottom: '0.5rem', fontSize: '2.2rem', fontWeight: 950}}>{t('plan_title', 'Chọn Gói Giải Pháp')}</h2>
 
       <div className="service-list-premium">
         {services.map(s => (
@@ -1898,98 +2572,56 @@ function PlanSelectionView({ service, onServiceChange, systemContent }: {
             key={s.id}
             className={`service-card-premium ${service === s.name ? 'active' : ''}`}
             onClick={() => onServiceChange(s.name)}
-            style={{ border: service === s.name ? `3.5px solid ${s.color}` : '1.5px solid rgba(255,255,255,0.1)' }}
+            style={{ 
+              padding: 0,
+              border: service === s.name ? `4px solid ${s.color}` : '2px solid transparent',
+              borderRadius: '24px',
+              overflow: 'hidden',
+              background: 'transparent',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: service === s.name ? `0 0 30px ${s.color}66` : '0 10px 30px rgba(0,0,0,0.3)'
+            }}
           >
-            <div className="card-inner-premium-v2">
-              <div className="service-icon-box-v2" style={{ background: s.color }}>{s.icon}</div>
-              <div className="service-info-v2">
-                <div className="service-header-v2">
-                  <h3 className="service-title-v2">{s.name}</h3>
-                  <div className="service-price-v2">{s.price}</div>
-                </div>
-                <p className="service-desc-v2">{s.desc}</p>
-              </div>
-            </div>
+            <img 
+              src={s.img} 
+              alt={s.name} 
+              style={{ 
+                width: '100%', 
+                height: 'auto',
+                objectFit: 'contain',
+                display: 'block',
+                transition: 'transform 0.3s'
+              }} 
+            />
           </button>
         ))}
       </div>
 
-      <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
-        <button
-          className="btn-show-samples"
-          onClick={() => setShowSamples(true)}
-        >
-          <Play size={20} fill="currentColor" />
-          XEM KẾT QUẢ MẪU CỦA CÁC GÓI
-        </button>
+      <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
         <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem', fontWeight: 600 }}>* Vui lòng chọn 1 gói bên trên để tiếp tục</span>
       </div>
 
-      {showSamples && (
-        <div className="samples-modal-overlay">
-          <div className="samples-modal-content">
-            <button className="btn-close-samples" onClick={() => setShowSamples(false)}>
-              <X size={44} />
-            </button>
-            <div className="samples-scroll">
-              <h2 style={{ color: 'var(--accent)', marginBottom: '1rem', fontSize: '2.4rem', textAlign: 'center' }}>Hành Trình Thiết Kế Mẫu</h2>
-              
-              <div className="sample-case req-box">
-                <div className="case-header" style={{ color: '#fbbf24' }}>YÊU CẦU KHÁCH HÀNG (HIỆN TRẠNG)</div>
-                <p className="case-sub" style={{ fontSize: '1.3rem', color: '#fff', fontWeight: 600 }}>
-                  "Thiết kế một hồ cá koi thác đá vân mây bên trái có tùng la hán và đèn đá, có hầm lọc tròn và bộ bàn để lên trên đó."
-                </p>
-                <img src={systemContent.tips.sampleImage} alt="Hiện trạng" className="sample-img-large" />
-              </div>
-
-              {systemContent.plans.map((p: any) => (
-                <div key={p.id} className="sample-case">
-                  <div className="case-header">{p.header}</div>
-                  <p className="case-sub">{p.sub}</p>
-                  <div className={p.id === 'premium' ? 'sample-grid-6' : ''}>
-                    {p.media.map((m: any, idx: number) => (
-                      m.type === 'video' ? (
-                        <div key={idx} className="sample-video-placeholder" style={{ marginTop: '20px', width: '100%' }}>
-                          <video autoPlay loop muted playsInline className="sample-img-large">
-                            <source src={m.url} type="video/mp4" />
-                          </video>
-                        </div>
-                      ) : (
-                        <img key={idx} src={m.url} alt={`${p.name} ${idx}`} className={p.id === 'premium' ? 'sample-img-grid' : 'sample-img-large'} />
-                      )
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </motion.div>
   );
 }
 
 function SubmitView({
-  customerName, onNameChange, customerPhone, onPhoneChange, customerEmail, onEmailChange,
-  dimensions, onDimensionsChange,
-  onSubmit, isSubmitting
+  customerName, onNameChange, customerPhone, onPhoneChange,
+  onSubmit, isSubmitting, systemContent
 }: {
   customerName: string; onNameChange: (n: string) => void;
   customerPhone: string; onPhoneChange: (p: string) => void;
-  customerEmail: string; onEmailChange: (e: string) => void;
-  dimensions: { width: string; depth: string; height: string }; onDimensionsChange: (d: { width: string; depth: string; height: string }) => void;
   onSubmit: () => void;
   isSubmitting?: boolean;
+  systemContent: any;
 }) {
+  const t = (key: string, defaultVal: string) => systemContent.uiText?.[key] || defaultVal;
   const isReady = customerName.trim().length > 0 && customerPhone.trim().length > 0;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view submit-view">
-      <div className="title-group" style={{textAlign: 'center', marginBottom: '2rem'}}>
-        <h2 style={{ fontSize: '2.2rem' }}>Thông Tin Liên Hệ</h2>
-        <p style={{ fontSize: '1.1rem', color: 'var(--accent)', fontWeight: 600, maxWidth: '600px', margin: '0.5rem auto' }}>
-          Hệ thống sẽ gửi bản vẽ phác thảo về Zalo và Email của Anh/Chị ngay sau khi hoàn tất.
-        </p>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view submit-view nav-offset">
+      <div className="title-group" style={{textAlign: 'center', marginBottom: '1.5rem'}}>
+        <h2 style={{ fontSize: '2.2rem' }}>{t('contact_title', 'Thông Tin Liên Hệ')}</h2>
       </div>
 
       <div className="form" style={{ padding: 0 }}>
@@ -2012,60 +2644,7 @@ function SubmitView({
             onChange={e => onPhoneChange(e.target.value)} 
           />
         </div>
-
-        <div className="input-group">
-          <label><Mail size={20} /> Email (Nếu có)</label>
-          <input
-            type="email"
-            placeholder="Nhập email để nhận bản vẽ (không bắt buộc)..."
-            value={customerEmail}
-            onChange={e => onEmailChange(e.target.value)}
-          />
-        </div>
-
-        <div className="input-group">
-          <label><Ruler size={20} /> Kích thước không gian (mét)</label>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <div style={{ flex: 1 }}>
-              <input
-                type="number"
-                inputMode="decimal"
-                placeholder="Ngang"
-                value={dimensions.width}
-                onChange={e => onDimensionsChange({ ...dimensions, width: e.target.value })}
-                style={{ width: '100%' }}
-              />
-              <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '4px', display: 'block', textAlign: 'center' }}>Ngang (m)</span>
-            </div>
-            <div style={{ flex: 1 }}>
-              <input
-                type="number"
-                inputMode="decimal"
-                placeholder="Dọc"
-                value={dimensions.depth}
-                onChange={e => onDimensionsChange({ ...dimensions, depth: e.target.value })}
-                style={{ width: '100%' }}
-              />
-              <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '4px', display: 'block', textAlign: 'center' }}>Dọc (m)</span>
-            </div>
-            <div style={{ flex: 1 }}>
-              <input
-                type="number"
-                inputMode="decimal"
-                placeholder="Cao"
-                value={dimensions.height}
-                onChange={e => onDimensionsChange({ ...dimensions, height: e.target.value })}
-                style={{ width: '100%' }}
-              />
-              <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '4px', display: 'block', textAlign: 'center' }}>Cao (m)</span>
-            </div>
-          </div>
-        </div>
       </div>
-
-      <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem', marginTop: '24px', lineHeight: '1.6' }}>
-        Hệ thống sẽ tự động xử lý thiết kế dựa trên yêu cầu và thông tin của bạn.
-      </p>
 
       <motion.button
         onClick={onSubmit}
@@ -2127,12 +2706,12 @@ function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewRe
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="view" style={{ maxWidth: '700px', width: '90%', padding: '2rem 0' }}>
-      <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', marginBottom: '1.5rem', fontSize: '1rem' }}>
-        <ChevronLeft size={18} style={{ verticalAlign: 'middle' }} /> Quay lại
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="view" style={{ maxWidth: '700px', width: '100%', padding: '2rem 10px', margin: '0 auto' }}>
+      <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#64748b', fontWeight: 700, cursor: 'pointer', marginBottom: '1.5rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}>
+        <ChevronLeft size={18} /> Quay lại
       </button>
-      <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '0.5rem' }}>Dự Án Của Tôi</h2>
-      <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: '2rem' }}>Các thiết kế đã tạo trên thiết bị này</p>
+      <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '0.5rem', textAlign: 'center', color: '#0f172a' }}>Dự Án Của Tôi</h2>
+      <p style={{ color: '#64748b', marginBottom: '2.5rem', textAlign: 'center', fontSize: '0.95rem' }}>Các thiết kế đã tạo trên thiết bị này</p>
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '3rem' }}>
@@ -2143,7 +2722,7 @@ function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewRe
         <div style={{ textAlign: 'center', padding: '3rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)' }}>
           <Camera size={48} color="rgba(255,255,255,0.2)" />
           <p style={{ marginTop: '1rem', color: 'rgba(255,255,255,0.4)' }}>Chưa có dự án nào trên thiết bị này</p>
-          <button className="btn-primary" onClick={onBack} style={{ marginTop: '1.5rem' }}>Bắt đầu thiết kế</button>
+          <button className="btn-primary" onClick={onBack} style={{ marginTop: '1.5rem' }}>Thiết kế cảnh quan</button>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -2156,21 +2735,24 @@ function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewRe
                 onClick={() => p.status === 'done' || p.status === 'processing' ? onViewResult(p.id) : null}
                 style={{
                   display: 'flex', gap: '16px', alignItems: 'center',
-                  background: 'rgba(255,255,255,0.04)', borderRadius: '14px', padding: '14px',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: '#ffffff', borderRadius: '16px', padding: '16px',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
                   cursor: p.status === 'done' || p.status === 'processing' ? 'pointer' : 'default',
-                  transition: 'background 0.2s'
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
+                onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
               >
                 <img
                   src={previewImg} alt=""
-                  style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '10px', flexShrink: 0, background: 'rgba(0,0,0,0.3)' }}
+                  style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '10px', flexShrink: 0, background: '#f1f5f9' }}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontWeight: 700, fontSize: '1.05rem', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0f172a' }}>
                     {p.customerName || 'Dự án'}
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>
+                  <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
                     {p.service} — {new Date(p.timestamp).toLocaleDateString('vi-VN')}
                   </div>
                 </div>
@@ -2191,7 +2773,7 @@ function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewRe
   );
 }
 
-function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isRetrying = false }: { projectId: string; service: string; onReset: () => void; retryCount?: number; onRetry?: () => void; isRetrying?: boolean }) {
+function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isRetrying = false, onBack }: { projectId: string; service: string; onReset: () => void; retryCount?: number; onRetry?: () => void; isRetrying?: boolean; onBack?: () => void }) {
   const [pass2Picked, setPass2Picked] = useState('');
   const [pass2W, setPass2W] = useState('4');
   const [pass2L, setPass2L] = useState('4');
@@ -2201,7 +2783,9 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
   const [previousImages, setPreviousImages] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!projectId || (service !== 'Gói Cơ Bản' && service !== 'Gói Cơ bản')) return;
+    // Poll for Gói Cơ bản and Gói Nâng cao
+    const isAuto = service === 'Gói Cơ Bản' || service === 'Gói Cơ bản' || service === 'Gói Nâng cao';
+    if (!projectId || !isAuto) return;
 
     const fetchProject = async () => {
       try {
@@ -2227,28 +2811,38 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
     }
   }, [retryCount, project]);
 
-  if (service === 'Gói Cơ Bản' || service === 'Gói Cơ bản') {
+  const isAutoPlan = service === 'Gói Cơ Bản' || service === 'Gói Cơ bản' || service === 'Gói Nâng cao';
+
+  if (isAutoPlan) {
     const isDone = project?.status === 'done';
     const images = project?.aiResults || [];
     const allImages = retryCount > 0 && isDone ? [...previousImages, ...images] : images;
 
     return (
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="view success-view" style={{ maxWidth: '800px', width: '90%', paddingBottom: '40px' }}>
+      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="view success-view" style={{ position: 'relative', width: '100%', maxWidth: '700px', margin: '0 auto', paddingTop: '3rem' }}>
+         {onBack && (
+           <button onClick={onBack} style={{ position: 'absolute', top: '0', left: '0', background: 'none', border: 'none', color: '#64748b', fontWeight: 700, cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '4px', padding: '10px 0', zIndex: 10 }}>
+             <ChevronLeft size={18} /> Quay lại
+           </button>
+         )}
          {!isDone ? (
            <>
-             <div className="processing-spinner" style={{margin: '1.5rem auto'}}>
-               <RefreshCcw size={48} className="spin" color="var(--accent)" />
-             </div>
-             <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{retryCount > 0 ? 'Đang thiết kế lần 2...' : 'Hệ thống đang thiết kế...'}</h2>
-             <p className="hint" style={{ fontSize: '0.85rem' }}>Máy chủ Sơn Hải đang tự động vẽ các phương án. Vui lòng không đóng trang.</p>
-             {images.length > 0 && <p style={{color: 'var(--accent)', fontWeight: 'bold', fontSize: '1rem'}}>Đã hoàn thiện {images.length}/2 phương án...</p>}
+               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+                 <div style={{ width: '64px', height: '64px', borderRadius: '50%', border: '4px solid rgba(226,177,112,0.2)', borderTopColor: '#e2b170', animation: 'spin 1s linear infinite' }} />
+                 <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#111', letterSpacing: '0.05em' }}>ĐANG XỬ LÝ</span>
+               </div>
+             <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111', textAlign: 'center', whiteSpace: 'nowrap' }}>Hệ thống đang tạo phương án thiết kế (~5 phút).</h2>
+             <p className="hint" style={{ fontSize: '1rem', color: '#555', lineHeight: '1.6', textAlign: 'center' }}>
+               Bạn có thể theo dõi trực tiếp tại đây hoặc xem trong mục <strong style={{color: 'var(--accent)'}}>“Dự án của bạn”</strong> khi hoàn tất.
+             </p>
+             {images.length > 0 && <p style={{color: '#e2b170', fontWeight: 'bold', fontSize: '1.1rem', marginTop: '1rem', textAlign: 'center'}}>Đã hoàn thiện {images.length}/2 phương án...</p>}
              {previousImages.length > 0 && (
                <>
-                 <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', marginTop: '1rem' }}>Kết quả lần 1:</p>
+                 <p style={{ fontSize: '0.85rem', color: '#888', marginTop: '1rem', textAlign: 'center', fontWeight: 600 }}>Kết quả lần 1:</p>
                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '8px', width: '100%' }}>
                    {previousImages.map((url, i) => (
                      <div key={`prev-${i}`} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', aspectRatio: '16/10' }}>
-                       <img src={url} alt={`Lần 1 - ${i+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                       <ProtectedImage src={url} alt={`Lần 1 - ${i+1}`} />
                        <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.7)', padding: '4px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.7rem' }}>
                          Lần 1 - PA{i + 1}
                        </div>
@@ -2261,7 +2855,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
          ) : (
            <>
              <div className="success-icon"><CheckCircle2 size={48} /></div>
-             <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Đã hoàn thành bản vẽ!</h2>
+             <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111', textAlign: 'center' }}>Đã hoàn thành bản vẽ!</h2>
              <p className="hint" style={{ fontSize: '0.85rem' }}>
                {retryCount > 0 ? `Tổng cộng ${allImages.length} phương án từ ${retryCount + 1} lần thiết kế.` : 'Dưới đây là các phương án thiết kế AI.'}
              </p>
@@ -2277,7 +2871,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                  : `Phương án ${i + 1}`;
                return (
                  <div key={i} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.25)', aspectRatio: '16/10' }}>
-                   <img src={url} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                   <ProtectedImage src={url} alt={label} />
                    <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: isOld ? 'rgba(0,0,0,0.7)' : 'rgba(226,177,112,0.85)', padding: '5px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.75rem', color: isOld ? '#fff' : '#000' }}>
                      {label}
                    </div>
@@ -2287,18 +2881,18 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
            </div>
          )}
 
-         {!isDone && images.length > 0 && (
-           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '1rem', width: '100%' }}>
-             {images.map((url, i) => (
-               <div key={i} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', aspectRatio: '16/10' }}>
-                 <img src={url} alt={`Phương án ${i+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                 <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.7)', padding: '5px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.75rem' }}>
-                   Phương án {i + 1}
-                 </div>
-               </div>
-             ))}
-           </div>
-         )}
+{!isDone && images.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '1rem', width: '100%' }}>
+            {images.map((url, i) => (
+              <div key={i} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', aspectRatio: '16/10' }}>
+                <ProtectedImage src={url} alt={`Phương án ${i+1}`} />
+                <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.7)', padding: '5px', textAlign: 'center', fontWeight: 'bold', fontSize: '1rem' }}>
+                  Phương án {i + 1}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
          {isDone && (
            <div style={{ marginTop: '1.5rem', width: '100%', textAlign: 'center' }}>
@@ -2468,13 +3062,17 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
 
   // Hiển thị cho các gói không phải "Gói Cơ Bản"
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="view success-view">
-      <div className="success-icon"><CheckCircle2 size={100} /></div>
-      <h2 style={{ fontSize: '2.5rem', fontWeight: 950 }}>Gửi Thành Công!</h2>
-      <p className="hint" style={{ lineHeight: '1.6', maxWidth: '90%' }}>
-        Cảm ơn bạn đã tin tưởng Sơn Hải. Đội ngũ thiết kế sẽ xử lý phác thảo và liên hệ lại với bạn trong thời gian sớm nhất.
+    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="view success-view" style={{ maxWidth: '600px', width: '90%', textAlign: 'center' }}>
+      <div className="success-icon" style={{ marginBottom: '2rem' }}>
+        <CheckCircle2 size={100} color="var(--accent)" style={{ filter: 'drop-shadow(0 0 15px rgba(212, 163, 115, 0.4))' }} />
+      </div>
+      <h2 style={{ fontSize: '1.6rem', fontWeight: 850, marginBottom: '1.2rem', lineHeight: '1.4' }}>
+        Đội ngũ KTS đã tiếp nhận dự án. Chúng tôi sẽ sớm liên hệ qua điện thoại hoặc Zalo để triển khai.
+      </h2>
+      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', marginBottom: '2.5rem' }}>
+        Cảm ơn bạn đã tin tưởng dịch vụ thiết kế chuyên nghiệp của Sơn Hải.
       </p>
-      <button className="btn-primary main-cta" onClick={onReset} style={{ marginTop: '20px' }}>
+      <button className="btn-primary main-cta" onClick={onReset} style={{ width: '100%' }}>
         Quay lại Trang Chủ
       </button>
     </motion.div>
@@ -2482,11 +3080,24 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
 }
 
 // --- HELPER WRAPPER FOR ASSET MANAGER ---
-function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeedback, onClose }: { 
-  systemContent: any, onSystemContentUpdate: (c: any) => void, onSync: () => Promise<boolean>, onFeedback: (msg: string) => void, onClose: () => void 
+function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeedback, onClose, adminBranch }: { 
+  systemContent: any, onSystemContentUpdate: (c: any) => void, onSync: () => Promise<boolean>, onFeedback: (msg: string) => void, onClose: () => void, adminBranch: MainBranch 
 }) {
-  const [selectedCat, setSelectedCat] = useState<'THAC' | 'KE' | 'CANH' | 'HO' | 'HO_HIEN_DAI' | 'TUONG_DA' | 'CAFE_SAN_VUON' | 'LOGIC' | 'AI_STUDIO' | 'TIPS' | 'PLANS'>('THAC');
-  const libraryCats = ['THAC', 'KE', 'CANH', 'HO', 'HO_HIEN_DAI', 'TUONG_DA', 'CAFE_SAN_VUON'];
+  const getBranchCats = (branch: MainBranch) => {
+    if (branch === 'architecture') return ['NHA_PHO', 'BIET_THU', 'NHA_CAP_4', 'NHA_VUON', 'NHA_TIEN_CHE'];
+    if (branch === 'interior') return ['HIEN_DAI', 'TAN_CO_DIEN', 'INDOCHINE', 'WABI_SABI', 'TAN_CO_DIEN_GO'];
+    return ['HO', 'HO_HIEN_DAI', 'TUONG_DA', 'TUONG_CAY', 'FARM', 'CAFE', 'HO_BOI'];
+  };
+
+  const libraryCats = getBranchCats(adminBranch);
+  const [selectedCat, setSelectedCat] = useState<string>(libraryCats[0]);
+
+  // Update selectedCat when adminBranch changes
+  useEffect(() => {
+    setSelectedCat(getBranchCats(adminBranch)[0]);
+    setSelectedItem(null);
+  }, [adminBranch]);
+
   const catItems = libraryCats.includes(selectedCat)
     ? (systemContent.library?.[selectedCat] || (ASSETS as any)[selectedCat] || [])
     : [];
@@ -2513,6 +3124,51 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
     } else {
       onFeedback('❌ LỖI KẾT NỐI! Vui lòng kiểm tra lại Backend/ngrok.');
     }
+  };
+
+  // Xóa 1 biến thể khỏi mẫu cha
+  const handleDeleteVariant = (vIdx: number) => {
+    if (!selectedItem) return;
+    const currentLib = systemContent.library || ASSETS;
+    const newLib = { ...currentLib };
+    const cat = selectedCat as keyof typeof ASSETS;
+    const catList = [...(newLib[cat] || (ASSETS as any)[cat] || [])];
+    const pIdx = catList.findIndex((it: any) => it.id === selectedItem.id);
+    if (pIdx !== -1) {
+      const vars = [...(catList[pIdx].variants || [])];
+      vars.splice(vIdx, 1);
+      catList[pIdx] = { ...catList[pIdx], variants: vars };
+      newLib[cat] = catList as any;
+      onSystemContentUpdate({ ...systemContent, library: newLib });
+      setSelectedItem(catList[pIdx]);
+      onFeedback(`Đã xóa biến thể khỏi mẫu.`);
+    }
+  };
+
+  // Xóa 1 mẫu cha khỏi danh mục
+  const handleDeleteItem = (itemId: string) => {
+    if (!window.confirm('Xóa mẫu này khỏi hệ thống?')) return;
+    const currentLib = systemContent.library || ASSETS;
+    const newLib = { ...currentLib };
+    const cat = selectedCat as keyof typeof ASSETS;
+    const catList = (newLib[cat] || (ASSETS as any)[cat] || []).filter((it: any) => it.id !== itemId);
+    newLib[cat] = catList as any;
+    onSystemContentUpdate({ ...systemContent, library: newLib });
+    setSelectedItem(null);
+    onFeedback(`Đã xóa mẫu khỏi hệ thống. Nhấn "ĐỒNG BỘ HỆ THỐNG" để lưu thay đổi.`);
+  };
+
+  // Xóa toàn bộ danh mục
+  const handleClearCategory = () => {
+    const catLabel = { HO: 'Hồ Koi Cổ Điển', HO_HIEN_DAI: 'Hồ Koi Hiện Đại', TUONG_DA: 'Tường Đá', TUONG_CAY: 'Tường Cây', FARM: 'Farm & Du Lịch', CAFE: 'Cà Phê', HO_BOI: 'Hồ Bơi' }[selectedCat] || selectedCat;
+    if (!window.confirm(`XÓA TOÀN BỘ "${catLabel}"?\n\nHành động này không thể hoàn tác.`)) return;
+    const currentLib = systemContent.library || ASSETS;
+    const newLib = { ...currentLib };
+    const cat = selectedCat as keyof typeof ASSETS;
+    newLib[cat] = [] as any;
+    onSystemContentUpdate({ ...systemContent, library: newLib });
+    setSelectedItem(null);
+    onFeedback(`Đã xóa toàn bộ danh mục "${catLabel}". Nhấn "ĐỒNG BỘ HỆ THỐNG" để lưu.`);
   };
 
   const handleMediaReplace = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2552,7 +3208,14 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
         const catList = [...(newLib[cat] || (ASSETS as any)[cat])];
         const idx = catList.findIndex((it: any) => it.id === pendingReplace.itemId);
         if (idx !== -1) {
-          catList[idx] = { ...catList[idx], url: result };
+          if (pendingReplace.mediaIdx !== undefined) {
+            const newImages = [...(catList[idx].images || Array(4).fill(catList[idx].url))];
+            newImages[pendingReplace.mediaIdx] = result;
+            catList[idx] = { ...catList[idx], images: newImages };
+            if (pendingReplace.mediaIdx === 0) catList[idx].url = result;
+          } else {
+            catList[idx] = { ...catList[idx], url: result };
+          }
           newLib[cat] = catList as any;
           onSystemContentUpdate({ ...systemContent, library: newLib });
           onFeedback(`Đã cập nhật ảnh mẫu cho ${catList[idx].name}.`);
@@ -2567,7 +3230,15 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
           const variants = [...(catList[pIdx].variants || [])];
           const vIdx = variants.findIndex(v => v.id === pendingReplace.variantId);
           if (vIdx !== -1) {
-            variants[vIdx] = { ...variants[vIdx], url: result };
+            if (pendingReplace.mediaIdx !== undefined && variants[vIdx].images) {
+              const newImages = [...variants[vIdx].images];
+              newImages[pendingReplace.mediaIdx] = result;
+              variants[vIdx] = { ...variants[vIdx], images: newImages };
+              // Also update main url to the first image if it's the first one
+              if (pendingReplace.mediaIdx === 0) variants[vIdx].url = result;
+            } else {
+              variants[vIdx] = { ...variants[vIdx], url: result };
+            }
             catList[pIdx] = { ...catList[pIdx], variants };
             newLib[cat] = catList as any;
             onSystemContentUpdate({ ...systemContent, library: newLib });
@@ -2593,13 +3264,55 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
 
         <div className="sidebar-group">
           <label>DANH MỤC THƯ VIỆN</label>
-          <button className={selectedCat === 'THAC' ? 'active' : ''} onClick={() => { setSelectedCat('THAC'); setSelectedItem(null); }}><Layers size={18} /> THÁC ĐÁ</button>
-          <button className={selectedCat === 'KE' ? 'active' : ''} onClick={() => { setSelectedCat('KE'); setSelectedItem(null); }}><Box size={18} /> KÈ ĐÁ / BỜ</button>
-          <button className={selectedCat === 'CANH' ? 'active' : ''} onClick={() => { setSelectedCat('CANH'); setSelectedItem(null); }}><Sparkles size={18} /> CẢNH QUAN</button>
-          <button className={selectedCat === 'HO' ? 'active' : ''} onClick={() => { setSelectedCat('HO'); setSelectedItem(null); }}><Waves size={18} /> MẪU HỒ KOI CỔ ĐIỂN</button>
-          <button className={selectedCat === 'HO_HIEN_DAI' ? 'active' : ''} onClick={() => { setSelectedCat('HO_HIEN_DAI'); setSelectedItem(null); }}><Monitor size={18} /> MẪU HỒ KOI HIỆN ĐẠI</button>
-          <button className={selectedCat === 'TUONG_DA' ? 'active' : ''} onClick={() => { setSelectedCat('TUONG_DA'); setSelectedItem(null); }}><Layers size={18} /> MẪU TƯỜNG ĐÁ</button>
-          <button className={selectedCat === 'CAFE_SAN_VUON' ? 'active' : ''} onClick={() => { setSelectedCat('CAFE_SAN_VUON'); setSelectedItem(null); }}><Crown size={18} /> MẪU CÀ PHÊ SÂN VƯỜN</button>
+          {libraryCats.map(cat => {
+            const labelMap: Record<string, string> = {
+              HO: 'MẪU HỒ KOI CỔ ĐIỂN',
+              HO_HIEN_DAI: 'MẪU HỒ KOI HIỆN ĐẠI',
+              TUONG_DA: 'MẪU TƯỜNG ĐÁ TRANG TRÍ',
+              TUONG_CAY: 'MẪU TƯỜNG CÂY & VƯỜN',
+              FARM: 'MẪU FARM & DU LỊCH',
+              CAFE: 'MẪU CẢNH QUAN CÀ PHÊ',
+              HO_BOI: 'MẪU HỒ BƠI THIÊN NHIÊN',
+              NHA_PHO: 'MẪU NHÀ PHỐ',
+              BIET_THU: 'MẪU BIỆT THỰ',
+              NHA_CAP_4: 'MẪU NHÀ CẤP 4',
+              NHA_VUON: 'MẪU NHÀ VƯỜN',
+              NHA_TIEN_CHE: 'MẪU NHÀ TIỀN CHẾ',
+              HIEN_DAI: 'NỘI THẤT HIỆN ĐẠI',
+              TAN_CO_DIEN: 'NỘI THẤT TÂN CỔ ĐIỂN',
+              INDOCHINE: 'NỘI THẤT INDOCHINE',
+              WABI_SABI: 'NỘI THẤT WABI SABI',
+              TAN_CO_DIEN_GO: 'TÂN CỔ ĐIỂN GỖ'
+            };
+            const iconMap: Record<string, any> = {
+              HO: <Waves size={18} />,
+              HO_HIEN_DAI: <Monitor size={18} />,
+              TUONG_DA: <Layers size={18} />,
+              TUONG_CAY: <Sprout size={18} />,
+              FARM: <Map size={18} />,
+              CAFE: <Coffee size={18} />,
+              HO_BOI: <Droplets size={18} />,
+              NHA_PHO: <Box size={18} />,
+              BIET_THU: <Crown size={18} />,
+              NHA_CAP_4: <Home size={18} />,
+              NHA_VUON: <Map size={18} />,
+              NHA_TIEN_CHE: <Layers size={18} />,
+              HIEN_DAI: <Monitor size={18} />,
+              TAN_CO_DIEN: <ShieldCheck size={18} />,
+              INDOCHINE: <Sprout size={18} />,
+              WABI_SABI: <Waves size={18} />,
+              TAN_CO_DIEN_GO: <Layers size={18} />
+            };
+            return (
+              <button 
+                key={cat} 
+                className={selectedCat === cat ? 'active' : ''} 
+                onClick={() => { setSelectedCat(cat); setSelectedItem(null); }}
+              >
+                {iconMap[cat] || <Layers size={18} />} {labelMap[cat] || cat}
+              </button>
+            );
+          })}
         </div>
 
         <div className="sidebar-divider" />
@@ -2779,10 +3492,12 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
                  if (pIdx !== -1) {
                    const variants = [...(catList[pIdx].variants || [])];
                    const newId = `${selectedItem.id}_v${variants.length + 1}`;
+                   const isInterior = adminBranch === 'interior';
                    variants.push({
                      id: newId,
                      url: "https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=600",
-                     name: `Biến thể mới ${variants.length + 1}`
+                     name: `Biến thể mới ${variants.length + 1}`,
+                     ...(isInterior ? { images: Array(4).fill("https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=600") } : {})
                    });
                    catList[pIdx] = { ...catList[pIdx], variants };
                    newLib[cat] = catList as any;
@@ -2794,67 +3509,108 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
              </div>
              
              <div className="asset-grid-manager">
-               {(selectedItem.variants || []).map((v: any, vIdx: number) => (
-                 <div key={v.id} className="asset-card-admin">
-                   <div className="asset-preview-box">
-                     <img src={v.url} alt={v.name} />
-                     <div className="asset-actions-overlay">
-                       <button onClick={() => { 
-                         setPendingReplace({ type: 'variant', cat: selectedCat, itemId: selectedItem.id, variantId: v.id }); 
-                         replacerRef.current?.click(); 
-                       }}>THAY THẾ</button>
+               {(selectedItem.variants || []).map((v: any, vIdx: number) => {
+                 const isInterior = adminBranch === 'interior';
+                 return (
+                   <div key={v.id} className={`asset-card-admin ${isInterior ? 'interior-combo' : ''}`} style={{ width: isInterior ? '100%' : '200px' }}>
+                     <div className="asset-preview-box-group" style={{ display: isInterior ? 'grid' : 'block', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                       {isInterior ? (
+                         [0, 1, 2, 3].map(imgIdx => (
+                           <div key={imgIdx} className="asset-preview-box" style={{ height: '120px' }}>
+                             <img src={v.images?.[imgIdx] || "https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=600"} alt={`${v.name} ${imgIdx + 1}`} />
+                             <div className="asset-actions-overlay">
+                               <button onClick={() => { 
+                                 setPendingReplace({ 
+                                   type: 'variant', 
+                                   cat: selectedCat, 
+                                   itemId: selectedItem.id, 
+                                   variantId: v.id,
+                                   mediaIdx: imgIdx 
+                                 }); 
+                                 replacerRef.current?.click(); 
+                               }}>THAY ẢNH {imgIdx + 1}</button>
+                             </div>
+                           </div>
+                         ))
+                       ) : (
+                         <div className="asset-preview-box">
+                           <img src={v.url} alt={v.name} />
+                           <div className="asset-actions-overlay">
+                             <button onClick={() => { 
+                               setPendingReplace({ type: 'variant', cat: selectedCat, itemId: selectedItem.id, variantId: v.id }); 
+                               replacerRef.current?.click(); 
+                             }}>THAY THẾ</button>
+                           </div>
+                         </div>
+                       )}
+                     </div>
+                     <div className="asset-meta-box">
+                       <div className="asset-id">{v.id}</div>
+                       <input 
+                         className="variant-name-edit" 
+                         value={v.name} 
+                         onChange={(e) => {
+                            const currentLib = systemContent.library || ASSETS;
+                            const newLib = { ...currentLib };
+                            const cat = selectedCat as keyof typeof ASSETS;
+                            const catList = [...(newLib[cat] || (ASSETS as any)[cat])];
+                            const pIdx = catList.findIndex((it: any) => it.id === selectedItem.id);
+                            if (pIdx !== -1) {
+                              const vars = [...catList[pIdx].variants];
+                              vars[vIdx] = { ...vars[vIdx], name: e.target.value };
+                              catList[pIdx] = { ...catList[pIdx], variants: vars };
+                              newLib[cat] = catList as any;
+                              onSystemContentUpdate({ ...systemContent, library: newLib });
+                              setSelectedItem(catList[pIdx]);
+                            }
+                           }
+                         } 
+                         style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', width: '100%', padding: '4px 8px', borderRadius: '4px', fontSize: '0.9rem' }}
+                       />
+                       <button
+                         onClick={() => handleDeleteVariant(vIdx)}
+                         style={{ marginTop: '4px', background: 'rgba(255,60,60,0.2)', border: '1px solid rgba(255,80,80,0.4)', color: '#ff6666', padding: '3px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                       >
+                         <Trash2 size={12} /> Xóa
+                       </button>
                      </div>
                    </div>
-                   <div className="asset-meta-box">
-                     <div className="asset-id">{v.id}</div>
-                     <input 
-                       className="variant-name-edit" 
-                       value={v.name} 
-                       onChange={(e) => {
-                          const currentLib = systemContent.library || ASSETS;
-                          const newLib = { ...currentLib };
-                          const cat = selectedCat as keyof typeof ASSETS;
-                          const catList = [...(newLib[cat] || (ASSETS as any)[cat])];
-                          const pIdx = catList.findIndex((it: any) => it.id === selectedItem.id);
-                          if (pIdx !== -1) {
-                            const vars = [...catList[pIdx].variants];
-                            vars[vIdx] = { ...vars[vIdx], name: e.target.value };
-                            catList[pIdx] = { ...catList[pIdx], variants: vars };
-                            newLib[cat] = catList as any;
-                            onSystemContentUpdate({ ...systemContent, library: newLib });
-                            setSelectedItem(catList[pIdx]);
-                          }
-                         }
-                       } 
-                       style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', width: '100%', padding: '4px 8px', borderRadius: '4px', fontSize: '0.9rem' }}
-                     />
-                   </div>
-                 </div>
-               ))}
+                 );
+               })}
              </div>
            </div>
         ) : (
           <>
-            <div className="manager-header">
-              <h3>Quản lý {{ THAC: 'Thác Đá', KE: 'Kè Đá / Bờ', CANH: 'Cảnh Quan', HO: 'Hồ Koi Cổ Điển', HO_HIEN_DAI: 'Hồ Koi Hiện Đại', TUONG_DA: 'Tường Đá Nhân Tạo', CAFE_SAN_VUON: 'Cà Phê Sân Vườn' }[selectedCat] || selectedCat}</h3>
-              <button className="btn-add-asset" onClick={() => {
+            <div className="manager-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3>Quản lý { { HO: 'Hồ Koi Cổ Điển', HO_HIEN_DAI: 'Hồ Koi Hiện Đại', TUONG_DA: 'Tường Đá Trang Trí', TUONG_CAY: 'Tường Cây & Vườn Nhiệt Đới', FARM: 'Farm & Du Lịch', CAFE: 'Cảnh Quan Quán Cà Phê', HO_BOI: 'Hồ Bơi Thiên Nhiên' }[selectedCat] || selectedCat }</h3>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn-add-asset" onClick={() => handleClearCategory()} style={{ background: 'rgba(255,60,60,0.15)', border: '1px solid rgba(255,80,80,0.4)', color: '#ff8888' }}><Trash2 size={14} /> Xóa danh mục</button>
+                <button className="btn-add-asset" onClick={() => {
                 const newLib = { ...systemContent.library };
                 const currentCat = selectedCat as string;
                 const list = [...(newLib[currentCat] || (ASSETS as any)[currentCat] || [])];
                 const newId = `${currentCat.toLowerCase()}_new_${list.length + 1}`;
 
+                const isInterior = adminBranch === 'interior';
+                const placeholderUrl = "https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=600";
+
                 const newItem: any = {
                   id: newId,
                   name: `Mẫu mới ${list.length + 1}`,
-                  url: "https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=600"
+                  url: placeholderUrl
                 };
 
-                const catsWithVariants = ['THAC', 'HO', 'HO_HIEN_DAI', 'TUONG_DA', 'CAFE_SAN_VUON'];
-                if (catsWithVariants.includes(currentCat)) {
-                   newItem.variants = [
-                     { id: `${newId}_v1`, name: "Biến thể mặc định", url: newItem.url }
-                   ];
+                // Nội thất: parent cần images[] cho giao diện combo
+                if (isInterior) {
+                   newItem.images = Array(4).fill(placeholderUrl);
                 }
+
+                // TẤT CẢ danh mục đều tạo variants
+                const defaultVariant: any = { id: `${newId}_v1`, name: "Biến thể mặc định", url: placeholderUrl };
+                if (isInterior) {
+                  defaultVariant.images = Array(4).fill(placeholderUrl);
+                }
+                newItem.variants = [defaultVariant];
 
                 list.push(newItem);
                 newLib[currentCat] = list as any;
@@ -2862,27 +3618,58 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
                 onFeedback(`Đã thêm mẫu ${newItem.name} vào hệ thống.`);
               }}>+ Thêm mẫu mới</button>
             </div>
-            <div className="asset-grid-manager">
-              {catItems.map((item: any) => (
-                <div key={item.id} className="asset-card-admin" onClick={() => setSelectedItem(item)} style={{ cursor: 'pointer' }}>
-                  <div className="asset-preview-box">
-                    <img src={item.url} alt={item.name} />
-                    <div className="asset-actions-overlay" onClick={e => e.stopPropagation()}>
-                      <button onClick={() => { 
-                        setPendingReplace({ type: 'library', cat: selectedCat, itemId: item.id }); 
-                        replacerRef.current?.click(); 
-                      }}>THAY THẾ ẢNH</button>
-                    </div>
+          </div>
+          <div className="asset-grid-manager">
+            {catItems.map((item: any) => {
+              const isInterior = adminBranch === 'interior';
+              return (
+                <div key={item.id} className={`asset-card-admin ${isInterior ? 'interior-combo' : ''}`} onClick={() => setSelectedItem(item)} style={{ cursor: 'pointer', width: isInterior ? '100%' : 'auto' }}>
+                  <div className="asset-preview-box-group" style={{ display: isInterior ? 'grid' : 'block', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                    {isInterior ? (
+                      [0, 1, 2, 3].map(imgIdx => (
+                        <div key={imgIdx} className="asset-preview-box" style={{ height: '120px' }}>
+                          <img src={item.images?.[imgIdx] || item.url} alt={`${item.name} ${imgIdx + 1}`} />
+                          <div className="asset-actions-overlay" onClick={e => e.stopPropagation()}>
+                            <button onClick={() => { 
+                              setPendingReplace({ 
+                                type: 'library', 
+                                cat: selectedCat, 
+                                itemId: item.id,
+                                mediaIdx: imgIdx 
+                              }); 
+                              replacerRef.current?.click(); 
+                            }}>THAY ẢNH {imgIdx + 1}</button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="asset-preview-box">
+                        <img src={item.url} alt={item.name} />
+                        <div className="asset-actions-overlay" onClick={e => e.stopPropagation()}>
+                          <button onClick={() => { 
+                            setPendingReplace({ type: 'library', cat: selectedCat, itemId: item.id }); 
+                            replacerRef.current?.click(); 
+                          }}>THAY THẾ ẢNH</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="asset-meta-box">
                     <div className="asset-id">{item.id}</div>
                     <div className="asset-name">{item.name}</div>
                     <div className="asset-variants-count">{item.variants?.length || 0} biến thể (Bấm để quản lý)</div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }}
+                      style={{ marginTop: '6px', background: 'rgba(255,60,60,0.2)', border: '1px solid rgba(255,80,80,0.4)', color: '#ff8888', padding: '3px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px', width: '100%', justifyContent: 'center' }}
+                    >
+                      <Trash2 size={11} /> Xóa mẫu
+                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          </>
+              );
+            })}
+          </div>
+        </>
         )}
       </div>
     </motion.div>
@@ -2917,11 +3704,12 @@ function AIStudioContent({ onFeedback }: { onFeedback: (msg: string) => void }) 
 }
 
 // --- PROMPT EDITOR VIEW ---
-function PromptEditorView({ systemContent, onSystemContentUpdate, onSync, onFeedback }: {
+function PromptEditorView({ systemContent, onSystemContentUpdate, onSync, onFeedback, adminBranch }: {
   systemContent: any;
   onSystemContentUpdate: (c: any) => void;
   onSync: () => Promise<boolean>;
   onFeedback: (msg: string) => void;
+  adminBranch: MainBranch;
 }) {
   const defaultBasicPrompt = `ROLE: Landscape visualization expert (STRICT image-to-image transformation)
 
@@ -2989,27 +3777,61 @@ Hãy nhìn trực tiếp vào hình ảnh khoanh vùng thiết kế (File 2) mà
   Trắng → vùng rải sỏi, vật liệu trang trí sáng
   Nâu → lối đi, đá bước chân`;
 
-  const tabs = [
-    { id: 'ho_co_dien', label: 'Hồ Koi Cổ Điển', color: 'var(--accent)', key: 'promptBasic' },
-    { id: 'ho_hien_dai', label: 'Hồ Koi Hiện Đại', color: '#3b82f6', key: 'promptHoHienDai' },
-    { id: 'tuong_da', label: 'Tường Đá Nhân Tạo', color: '#22c55e', key: 'promptTuongDa' },
-    { id: 'cafe_san_vuon', label: 'Cà Phê Sân Vườn', color: '#f59e0b', key: 'promptCafeSanVuon' },
-    { id: 'advanced', label: 'Nâng cao / Premium', color: '#6366f1', key: 'promptAdvanced' },
-    { id: 'video', label: 'Video AI', color: '#ec4899', key: 'promptVideo' },
-  ];
+  const getBranchTabs = (branch: MainBranch) => {
+    if (branch === 'architecture') return [
+      { id: 'nha_pho', label: 'Nhà Phố', color: '#3b82f6', key: 'promptNhaPho' },
+      { id: 'biet_thu', label: 'Biệt Thự', color: '#6366f1', key: 'promptBietThu' },
+      { id: 'nha_cap_4', label: 'Nhà Cấp 4', color: '#10b981', key: 'promptNhaCap4' },
+      { id: 'nha_vuon', label: 'Nhà Vườn', color: '#f59e0b', key: 'promptNhaVuon' },
+      { id: 'nha_tien_che', label: 'Nhà Tiền Chế', color: '#ec4899', key: 'promptNhaTienChe' },
+    ];
+    if (branch === 'interior') return [
+      { id: 'hien_dai', label: 'Hiện Đại', color: '#3b82f6', key: 'promptHienDai' },
+      { id: 'tan_co_dien', label: 'Tân Cổ Điển', color: '#6366f1', key: 'promptTanCoDien' },
+      { id: 'indochine', label: 'Indochine', color: '#10b981', key: 'promptIndochine' },
+      { id: 'wabi_sabi', label: 'Wabi Sabi', color: '#f59e0b', key: 'promptWabiSabi' },
+      { id: 'tan_co_dien_go', label: 'Tân Cổ Điển Gỗ', color: '#ec4899', key: 'promptTanCoDienGo' },
+    ];
+    return [
+      { id: 'ho_co_dien', label: 'Hồ Koi Cổ Điển', color: 'var(--accent)', key: 'promptBasic' },
+      { id: 'ho_hien_dai', label: 'Hồ Koi Hiện Đại', color: '#3b82f6', key: 'promptHoHienDai' },
+      { id: 'tuong_da', label: 'Tường Đá Nhân Tạo', color: '#22c55e', key: 'promptTuongDa' },
+      { id: 'cafe_san_vuon', label: 'Cà Phê Sân Vườn', color: '#f59e0b', key: 'promptCafeSanVuon' },
+      { id: 'advanced', label: 'Nâng cao / Premium', color: '#6366f1', key: 'promptAdvanced' },
+      { id: 'video', label: 'Video AI', color: '#ec4899', key: 'promptVideo' },
+    ];
+  };
+
+  const tabs = getBranchTabs(adminBranch);
 
   const [prompts, setPrompts] = useState<Record<string, string>>({
-    promptBasic: systemContent.promptBasic || defaultBasicPrompt,
-    promptHoHienDai: systemContent.promptHoHienDai || defaultBasicPrompt,
-    promptTuongDa: systemContent.promptTuongDa || defaultBasicPrompt,
-    promptCafeSanVuon: systemContent.promptCafeSanVuon || defaultBasicPrompt,
-    promptAdvanced: systemContent.promptAdvanced || defaultAdvancedPrompt,
-    promptVideo: systemContent.promptVideo || 'Smooth cinematic camera slowly panning through this beautiful landscape garden. Gentle water flowing over rocks, koi fish swimming peacefully, leaves and branches swaying in soft breeze. Golden hour warm lighting with long shadows. Photorealistic quality, peaceful zen atmosphere. Camera moves from left to right revealing the full garden design.',
+    promptBasic: systemContent.promptBasic || '',
+    promptHoHienDai: systemContent.promptHoHienDai || '',
+    promptTuongDa: systemContent.promptTuongDa || '',
+    promptCafeSanVuon: systemContent.promptCafeSanVuon || '',
+    promptAdvanced: systemContent.promptAdvanced || '',
+    promptVideo: systemContent.promptVideo || '',
+    promptNhaPho: systemContent.promptNhaPho || '',
+    promptBietThu: systemContent.promptBietThu || '',
+    promptNhaCap4: systemContent.promptNhaCap4 || '',
+    promptNhaVuon: systemContent.promptNhaVuon || '',
+    promptNhaTienChe: systemContent.promptNhaTienChe || '',
+    promptHienDai: systemContent.promptHienDai || '',
+    promptTanCoDien: systemContent.promptTanCoDien || '',
+    promptIndochine: systemContent.promptIndochine || '',
+    promptWabiSabi: systemContent.promptWabiSabi || '',
+    promptTanCoDienGo: systemContent.promptTanCoDienGo || '',
   });
-  const [editingTab, setEditingTab] = useState('ho_co_dien');
+
+  const [editingTab, setEditingTab] = useState(tabs[0].id);
   const [isSaving, setIsSaving] = useState(false);
 
-  const currentTab = tabs.find(t => t.id === editingTab)!;
+  // Update editingTab when adminBranch changes
+  useEffect(() => {
+    setEditingTab(getBranchTabs(adminBranch)[0].id);
+  }, [adminBranch]);
+
+  const currentTab = tabs.find(t => t.id === editingTab) || tabs[0];
   const currentPrompt = prompts[currentTab.key] || '';
 
   const handleSave = async () => {
@@ -3107,7 +3929,7 @@ Hãy nhìn trực tiếp vào hình ảnh khoanh vùng thiết kế (File 2) mà
 
 // --- ADMIN VIEW ---
 function AdminView({
-  projects, isLoading, systemContent, onSystemContentUpdate, onSync, onBack, onUpdateProject, onDeleteProject, onDeleteAllProjects, onGenerateAiImage
+  projects, isLoading, systemContent, onSystemContentUpdate, onSync, onBack, onUpdateProject, onDeleteProject, onDeleteAllProjects, onGenerateAiImage, onRefreshConfig
 }: { 
   projects: Project[]; 
   isLoading: boolean;
@@ -3119,8 +3941,10 @@ function AdminView({
   onDeleteProject: (id: string) => Promise<void>;
   onDeleteAllProjects: () => Promise<number>;
   onGenerateAiImage: (id: string, payload: any) => Promise<Project>;
+  onRefreshConfig: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<'projects' | 'resources' | 'prompt'>('projects');
+  const [activeTab, setActiveTab] = useState<'projects' | 'resources' | 'prompt' | 'config'>('projects');
+  const [adminBranch, setAdminBranch] = useState<MainBranch>('landscape');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [actionFeedback, setActionFeedback] = useState('');
   const [showDesigner, setShowDesigner] = useState(false);
@@ -3159,6 +3983,9 @@ function AdminView({
     });
   }, [projects, selectedProject?.id]);
 
+  // Filter projects by adminBranch
+  const filteredProjects = projects.filter(p => (p as any).mainBranch === adminBranch || (!p.hasOwnProperty('mainBranch') && adminBranch === 'landscape'));
+
   // Pass 2 polling — khi đang chạy thì refresh project mỗi 5s để cập nhật trạng thái task
   useEffect(() => {
     const pass2Status = selectedProject?.pass2Results?.status;
@@ -3175,7 +4002,7 @@ function AdminView({
   }, [selectedProject?.id, selectedProject?.pass2Results?.status]);
 
   // --- HELPERS ---
-  const getAssetInfo = (id: string, category: 'THAC' | 'KE' | 'CANH' | 'HO'): { name: string, url: string } | null => {
+  const getAssetInfo = (id: string, category: 'THAC' | 'KE' | 'CANH' | 'HO' | 'HO_HIEN_DAI' | 'TUONG_DA' | 'TUONG_CAY' | 'FARM' | 'CAFE' | 'HO_BOI'): { name: string, url: string } | null => {
     const list = (systemContent.library?.[category] || (ASSETS as any)[category]);
     for (const item of list) {
       if (item.id === id) return { name: item.name, url: 'url' in item ? item.url : '' };
@@ -3187,7 +4014,7 @@ function AdminView({
     return null;
   };
 
-  const getAssetName = (id: string, category: 'THAC' | 'KE' | 'CANH' | 'HO') => {
+  const getAssetName = (id: string, category: 'THAC' | 'KE' | 'CANH' | 'HO' | 'HO_HIEN_DAI' | 'TUONG_DA' | 'TUONG_CAY' | 'FARM' | 'CAFE' | 'HO_BOI') => {
     const info = getAssetInfo(id, category);
     return info ? info.name : id;
   };
@@ -3211,7 +4038,7 @@ function AdminView({
 
   const groupProjects = () => {
     // Sort projects strictly descending by timestamp first
-    const sortedProjects = [...projects].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const sortedProjects = [...filteredProjects].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     
     // Get VN time for today and yesterday
     const today = new Date();
@@ -3272,21 +4099,187 @@ function AdminView({
   };
 
   const handleDeleteAllProjects = async () => {
-    if (projects.length === 0 || isDeletingAllProjects) return;
+    if (filteredProjects.length === 0 || isDeletingAllProjects) return;
 
-    const ok = window.confirm(`Xóa toàn bộ ${projects.length} dự án khỏi admin? Thao tác này không thể hoàn tác.`);
+    const ok = window.confirm(`Xóa toàn bộ ${filteredProjects.length} dự án khỏi admin? Thao tác này không thể hoàn tác.`);
     if (!ok) return;
 
     try {
       setIsDeletingAllProjects(true);
       const deletedCount = await onDeleteAllProjects();
       setSelectedProject(null);
-      setActionFeedback(`Đã xóa ${deletedCount || projects.length} dự án khỏi hệ thống.`);
+      setActionFeedback(`Đã xóa ${deletedCount || filteredProjects.length} dự án khỏi hệ thống.`);
     } catch (err: any) {
       setActionFeedback(err?.message || 'Không thể xóa toàn bộ dữ liệu dự án.');
     } finally {
       setIsDeletingAllProjects(false);
     }
+  };
+
+  const handleSaveSystemConfig = async (newConfig: any) => {
+    try {
+      const res = await apiFetch('/api/system-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newConfig)
+      });
+      if (res.ok) {
+        setActionFeedback('Đã cập nhật cấu hình hệ thống thành công!');
+        onRefreshConfig();
+        return true;
+      } else {
+        throw new Error('Không thể lưu cấu hình');
+      }
+    } catch (err) {
+      console.error(err);
+      setActionFeedback('Lỗi khi lưu cấu hình.');
+      return false;
+    }
+  };
+
+  const ConfigEditorTab = () => {
+    const [localConfig, setLocalConfig] = useState(systemContent);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+      if (!isSaving) {
+        setLocalConfig(systemContent);
+      }
+    }, [systemContent, isSaving]);
+
+    const handleSave = async () => {
+      setIsSaving(true);
+      const success = await handleSaveSystemConfig(localConfig);
+      if (success) {
+        onRefreshConfig();
+        alert('Đã lưu cấu hình thành công!');
+      } else {
+        alert('Có lỗi xảy ra khi lưu cấu hình.');
+      }
+      setIsSaving(false);
+    };
+
+    const textSections = [
+      { id: 'welcome', name: 'Trang chào (Slogan/Nút)', fields: [
+        { key: 'slogan', label: 'Slogan trang chủ', default: 'Hệ thống thiết kế bản vẽ nhanh nhất Việt Nam' },
+        { key: 'btn_landscape', label: 'Nút Thiết kế cảnh quan', default: 'Thiết kế cảnh quan' },
+        { key: 'btn_architecture', label: 'Nút Thiết kế kiến trúc', default: 'Thiết kế kiến trúc' },
+        { key: 'btn_interior', label: 'Nút Thiết kế nội thất', default: 'Thiết kế nội thất' },
+        { key: 'my_projects', label: 'Nút Dự án của bạn', default: 'Dự án của bạn' }
+      ]},
+      { id: 'selection', name: 'Trang chọn mẫu', fields: [
+        { key: 'title_cats', label: 'Tiêu đề chọn phong cách', default: 'Chọn mẫu thiết kế' },
+        { key: 'sub_cats', label: 'Mô tả chọn phong cách', default: 'Hãy chọn một danh mục để thực hiện dự án của bạn.' },
+        { key: 'title_gallery', label: 'Tiêu đề chọn mẫu', default: 'Nhấn chọn mẫu phù hợp' },
+        { key: 'sub_gallery', label: 'Mô tả chọn mẫu', default: '' }
+      ]},
+      { id: 'upload', name: 'Trang tải ảnh', fields: [
+        { key: 'title', label: 'Tiêu đề tải ảnh', default: 'Tải ảnh hiện trạng công trình' },
+        { key: 'sub', label: 'Mô tả tải ảnh', default: 'Tải ảnh hiện trạng để bắt đầu thiết kế.' },
+        { key: 'title_note', label: 'Tiêu đề mô tả ý tưởng', default: 'Mô tả ý tưởng của bạn' },
+        { key: 'sub_note', label: 'Mô tả hướng dẫn', default: 'Hãy cho chúng tôi biết bạn muốn không gian trông như thế nào...' },
+        { key: 'btn_next', label: 'Nút Tiếp theo', default: 'Tiếp theo' }
+      ]},
+      { id: 'contact', name: 'Trang thông tin liên hệ', fields: [
+        { key: 'title', label: 'Tiêu đề', default: 'Thông Tin Liên Hệ' }
+      ]},
+      { id: 'cat_landscape', name: 'Tên danh mục Cảnh quan', fields: [
+        { key: 'ho', label: 'Hồ koi cổ điển', default: 'Hồ koi sân vườn cổ điển' },
+        { key: 'ho_hien_dai', label: 'Hồ koi hiện đại', default: 'Hồ koi sân vườn hiện đại' },
+        { key: 'tuong_da', label: 'Tường đá trang trí', default: 'Tường đá trang trí' },
+        { key: 'tuong_cay', label: 'Tường cây & vườn nhiệt đới', default: 'Tường cây & vườn nhiệt đới' },
+        { key: 'farm', label: 'Quy hoạch farm', default: 'Quy hoạch farm & du lịch' },
+        { key: 'cafe', label: 'Cảnh quan cà phê', default: 'Cảnh quan quán cà phê' },
+        { key: 'ho_boi', label: 'Hồ bơi thiên nhiên', default: 'Hồ bơi thiên nhiên' }
+      ]},
+      { id: 'cat_architecture', name: 'Tên danh mục Kiến trúc', fields: [
+        { key: 'nha_pho', label: 'Nhà phố', default: 'Nhà phố hiện đại' },
+        { key: 'biet_thu', label: 'Biệt thự', default: 'Biệt thự sang trọng' },
+        { key: 'nha_cap_4', label: 'Nhà cấp 4', default: 'Nhà cấp 4 tiện nghi' },
+        { key: 'nha_vuon', label: 'Nhà vườn', default: 'Nhà vườn nghỉ dưỡng' },
+        { key: 'nha_tien_che', label: 'Nhà tiền chế', default: 'Nhà tiền chế độc đáo' }
+      ]},
+      { id: 'cat_interior', name: 'Tên danh mục Nội thất', fields: [
+        { key: 'hien_dai', label: 'Nội thất hiện đại', default: 'Nội thất hiện đại' },
+        { key: 'tan_co_dien', label: 'Tân cổ điển', default: 'Tân cổ điển quý phái' },
+        { key: 'indochine', label: 'Phong cách Indochine', default: 'Phong cách Indochine' },
+        { key: 'wabi_sabi', label: 'Wabi sabi', default: 'Wabi sabi tối giản' },
+        { key: 'tan_co_dien_go', label: 'Tân cổ điển gỗ', default: 'Tân cổ điển gỗ' }
+      ]}
+    ];
+
+    return (
+      <div className="admin-config-editor">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+          <div>
+            <h2 style={{ color: 'var(--accent)', fontSize: '1.8rem' }}>Cấu hình nội dung giao diện</h2>
+            <p style={{ color: 'rgba(255,255,255,0.6)' }}>Chỉnh sửa văn bản và biểu tượng hiển thị cho người dùng.</p>
+          </div>
+          <button 
+            className="btn-primary" 
+            onClick={handleSave} 
+            disabled={isSaving}
+            style={{ padding: '12px 24px', borderRadius: '12px', opacity: isSaving ? 0.5 : 1 }}
+          >
+             {isSaving ? 'ĐANG LƯU...' : 'LƯU CẤU HÌNH'}
+          </button>
+        </div>
+
+        <div className="config-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '20px' }}>
+          {textSections.map(section => (
+            <div key={section.id} className="config-card" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '20px', padding: '24px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <h3 style={{ color: 'var(--accent)', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>{section.name}</h3>
+              {section.fields.map(field => {
+                const configKey = `${section.id}_${field.key}`;
+                const displayValue = localConfig.uiText?.[configKey] !== undefined ? localConfig.uiText[configKey] : field.default;
+                
+                return (
+                  <div key={field.key} className="input-group" style={{ marginBottom: '15px' }}>
+                    <label style={{ fontSize: '0.85rem', marginBottom: '6px', display: 'block', color: 'rgba(255,255,255,0.5)' }}>{field.label}</label>
+                    <input 
+                      type="text" 
+                      value={displayValue} 
+                      onChange={e => {
+                        const newVal = e.target.value;
+                        setLocalConfig((prev: any) => ({
+                          ...prev,
+                          uiText: { ...prev.uiText, [configKey]: newVal }
+                        }));
+                      }}
+                      style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.95rem' }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+
+          <div className="config-card" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '20px', padding: '24px', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <h3 style={{ color: 'var(--accent)', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>Quản lý Icon</h3>
+            <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', marginBottom: '1.5rem' }}>
+              Dán URL ảnh (PNG/SVG) để thay thế.
+            </p>
+            {['landscape', 'architecture', 'interior'].map(branch => (
+              <div key={branch} className="input-group" style={{ marginBottom: '15px' }}>
+                <label style={{ fontSize: '0.85rem', marginBottom: '6px', display: 'block', textTransform: 'capitalize', color: 'rgba(255,255,255,0.5)' }}>Icon luồng {branch}</label>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <input 
+                    type="text" 
+                    value={localConfig.uiIcons?.[`branch_${branch}`] || ''} 
+                    placeholder="URL ảnh icon..."
+                    onChange={e => setLocalConfig({
+                      ...localConfig,
+                      uiIcons: { ...localConfig.uiIcons, [`branch_${branch}`]: e.target.value }
+                    })}
+                    style={{ flex: 1, padding: '10px', borderRadius: '10px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // --- DESIGNER HELPERS ---
@@ -3384,9 +4377,33 @@ function AdminView({
     } else {
       assets.push({ label: 'Ảnh khoanh vùng thiết kế', url: project.annotatedImage, role: 'Ảnh quy hoạch công năng bằng màu, dùng để xác định đúng vị trí từng hạng mục.' });
 
-      if (project.selections.thac) {
-        const info = getAssetInfo(project.selections.thac, 'THAC');
-        if (info) assets.push({ label: `Mẫu khách chọn: ${info.name}`, url: info.url, role: 'Mẫu thác / vân đá chọn từ thư viện, dùng cho phối cảnh và vật liệu.' });
+      if (project.selections.ho) {
+        const info = getAssetInfo(project.selections.ho, 'HO');
+        if (info) assets.push({ label: `Mẫu khách chọn: ${info.name}`, url: info.url, role: 'Mẫu hồ koi cổ điển chọn từ thư viện.' });
+      }
+      if (project.selections.ho_hien_dai) {
+        const info = getAssetInfo(project.selections.ho_hien_dai, 'HO_HIEN_DAI');
+        if (info) assets.push({ label: `Mẫu khách chọn: ${info.name}`, url: info.url, role: 'Mẫu hồ koi hiện đại chọn từ thư viện.' });
+      }
+      if (project.selections.tuong_da) {
+        const info = getAssetInfo(project.selections.tuong_da, 'TUONG_DA');
+        if (info) assets.push({ label: `Mẫu khách chọn: ${info.name}`, url: info.url, role: 'Mẫu tường đá chọn từ thư viện.' });
+      }
+      if (project.selections.tuong_cay) {
+        const info = getAssetInfo(project.selections.tuong_cay, 'TUONG_CAY');
+        if (info) assets.push({ label: `Mẫu khách chọn: ${info.name}`, url: info.url, role: 'Mẫu tường cây chọn từ thư viện.' });
+      }
+      if (project.selections.farm) {
+        const info = getAssetInfo(project.selections.farm, 'FARM');
+        if (info) assets.push({ label: `Mẫu khách chọn: ${info.name}`, url: info.url, role: 'Mẫu farm chọn từ thư viện.' });
+      }
+      if (project.selections.cafe) {
+        const info = getAssetInfo(project.selections.cafe, 'CAFE');
+        if (info) assets.push({ label: `Mẫu khách chọn: ${info.name}`, url: info.url, role: 'Mẫu cà phê chọn từ thư viện.' });
+      }
+      if (project.selections.ho_boi) {
+        const info = getAssetInfo(project.selections.ho_boi, 'HO_BOI');
+        if (info) assets.push({ label: `Mẫu khách chọn: ${info.name}`, url: info.url, role: 'Mẫu hồ bơi chọn từ thư viện.' });
       }
     }
 
@@ -3396,10 +4413,13 @@ function AdminView({
 
   const buildSelectionLines = (project: Project) => {
     const lines: string[] = [];
-    if (project.selections.thac) lines.push(`- Thác nước: ${getAssetName(project.selections.thac, 'THAC')}`);
-    if (project.selections.ho) lines.push(`- Hồ Koi: ${getAssetName(project.selections.ho, 'HO')}`);
-    if (project.selections.ke?.length) lines.push(`- Kè đá: ${project.selections.ke.map(id => getAssetName(id, 'KE')).join(', ')}`);
-    if (project.selections.canh?.length) lines.push(`- Cảnh quan: ${project.selections.canh.map(id => getAssetName(id, 'CANH')).join(', ')}`);
+    if (project.selections.ho) lines.push(`- Hồ Koi Cổ Điển: ${getAssetName(project.selections.ho, 'HO')}`);
+    if (project.selections.ho_hien_dai) lines.push(`- Hồ Koi Hiện Đại: ${getAssetName(project.selections.ho_hien_dai, 'HO_HIEN_DAI')}`);
+    if (project.selections.tuong_da) lines.push(`- Tường Đá Trang Trí: ${getAssetName(project.selections.tuong_da, 'TUONG_DA')}`);
+    if (project.selections.tuong_cay) lines.push(`- Tường Cây & Vườn Nhiệt Đới: ${getAssetName(project.selections.tuong_cay, 'TUONG_CAY')}`);
+    if (project.selections.farm) lines.push(`- Farm & Du Lịch: ${getAssetName(project.selections.farm, 'FARM')}`);
+    if (project.selections.cafe) lines.push(`- Cảnh Quan Quán Cà Phê: ${getAssetName(project.selections.cafe, 'CAFE')}`);
+    if (project.selections.ho_boi) lines.push(`- Hồ Bơi Thiên Nhiên: ${getAssetName(project.selections.ho_boi, 'HO_BOI')}`);
     return lines.length > 0 ? lines : ['- Chưa có mẫu chọn cụ thể'];
   };
 
@@ -3419,7 +4439,7 @@ function AdminView({
 
     // Use custom prompt from admin if available (per category)
     const categoryPromptKey = isBasic
-      ? (project.basicCategory === 'ho_hien_dai' ? 'promptHoHienDai' : project.basicCategory === 'tuong_da' ? 'promptTuongDa' : project.basicCategory === 'cafe_san_vuon' ? 'promptCafeSanVuon' : 'promptBasic')
+      ? (project.basicCategory === 'ho' ? 'promptBasic' : project.basicCategory === 'ho_hien_dai' ? 'promptHoHienDai' : project.basicCategory === 'tuong_da' ? 'promptTuongDa' : project.basicCategory === 'tuong_cay' ? 'promptTuongCay' : project.basicCategory === 'farm' ? 'promptFarm' : project.basicCategory === 'cafe' ? 'promptCafe' : project.basicCategory === 'ho_boi' ? 'promptHoBoi' : 'promptBasic')
       : null;
 
     if (isBasic && categoryPromptKey && systemContent[categoryPromptKey]) {
@@ -3459,7 +4479,7 @@ function AdminView({
       const noteContent = (project.note || '').toLowerCase();
       // Detect if user wants water features based on keywords
       const hasWaterKeywords = /hồ|thác|nước|pond|waterfall|stream|lake|flow|suối/i.test(noteContent);
-      const hasWaterSelection = !!(project.selections.thac || project.selections.ho);
+      const hasWaterSelection = !!(project.selections.ho || project.selections.ho_hien_dai || project.selections.ho_boi);
       const includeWater = hasWaterKeywords || hasWaterSelection;
 
       // =============================================
@@ -4017,10 +5037,14 @@ function AdminView({
               <label>Mẫu chuẩn đã chọn:</label>
               <div className="req-tags-visual">
                 {(() => {
-                  const items: { id: string, cat: 'THAC' | 'KE' | 'CANH' }[] = [];
-                  if (selectedProject.selections.thac) items.push({ id: selectedProject.selections.thac, cat: 'THAC' });
-                  (selectedProject.selections.ke || []).forEach(id => items.push({ id, cat: 'KE' }));
-                  (selectedProject.selections.canh || []).forEach(id => items.push({ id, cat: 'CANH' }));
+                  const items: { id: string, cat: 'HO' | 'HO_HIEN_DAI' | 'TUONG_DA' | 'TUONG_CAY' | 'FARM' | 'CAFE' | 'HO_BOI' }[] = [];
+                  if (selectedProject.selections.ho) items.push({ id: selectedProject.selections.ho, cat: 'HO' });
+                  if (selectedProject.selections.ho_hien_dai) items.push({ id: selectedProject.selections.ho_hien_dai, cat: 'HO_HIEN_DAI' });
+                  if (selectedProject.selections.tuong_da) items.push({ id: selectedProject.selections.tuong_da, cat: 'TUONG_DA' });
+                  if (selectedProject.selections.tuong_cay) items.push({ id: selectedProject.selections.tuong_cay, cat: 'TUONG_CAY' });
+                  if (selectedProject.selections.farm) items.push({ id: selectedProject.selections.farm, cat: 'FARM' });
+                  if (selectedProject.selections.cafe) items.push({ id: selectedProject.selections.cafe, cat: 'CAFE' });
+                  if (selectedProject.selections.ho_boi) items.push({ id: selectedProject.selections.ho_boi, cat: 'HO_BOI' });
                   if (items.length === 0) return <div className="req-tag-mini">Chưa chọn mẫu</div>;
                   return items.map((item, idx) => {
                     const info = getAssetInfo(item.id, item.cat);
@@ -4108,16 +5132,43 @@ function AdminView({
                <button className={activeTab === 'projects' ? 'active' : ''} onClick={() => setActiveTab('projects')}><Folder size={18} /> QUẢN LÝ DỰ ÁN</button>
                <button className={activeTab === 'resources' ? 'active' : ''} onClick={() => setActiveTab('resources')}><Layers size={18} /> TÀI NGUYÊN</button>
                <button className={activeTab === 'prompt' ? 'active' : ''} onClick={() => setActiveTab('prompt')}><Bot size={18} /> PROMPT AI</button>
+               <button className={activeTab === 'config' ? 'active' : ''} onClick={() => setActiveTab('config')}><Settings size={18} /> CẤU HÌNH UI</button>
             </div>
           </div>
+          
+          {/* BRANCH SELECTION SUB-NAV */}
+          <div className="admin-branch-subnav" style={{ display: 'flex', gap: '10px', marginTop: '15px', padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px' }}>
+            <button 
+              className={`branch-tab ${adminBranch === 'landscape' ? 'active' : ''}`} 
+              onClick={() => { setAdminBranch('landscape'); setSelectedProject(null); }}
+              style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminBranch === 'landscape' ? 'var(--accent)' : 'transparent', color: adminBranch === 'landscape' ? '#000' : '#fff', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              <Map size={18} /> CẢNH QUAN
+            </button>
+            <button 
+              className={`branch-tab ${adminBranch === 'architecture' ? 'active' : ''}`} 
+              onClick={() => { setAdminBranch('architecture'); setSelectedProject(null); }}
+              style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminBranch === 'architecture' ? '#3b82f6' : 'transparent', color: '#fff', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              <Box size={18} /> KIẾN TRÚC
+            </button>
+            <button 
+              className={`branch-tab ${adminBranch === 'interior' ? 'active' : ''}`} 
+              onClick={() => { setAdminBranch('interior'); setSelectedProject(null); }}
+              style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminBranch === 'interior' ? '#a855f7' : 'transparent', color: '#fff', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              <Coffee size={18} /> NỘI THẤT
+            </button>
+          </div>
+
           <div className="admin-title-section">
             <h1>Sơn Hải Landscape Control Center</h1>
             <div className="admin-project-toolbar">
               <div className="stats-pill-bar">
-                 <span className="count-badge">{projects.length}</span>
-                 <span>Hồ sơ khách hàng</span>
+                 <span className="count-badge">{filteredProjects.length}</span>
+                 <span>Dự án {adminBranch === 'landscape' ? 'Cảnh quan' : adminBranch === 'architecture' ? 'Kiến trúc' : 'Nội thất'}</span>
               </div>
-              {activeTab === 'projects' && projects.length > 0 && (
+              {activeTab === 'projects' && filteredProjects.length > 0 && (
                 <button
                   type="button"
                   className="btn-admin-delete-all"
@@ -4125,7 +5176,7 @@ function AdminView({
                   disabled={isDeletingAllProjects}
                 >
                   <Trash2 size={16} />
-                  {isDeletingAllProjects ? 'Đang xóa...' : 'Xóa tất cả dự án'}
+                  {isDeletingAllProjects ? 'Đang xóa...' : 'Xóa tất cả'}
                 </button>
               )}
             </div>
@@ -4139,6 +5190,7 @@ function AdminView({
             onSync={onSync}
             onFeedback={setActionFeedback}
             onClose={() => setActiveTab('projects')}
+            adminBranch={adminBranch}
           />
         )}
 
@@ -4148,7 +5200,14 @@ function AdminView({
             onSystemContentUpdate={onSystemContentUpdate}
             onSync={onSync}
             onFeedback={setActionFeedback}
+            adminBranch={adminBranch}
           />
+        )}
+
+        {activeTab === 'config' && (
+          <div className="admin-content-p-20">
+            <ConfigEditorTab />
+          </div>
         )}
 
         {activeTab === 'projects' && (
@@ -4193,12 +5252,6 @@ function AdminView({
                     <label>Số điện thoại / Zalo</label>
                     <div className="id-value">{selectedProject.customerPhone}</div>
                   </div>
-                  {selectedProject.customerEmail && (
-                    <div className="id-group">
-                      <label>Email liên hệ</label>
-                      <div className="id-value">{selectedProject.customerEmail}</div>
-                    </div>
-                  )}
                   <div className="id-group">
                     <label>Gói dịch vụ đã đăng ký</label>
                     <div className="val-tag service-hero">{selectedProject.service}</div>
@@ -4247,30 +5300,48 @@ function AdminView({
                 <div className="analytic-entry">
                   <label>Chi tiết các hạng mục đã lựa chọn</label>
                   <div className="asset-luxe-grid">
-                    {selectedProject.selections.thac && (
-                      <div className="asset-luxe-pill">
-                        <img src={getAssetInfo(selectedProject.selections.thac, 'THAC')?.url} alt="" />
-                        <span>{getAssetName(selectedProject.selections.thac, 'THAC')} (Thác nước)</span>
-                      </div>
-                    )}
-                    {(selectedProject.selections.ke || []).map(id => (
-                      <div key={id} className="asset-luxe-pill">
-                        <img src={getAssetInfo(id, 'KE')?.url} alt="" />
-                        <span>{getAssetName(id, 'KE')} (Kè đá)</span>
-                      </div>
-                    ))}
                     {selectedProject.selections.ho && (
                       <div className="asset-luxe-pill">
                         <img src={getAssetInfo(selectedProject.selections.ho, 'HO')?.url} alt="" />
-                        <span>{getAssetName(selectedProject.selections.ho, 'HO')} (Kiểu hồ)</span>
+                        <span>{getAssetName(selectedProject.selections.ho, 'HO')} (Hồ Koi Cổ Điển)</span>
                       </div>
                     )}
-                    {(selectedProject.selections.canh || []).map(id => (
-                      <div key={id} className="asset-luxe-pill">
-                        <img src={getAssetInfo(id, 'CANH')?.url} alt="" />
-                        <span>{getAssetName(id, 'CANH')} (Cây xanh)</span>
+                    {selectedProject.selections.ho_hien_dai && (
+                      <div className="asset-luxe-pill">
+                        <img src={getAssetInfo(selectedProject.selections.ho_hien_dai, 'HO_HIEN_DAI')?.url} alt="" />
+                        <span>{getAssetName(selectedProject.selections.ho_hien_dai, 'HO_HIEN_DAI')} (Hồ Koi Hiện Đại)</span>
                       </div>
-                    ))}
+                    )}
+                    {selectedProject.selections.tuong_da && (
+                      <div className="asset-luxe-pill">
+                        <img src={getAssetInfo(selectedProject.selections.tuong_da, 'TUONG_DA')?.url} alt="" />
+                        <span>{getAssetName(selectedProject.selections.tuong_da, 'TUONG_DA')} (Tường Đá)</span>
+                      </div>
+                    )}
+                    {selectedProject.selections.tuong_cay && (
+                      <div className="asset-luxe-pill">
+                        <img src={getAssetInfo(selectedProject.selections.tuong_cay, 'TUONG_CAY')?.url} alt="" />
+                        <span>{getAssetName(selectedProject.selections.tuong_cay, 'TUONG_CAY')} (Tường Cây)</span>
+                      </div>
+                    )}
+                    {selectedProject.selections.farm && (
+                      <div className="asset-luxe-pill">
+                        <img src={getAssetInfo(selectedProject.selections.farm, 'FARM')?.url} alt="" />
+                        <span>{getAssetName(selectedProject.selections.farm, 'FARM')} (Farm & Du Lịch)</span>
+                      </div>
+                    )}
+                    {selectedProject.selections.cafe && (
+                      <div className="asset-luxe-pill">
+                        <img src={getAssetInfo(selectedProject.selections.cafe, 'CAFE')?.url} alt="" />
+                        <span>{getAssetName(selectedProject.selections.cafe, 'CAFE')} (Cà Phê)</span>
+                      </div>
+                    )}
+                    {selectedProject.selections.ho_boi && (
+                      <div className="asset-luxe-pill">
+                        <img src={getAssetInfo(selectedProject.selections.ho_boi, 'HO_BOI')?.url} alt="" />
+                        <span>{getAssetName(selectedProject.selections.ho_boi, 'HO_BOI')} (Hồ Bơi)</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

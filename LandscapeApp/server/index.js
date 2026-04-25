@@ -5,7 +5,7 @@ const cors = require('cors');
 const cloudinary = require('cloudinary').v2;
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
-const { runChatGptAutomation } = require('./chatgptAutomation');
+const { runChatGptAutomation, runChatGptAutomationBatch } = require('./chatgptAutomation');
 const { runFlowAutomation, runFlowVideoAutomation } = require('./flowAutomation');
 const { generateLandscapePrompt } = require('./geminiPromptService');
 const { runPass2Tasks, runSinglePass2Task, initPass2State, PASS2_TASKS } = require('./pass2Automation');
@@ -446,6 +446,7 @@ async function resumePendingProjects() {
 const ProjectSchema = new mongoose.Schema({
   id: String,
   timestamp: { type: Date, default: Date.now },
+  mainBranch: { type: String, default: 'landscape' },
   customerName: String,
   customerPhone: String,
   rawImage: String,
@@ -493,7 +494,11 @@ const Project = mongoose.model('Project', ProjectSchema);
 
 const SystemContentSchema = new mongoose.Schema({
   key: { type: String, default: 'main', unique: true },
-  data: mongoose.Schema.Types.Mixed
+  uiText: { type: mongoose.Schema.Types.Mixed, default: {} },
+  uiIcons: { type: mongoose.Schema.Types.Mixed, default: {} },
+  tips: { type: mongoose.Schema.Types.Mixed, default: null },
+  plans: { type: mongoose.Schema.Types.Mixed, default: null },
+  library: { type: mongoose.Schema.Types.Mixed, default: null }
 }, { timestamps: true });
 const SystemContent = mongoose.model('SystemContent', SystemContentSchema);
 
@@ -640,10 +645,14 @@ app.post('/api/projects', async (req, res) => {
     console.log('Uploading images to Cloudinary...');
 
     // 1. Upload Raw Image
-    data.rawImage = await uploadToCloudinary(data.rawImage);
+    if (data.rawImage) {
+      data.rawImage = await uploadToCloudinary(data.rawImage);
+    }
     
     // 2. Upload Annotated Image
-    data.annotatedImage = await uploadToCloudinary(data.annotatedImage);
+    if (data.annotatedImage) {
+      data.annotatedImage = await uploadToCloudinary(data.annotatedImage);
+    }
 
     if (data.referenceModelUrl) {
       data.referenceModelUrl = await uploadToCloudinary(normalizePublicAssetUrl(data.referenceModelUrl));
@@ -668,12 +677,20 @@ app.post('/api/projects', async (req, res) => {
       console.log('Uploading selected Thac model to Cloudinary:', absoluteThacUrl);
       data.selections.thacUrl = await uploadToCloudinary(absoluteThacUrl);
     }
+
+    if (data.interiorPairs && data.interiorPairs.length > 0) {
+      console.log(`[DEBUG] Uploading ${data.interiorPairs.length} interior pairs to Cloudinary...`);
+      for (let i = 0; i < data.interiorPairs.length; i++) {
+        data.interiorPairs[i].siteImage = await uploadToCloudinary(data.interiorPairs[i].siteImage);
+      }
+    }
     
     const shouldAutoRunFlow = isBasicService(data.service);
 
     // Create project
     const newProject = new Project({
       ...data,
+      mainBranch: data.mainBranch || 'landscape',
       status: shouldAutoRunFlow ? 'processing' : (data.status || 'pending'),
       workflowBranch: shouldAutoRunFlow ? 'chatgpt_image' : data.workflowBranch
     });
@@ -714,9 +731,27 @@ app.post('/api/projects', async (req, res) => {
           };
 
           console.log(`[AUTO] Đang bắt đầu xử lý ảnh qua Google Labs Flow cho "${data.customerName}" với pipeline giống nút admin...`);
-          await runFlowAutomation({ prompt: resolvedPrompt, assets, onImageReady }).catch(err => {
-              console.error('[AUTO] Lỗi Google Flow:', err.message);
-          });
+          
+          if (projectForAi.interiorPairs && projectForAi.interiorPairs.length > 0) {
+            console.log(`[AUTO] Phát hiện ${projectForAi.interiorPairs.length} cặp Nội thất. Sẽ tạo song song.`);
+            // Tạo danh sách jobs để chạy song song 1 lúc
+            const jobs = projectForAi.interiorPairs.map((pair, idx) => {
+              const pairAssets = [
+                { label: `Ảnh hiện trạng góc ${idx + 1}`, url: pair.siteImage, role: 'Ảnh nền chính, phải giữ nguyên kiến trúc, góc chụp và phối cảnh.' },
+                { label: `Mẫu phong cách tham khảo ${idx + 1}`, url: pair.referenceImage, role: 'Mẫu phong cách tham khảo. Dùng làm nguồn cảm hứng.' }
+              ];
+              const pairPrompt = buildProjectFlowPrompt({ ...projectForAi, rawImage: pair.siteImage, referenceModelUrl: pair.referenceImage, selections: {} });
+              return { prompt: pairPrompt, assets: pairAssets };
+            });
+
+            await runChatGptAutomationBatch(jobs, onImageReady).catch(err => {
+                console.error('[AUTO] Lỗi ChatGPT song song:', err.message);
+            });
+          } else {
+            await runFlowAutomation({ prompt: resolvedPrompt, assets, onImageReady }).catch(err => {
+                console.error('[AUTO] Lỗi Google Flow:', err.message);
+            });
+          }
 
           if (autoCount > 0) {
             await Project.findOneAndUpdate({ id: newProject.id }, { $set: { status: 'done' } });
@@ -757,6 +792,10 @@ app.patch('/api/projects/:id', async (req, res) => {
       updates.aiResults = req.body.aiResults;
     }
 
+    if (typeof req.body.mainBranch === 'string') {
+      updates.mainBranch = req.body.mainBranch;
+    }
+
     const updated = await Project.findOneAndUpdate(
       { id: req.params.id },
       { $set: updates },
@@ -770,6 +809,39 @@ app.patch('/api/projects/:id', async (req, res) => {
     res.json(updated);
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/system-content', async (req, res) => {
+  try {
+    let content = await SystemContent.findOne({ key: 'main' });
+    if (!content) {
+      return res.json({ uiText: {}, uiIcons: {} });
+    }
+    res.json(content);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/system-content', async (req, res) => {
+  try {
+    const { uiText, uiIcons, tips, plans, library } = req.body;
+    const update = {};
+    if (uiText) update.uiText = uiText;
+    if (uiIcons) update.uiIcons = uiIcons;
+    if (tips) update.tips = tips;
+    if (plans) update.plans = plans;
+    if (library) update.library = library;
+
+    const content = await SystemContent.findOneAndUpdate(
+      { key: 'main' },
+      { $set: update },
+      { upsert: true, new: true }
+    );
+    res.json(content);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -1124,28 +1196,7 @@ app.post('/api/upload', async (req, res) => {
   }
 });
 
-app.get('/api/system-content', async (req, res) => {
-  try {
-    const content = await SystemContent.findOne({ key: 'main' });
-    if (!content) return res.json(null);
-    res.json(content.data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/system-content', async (req, res) => {
-  try {
-    const updated = await SystemContent.findOneAndUpdate(
-      { key: 'main' },
-      { $set: { data: req.body } },
-      { upsert: true, new: true }
-    );
-    res.json(updated.data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// Removed duplicate system-content routes
 
 app.post('/api/upload', async (req, res) => {
   try {

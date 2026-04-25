@@ -190,11 +190,7 @@ async function enableImageMode(page) {
 async function clearTextarea(page) {
   try {
     const input = await findPromptInput(page);
-    await input.focus();
-    await page.keyboard.down('Control');
-    await page.keyboard.press('a');
-    await page.keyboard.up('Control');
-    await page.keyboard.press('Backspace');
+    await input.fill('');
     await delay(200);
   } catch (e) {}
 }
@@ -272,9 +268,7 @@ async function uploadFiles(page, filePaths, attempt = 0) {
 async function fillPrompt(page, prompt) {
   await clearTextarea(page);
   const promptInput = await findPromptInput(page);
-  await promptInput.click();
-  await delay(100);
-  await page.keyboard.insertText(prompt);
+  await promptInput.fill(prompt);
   await delay(200);
 }
 
@@ -649,6 +643,58 @@ async function runChatGptAutomation({ prompt, assets, onImageReady }) {
   }
 }
 
+async function runChatGptAutomationBatch(jobs, onImageReady) {
+  const tempDir = path.join(os.tmpdir(), `landscape-chatgpt-batch-${Date.now()}`);
+  await ensureDirectory(tempDir);
+
+  let browser;
+  const allInputFiles = [];
+
+  try {
+    // Tải tất cả assets cho tất cả jobs
+    for (const job of jobs) {
+      const filePaths = [];
+      for (let index = 0; index < job.assets.length; index += 1) {
+        const fileInfo = await downloadAssetToFile(job.assets[index], tempDir, Math.floor(Math.random() * 1000) + index);
+        allInputFiles.push(fileInfo);
+        filePaths.push(fileInfo.filePath);
+      }
+      job.filePaths = filePaths;
+    }
+
+    browser = await chromium.launchPersistentContext(CHATGPT_PROFILE_DIR, {
+      executablePath: resolveBrowserExecutable(),
+      headless: false,
+      viewport: { width: 1440, height: 900 },
+      acceptDownloads: true,
+      args: ['--disable-blink-features=AutomationControlled']
+    });
+
+    const defaultPage = browser.pages()[0];
+    
+    // Khởi chạy đồng thời tất cả các luồng
+    const promises = jobs.map(async (job, i) => {
+      // Để tránh mở 4 tab cùng 1 mili-giây gây nghẽn, tạo độ trễ nhẹ
+      await delay(i * 3000); 
+      console.log(`[BATCH] Bắt đầu luồng ${i + 1}/${jobs.length}...`);
+      const targetPage = (i === 0 && defaultPage) ? defaultPage : await browser.newPage();
+      return runSingleVariant(targetPage, job.prompt, job.filePaths, tempDir, `Batch_${i + 1}`, onImageReady);
+    });
+
+    const results = await Promise.all(promises);
+    const validOutputs = results.filter(p => p);
+    
+    console.log(`[BATCH] Tổng cộng thu được ${validOutputs.length}/${jobs.length} ảnh.`);
+    return { outputPaths: validOutputs, chatUrl: 'https://chatgpt.com' };
+  } finally {
+    if (browser) {
+      await browser.close().catch(() => null);
+    }
+    await Promise.all(allInputFiles.map(file => fs.unlink(file.filePath).catch(() => null)));
+  }
+}
+
 module.exports = {
-  runChatGptAutomation
+  runChatGptAutomation,
+  runChatGptAutomationBatch
 };
