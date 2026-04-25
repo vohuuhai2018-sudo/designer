@@ -10,6 +10,32 @@
   font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+/* ===== Performance baseline ===== */
+img {
+  content-visibility: auto;
+}
+.view {
+  contain: layout paint style;
+}
+.btn-v2-main,
+.process-step,
+.step-icon,
+.btn-admin-access,
+.btn-my-projects-v2,
+.arrow-float,
+.infinity-3d-icon {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 
 .view {
   flex: 1;
@@ -1563,9 +1589,9 @@ canvas {
 
 /* Infinity 3D Animation */
 @keyframes infinity-3d-float {
-  0% { transform: rotateY(0deg) rotateX(10deg) translateY(0px); filter: drop-shadow(0 0 5px var(--accent)); }
-  50% { transform: rotateY(180deg) rotateX(-10deg) translateY(-10px); filter: drop-shadow(0 0 25px var(--accent)); }
-  100% { transform: rotateY(360deg) rotateX(10deg) translateY(0px); filter: drop-shadow(0 0 5px var(--accent)); }
+  0% { transform: rotateY(0deg) rotateX(10deg) translateY(0px); }
+  50% { transform: rotateY(180deg) rotateX(-10deg) translateY(-10px); }
+  100% { transform: rotateY(360deg) rotateX(10deg) translateY(0px); }
 }
 
 .infinity-3d-container {
@@ -1580,6 +1606,7 @@ canvas {
   animation: infinity-3d-float 4s infinite linear;
   color: var(--accent);
   display: block;
+  filter: drop-shadow(0 0 12px var(--accent));
 }
 
 .change-image-btn {
@@ -1612,7 +1639,7 @@ canvas {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(15px);
+  backdrop-filter: blur(7px);
   z-index: 1000;
   display: flex;
   align-items: flex-end; /* Slide from bottom for mobile feel */
@@ -3150,7 +3177,7 @@ canvas {
   background: rgba(15, 15, 15, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(15px);
+  backdrop-filter: blur(7px);
   user-select: none;
 }
 
@@ -3479,7 +3506,7 @@ canvas {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.9);
-  backdrop-filter: blur(15px);
+  backdrop-filter: blur(7px);
   z-index: 10000;
   display: flex;
   align-items: center;
@@ -4716,8 +4743,8 @@ canvas {
   position: relative;
   z-index: 1;
   background: rgba(255, 255, 255, 0.72); /* More translucent for better glass effect */
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   padding: 40px 40px;
   border-radius: 40px;
   border: 1px solid rgba(255, 255, 255, 0.8);
@@ -4742,8 +4769,8 @@ canvas {
     padding: 40px 20px;
     margin: 0;
     background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     box-shadow: none;
   }
   

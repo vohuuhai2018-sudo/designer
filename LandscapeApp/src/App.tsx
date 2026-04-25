@@ -1322,36 +1322,36 @@ function WelcomeView({ onStart, onAdmin, onMyProjects }: { onStart: (branch: Mai
       <div className="founder-bg-overlay" />
       <div className="hero-content">
         <div className="logo-tech-container" onClick={handleLogoClick}>
-           <img src="/assets/LOGO _ PNG.png" alt="Logo" className="main-logo-image" />
+           <img decoding="async" loading="lazy" src="/assets/LOGO _ PNG.png" alt="Logo" className="main-logo-image" />
         </div>
         <h1 className="main-title-v3">Hệ thống thiết kế bản vẽ nhanh nhất Việt Nam</h1>
         
         <div className="branch-cta-group-v2">
           <button className="btn-v2-main" onClick={() => onStart('landscape')}>
-            <div className="btn-v2-icon"><img src="/assets/LUỒNG THIẾT KẾ/1. THIET KE CANH QUAN.png" alt="Cảnh quan" className="full-width-icon" /></div>
+            <div className="btn-v2-icon"><img decoding="async" loading="lazy" src="/assets/LUỒNG THIẾT KẾ/1. THIET KE CANH QUAN.png" alt="Cảnh quan" className="full-width-icon" /></div>
             <div className="btn-v2-text">
               <strong>Thiết kế cảnh quan</strong>
               <span>Hồ koi, sân vườn, farm, hồ bơi</span>
             </div>
-            <img src="/assets/mui ten.png" alt="Arrow" className="arrow-float custom-arrow" />
+            <img decoding="async" loading="lazy" src="/assets/mui ten.png" alt="Arrow" className="arrow-float custom-arrow" />
           </button>
           
           <button className="btn-v2-main" onClick={() => onStart('architecture')}>
-            <div className="btn-v2-icon"><img src="/assets/LUỒNG THIẾT KẾ/2. THIET KE KIEN TRUC.png" alt="Kiến trúc" className="full-width-icon" /></div>
+            <div className="btn-v2-icon"><img decoding="async" loading="lazy" src="/assets/LUỒNG THIẾT KẾ/2. THIET KE KIEN TRUC.png" alt="Kiến trúc" className="full-width-icon" /></div>
             <div className="btn-v2-text">
               <strong>Thiết kế kiến trúc</strong>
               <span>Nhà phố, biệt thự, nhà tiền chế</span>
             </div>
-            <img src="/assets/mui ten.png" alt="Arrow" className="arrow-float custom-arrow" />
+            <img decoding="async" loading="lazy" src="/assets/mui ten.png" alt="Arrow" className="arrow-float custom-arrow" />
           </button>
 
           <button className="btn-v2-main" onClick={() => onStart('interior')}>
-            <div className="btn-v2-icon"><img src="/assets/LUỒNG THIẾT KẾ/3. THIET KE NOI THAT.png" alt="Nội thất" className="full-width-icon" /></div>
+            <div className="btn-v2-icon"><img decoding="async" loading="lazy" src="/assets/LUỒNG THIẾT KẾ/3. THIET KE NOI THAT.png" alt="Nội thất" className="full-width-icon" /></div>
             <div className="btn-v2-text">
               <strong>Thiết kế nội thất</strong>
               <span>Hiện đại, tân cổ điển, indochine</span>
             </div>
-            <img src="/assets/mui ten.png" alt="Arrow" className="arrow-float custom-arrow" />
+            <img decoding="async" loading="lazy" src="/assets/mui ten.png" alt="Arrow" className="arrow-float custom-arrow" />
           </button>
         </div>
 
@@ -1364,17 +1364,17 @@ function WelcomeView({ onStart, onAdmin, onMyProjects }: { onStart: (branch: Mai
 
         <div className="process-flow-v3">
           <div className="process-step">
-            <div className="step-icon"><img src="/assets/ICON TRANG CHU/1. CHON MAU.png" alt="Chọn mẫu đẹp" className="full-width-icon" /></div>
+            <div className="step-icon"><img decoding="async" loading="lazy" src="/assets/ICON TRANG CHU/1. CHON MAU.png" alt="Chọn mẫu đẹp" className="full-width-icon" /></div>
             <span>Chọn mẫu đẹp</span>
           </div>
-          <div className="step-arrow"><img src="/assets/mui ten.png" alt="->" className="custom-arrow-small" /></div>
+          <div className="step-arrow"><img decoding="async" loading="lazy" src="/assets/mui ten.png" alt="->" className="custom-arrow-small" /></div>
           <div className="process-step">
-            <div className="step-icon"><img src="/assets/ICON TRANG CHU/2. CHUP HIEN TRANG.png" alt="Chụp hiện trạng" className="full-width-icon" /></div>
+            <div className="step-icon"><img decoding="async" loading="lazy" src="/assets/ICON TRANG CHU/2. CHUP HIEN TRANG.png" alt="Chụp hiện trạng" className="full-width-icon" /></div>
             <span>Chụp hiện trạng</span>
           </div>
-          <div className="step-arrow"><img src="/assets/mui ten.png" alt="->" className="custom-arrow-small" /></div>
+          <div className="step-arrow"><img decoding="async" loading="lazy" src="/assets/mui ten.png" alt="->" className="custom-arrow-small" /></div>
           <div className="process-step">
-            <div className="step-icon"><img src="/assets/ICON TRANG CHU/3. NHAN BAN VE.png" alt="Nhận bản vẽ" className="full-width-icon" /></div>
+            <div className="step-icon"><img decoding="async" loading="lazy" src="/assets/ICON TRANG CHU/3. NHAN BAN VE.png" alt="Nhận bản vẽ" className="full-width-icon" /></div>
             <span>Nhận bản vẽ</span>
           </div>
         </div>
@@ -1499,7 +1499,7 @@ function UploadView({
               >
                 {interiorSiteImages?.[idx] ? (
                   <>
-                    <img src={interiorSiteImages[idx]} alt={`Site ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img decoding="async" loading="lazy" src={interiorSiteImages[idx]} alt={`Site ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     <div className="tag-overlay-premium">
                       <CheckCircle2 size={12} /> ĐÃ TẢI ẢNH
                     </div>
@@ -1523,7 +1523,7 @@ function UploadView({
           <div className="upload-area" onClick={() => fileRef.current?.click()}>
             {preview ? (
               <>
-                <img src={preview} alt="Preview" />
+                <img decoding="async" loading="lazy" src={preview} alt="Preview" />
                 <div className="change-image-overlay">
                   <div className="change-image-btn">
                     <RefreshCw size={20} />
@@ -1555,10 +1555,10 @@ function UploadView({
               {basicModelUrl ? (
                 <div className="guide-template-side">
                   <span className="guide-template-label">ẢNH MẪU ĐÃ CHỌN</span>
-                  <img src={basicModelUrl} alt="Selected Template" className="guide-template-img" />
+                  <img decoding="async" loading="lazy" src={basicModelUrl} alt="Selected Template" className="guide-template-img" />
                 </div>
               ) : (
-                <img src={systemContent.tips.sampleImage} alt="Guide" className="guide-template-img" />
+                <img decoding="async" loading="lazy" src={systemContent.tips.sampleImage} alt="Guide" className="guide-template-img" />
               )}
             </div>
           </div>
@@ -1630,7 +1630,7 @@ function UploadView({
                   {asset.startsWith('data:video') ? (
                     <video src={asset} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    <img src={asset} alt={`Extra ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img decoding="async" loading="lazy" src={asset} alt={`Extra ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   )}
                   <button className="btn-remove-extra" onClick={(e) => { e.stopPropagation(); removeExtraAsset(idx); }}>
                     <X size={18} />
@@ -1830,7 +1830,7 @@ function EditorView({
                 <X size={40} />
               </button>
               <div className="modal-header-premium">Hướng dẫn khoanh vùng chuẩn</div>
-              <img src="/assets/sample_marking.jpg" alt="Hướng dẫn khoanh vùng" className="sample-img-full" />
+              <img decoding="async" loading="lazy" src="/assets/sample_marking.jpg" alt="Hướng dẫn khoanh vùng" className="sample-img-full" />
               <div className="modal-legend-mini-premium">
                 <div className="legend-row">
                   <div className="legend-item"><span className="dot" style={{ background: '#ef4444' }}/> Thác nước (Đỏ)</div>
@@ -1954,7 +1954,7 @@ function ServiceView({
                   return (
                     <button key={cat.id} className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`} onClick={() => !isLocked && setHoActive(cat.id)} disabled={isLocked}>
                       <div className="cat-img">
-                        <img src={displayImg} alt={cat.name} />
+                        <img decoding="async" loading="lazy" src={displayImg} alt={cat.name} />
                         {isSelectedCat && <div className="change-badge" onClick={(e) => makeHandleReset('ho')(e as any)}><RefreshCcw size={12} /> Thay đổi</div>}
                       </div>
                       <div className="picked-label-container">
@@ -1975,7 +1975,7 @@ function ServiceView({
                   {(lib.HO || []).find((c: any) => c.id === hoActive)?.variants?.map((v: any) => (
                     <button key={v.id} className={`category-card ${selections.ho === v.id ? 'picked' : ''}`} onClick={() => makeHandleSelect('ho', setHoActive)(v.id)}>
                       <div className="cat-img">
-                        <img src={v.url} alt={v.name} />
+                        <img decoding="async" loading="lazy" src={v.url} alt={v.name} />
                         {selections.ho === v.id && <div className="check-badge-inline"><CheckCircle2 size={16} /></div>}
                       </div>
                       <span>{v.name}</span>
@@ -2003,7 +2003,7 @@ function ServiceView({
                   return (
                     <button key={cat.id} className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`} onClick={() => !isLocked && setHoHienDaiActive(cat.id)} disabled={isLocked}>
                       <div className="cat-img">
-                        <img src={displayImg} alt={cat.name} />
+                        <img decoding="async" loading="lazy" src={displayImg} alt={cat.name} />
                         {isSelectedCat && <div className="change-badge" onClick={(e) => makeHandleReset('ho_hien_dai')(e as any)}><RefreshCcw size={12} /> Thay đổi</div>}
                       </div>
                       <div className="picked-label-container">
@@ -2024,7 +2024,7 @@ function ServiceView({
                   {(lib.HO_HIEN_DAI || []).find((c: any) => c.id === hoHienDaiActive)?.variants?.map((v: any) => (
                     <button key={v.id} className={`category-card ${selections.ho_hien_dai === v.id ? 'picked' : ''}`} onClick={() => makeHandleSelect('ho_hien_dai', setHoHienDaiActive)(v.id)}>
                       <div className="cat-img">
-                        <img src={v.url} alt={v.name} />
+                        <img decoding="async" loading="lazy" src={v.url} alt={v.name} />
                         {selections.ho_hien_dai === v.id && <div className="check-badge-inline"><CheckCircle2 size={16} /></div>}
                       </div>
                       <span>{v.name}</span>
@@ -2052,7 +2052,7 @@ function ServiceView({
                   return (
                     <button key={cat.id} className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`} onClick={() => !isLocked && setTuongDaActive(cat.id)} disabled={isLocked}>
                       <div className="cat-img">
-                        <img src={displayImg} alt={cat.name} />
+                        <img decoding="async" loading="lazy" src={displayImg} alt={cat.name} />
                         {isSelectedCat && <div className="change-badge" onClick={(e) => makeHandleReset('tuong_da')(e as any)}><RefreshCcw size={12} /> Thay đổi</div>}
                       </div>
                       <div className="picked-label-container">
@@ -2073,7 +2073,7 @@ function ServiceView({
                   {(lib.TUONG_DA || []).find((c: any) => c.id === tuongDaActive)?.variants?.map((v: any) => (
                     <button key={v.id} className={`category-card ${selections.tuong_da === v.id ? 'picked' : ''}`} onClick={() => makeHandleSelect('tuong_da', setTuongDaActive)(v.id)}>
                       <div className="cat-img">
-                        <img src={v.url} alt={v.name} />
+                        <img decoding="async" loading="lazy" src={v.url} alt={v.name} />
                         {selections.tuong_da === v.id && <div className="check-badge-inline"><CheckCircle2 size={16} /></div>}
                       </div>
                       <span>{v.name}</span>
@@ -2101,7 +2101,7 @@ function ServiceView({
                   return (
                     <button key={cat.id} className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`} onClick={() => !isLocked && setTuongCayActive(cat.id)} disabled={isLocked}>
                       <div className="cat-img">
-                        <img src={displayImg} alt={cat.name} />
+                        <img decoding="async" loading="lazy" src={displayImg} alt={cat.name} />
                         {isSelectedCat && <div className="change-badge" onClick={(e) => makeHandleReset('tuong_cay')(e as any)}><RefreshCcw size={12} /> Thay đổi</div>}
                       </div>
                       <div className="picked-label-container">
@@ -2122,7 +2122,7 @@ function ServiceView({
                   {(lib.TUONG_CAY || []).find((c: any) => c.id === tuongCayActive)?.variants?.map((v: any) => (
                     <button key={v.id} className={`category-card ${selections.tuong_cay === v.id ? 'picked' : ''}`} onClick={() => makeHandleSelect('tuong_cay', setTuongCayActive)(v.id)}>
                       <div className="cat-img">
-                        <img src={v.url} alt={v.name} />
+                        <img decoding="async" loading="lazy" src={v.url} alt={v.name} />
                         {selections.tuong_cay === v.id && <div className="check-badge-inline"><CheckCircle2 size={16} /></div>}
                       </div>
                       <span>{v.name}</span>
@@ -2150,7 +2150,7 @@ function ServiceView({
                   return (
                     <button key={cat.id} className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`} onClick={() => !isLocked && setFarmActive(cat.id)} disabled={isLocked}>
                       <div className="cat-img">
-                        <img src={displayImg} alt={cat.name} />
+                        <img decoding="async" loading="lazy" src={displayImg} alt={cat.name} />
                         {isSelectedCat && <div className="change-badge" onClick={(e) => makeHandleReset('farm')(e as any)}><RefreshCcw size={12} /> Thay đổi</div>}
                       </div>
                       <div className="picked-label-container">
@@ -2171,7 +2171,7 @@ function ServiceView({
                   {(lib.FARM || []).find((c: any) => c.id === farmActive)?.variants?.map((v: any) => (
                     <button key={v.id} className={`category-card ${selections.farm === v.id ? 'picked' : ''}`} onClick={() => makeHandleSelect('farm', setFarmActive)(v.id)}>
                       <div className="cat-img">
-                        <img src={v.url} alt={v.name} />
+                        <img decoding="async" loading="lazy" src={v.url} alt={v.name} />
                         {selections.farm === v.id && <div className="check-badge-inline"><CheckCircle2 size={16} /></div>}
                       </div>
                       <span>{v.name}</span>
@@ -2199,7 +2199,7 @@ function ServiceView({
                   return (
                     <button key={cat.id} className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`} onClick={() => !isLocked && setCafeActive(cat.id)} disabled={isLocked}>
                       <div className="cat-img">
-                        <img src={displayImg} alt={cat.name} />
+                        <img decoding="async" loading="lazy" src={displayImg} alt={cat.name} />
                         {isSelectedCat && <div className="change-badge" onClick={(e) => makeHandleReset('cafe')(e as any)}><RefreshCcw size={12} /> Thay đổi</div>}
                       </div>
                       <div className="picked-label-container">
@@ -2220,7 +2220,7 @@ function ServiceView({
                   {(lib.CAFE || []).find((c: any) => c.id === cafeActive)?.variants?.map((v: any) => (
                     <button key={v.id} className={`category-card ${selections.cafe === v.id ? 'picked' : ''}`} onClick={() => makeHandleSelect('cafe', setCafeActive)(v.id)}>
                       <div className="cat-img">
-                        <img src={v.url} alt={v.name} />
+                        <img decoding="async" loading="lazy" src={v.url} alt={v.name} />
                         {selections.cafe === v.id && <div className="check-badge-inline"><CheckCircle2 size={16} /></div>}
                       </div>
                       <span>{v.name}</span>
@@ -2248,7 +2248,7 @@ function ServiceView({
                   return (
                     <button key={cat.id} className={`category-card ${isSelectedCat ? 'picked' : ''} ${isLocked ? 'locked' : ''}`} onClick={() => !isLocked && setHoBoiActive(cat.id)} disabled={isLocked}>
                       <div className="cat-img">
-                        <img src={displayImg} alt={cat.name} />
+                        <img decoding="async" loading="lazy" src={displayImg} alt={cat.name} />
                         {isSelectedCat && <div className="change-badge" onClick={(e) => makeHandleReset('ho_boi')(e as any)}><RefreshCcw size={12} /> Thay đổi</div>}
                       </div>
                       <div className="picked-label-container">
@@ -2269,7 +2269,7 @@ function ServiceView({
                   {(lib.HO_BOI || []).find((c: any) => c.id === hoBoiActive)?.variants?.map((v: any) => (
                     <button key={v.id} className={`category-card ${selections.ho_boi === v.id ? 'picked' : ''}`} onClick={() => makeHandleSelect('ho_boi', setHoBoiActive)(v.id)}>
                       <div className="cat-img">
-                        <img src={v.url} alt={v.name} />
+                        <img decoding="async" loading="lazy" src={v.url} alt={v.name} />
                         {selections.ho_boi === v.id && <div className="check-badge-inline"><CheckCircle2 size={16} /></div>}
                       </div>
                       <span>{v.name}</span>
@@ -2312,7 +2312,7 @@ function ServiceView({
             <div className="media-preview-row">
               {extraAssets.map((asset, idx) => (
                 <div key={idx} className="media-preview-item">
-                  <img src={asset} alt="extra" />
+                  <img decoding="async" loading="lazy" src={asset} alt="extra" />
                 </div>
               ))}
             </div>
@@ -2426,7 +2426,7 @@ function BasicSelectionView({
                     }}
                   >
                     {cat.thumb ? (
-                      <img src={cat.thumb} alt={cat.name} className="cat-thumb" />
+                      <img decoding="async" loading="lazy" src={cat.thumb} alt={cat.name} className="cat-thumb" />
                     ) : (
                       <div className="cat-icon-orb">{(cat as any).icon}</div>
                     )}
@@ -2582,7 +2582,7 @@ function PlanSelectionView({ service, onServiceChange, systemContent, mainBranch
               boxShadow: service === s.name ? `0 0 30px ${s.color}66` : '0 10px 30px rgba(0,0,0,0.3)'
             }}
           >
-            <img 
+            <img decoding="async" loading="lazy" 
               src={s.img} 
               alt={s.name} 
               style={{ 
@@ -2745,7 +2745,7 @@ function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewRe
                 onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
               >
                 <img
-                  src={previewImg} alt=""
+decoding="async" loading="lazy"                   src={previewImg} alt=""
                   style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '10px', flexShrink: 0, background: '#f1f5f9' }}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -2964,7 +2964,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                          border: pass2Picked === url ? '3px solid #facc15' : '2px solid rgba(255,255,255,0.15)',
                          opacity: pass2Picked === url ? 1 : 0.55, transition: 'all 0.15s', aspectRatio: '1'
                        }}>
-                         <img src={url} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                         <img decoding="async" loading="lazy" src={url} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '0.55rem', padding: '2px', textAlign: 'center', fontWeight: 700 }}>{label}</div>
                        </div>
                      );
@@ -3022,7 +3022,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                        {task.url ? (
                          task.type === 'video'
                            ? <video src={task.url} controls style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block', background: '#000' }} />
-                           : <img src={task.url} alt={task.label} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }} />
+                           : <img decoding="async" loading="lazy" src={task.url} alt={task.label} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }} />
                        ) : (
                          <div style={{ aspectRatio: '16/10', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>
                            {task.status === 'failed' ? '❌' : task.status === 'running' ? '⏳ Đang tạo...' : '... chờ'}
@@ -3402,7 +3402,7 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
                   <label>Ảnh minh họa mẹo chụp</label>
                   <div className="asset-card-admin" style={{marginTop: '10px'}}>
                     <div className="asset-preview-box">
-                      <img src={systemContent.tips.sampleImage} alt="Tips" />
+                      <img decoding="async" loading="lazy" src={systemContent.tips.sampleImage} alt="Tips" />
                       <div className="asset-actions-overlay">
                         <button onClick={() => { setPendingReplace({ type: 'tip' }); replacerRef.current?.click(); }}>THAY THẾ ẢNH</button>
                       </div>
@@ -3440,7 +3440,7 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
                       <div className="plan-media-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px'}}>
                         {p.media.map((m: any, mIdx: number) => (
                           <div key={mIdx} className="asset-preview-box" style={{borderRadius: '8px', overflow: 'hidden', height: '80px'}}>
-                             {m.type === 'video' ? <div style={{height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#222'}}><VideoIcon size={20} /></div> : <img src={m.url} alt="plan" style={{width: '100%', height: '100%', objectFit: 'cover'}} />}
+                             {m.type === 'video' ? <div style={{height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#222'}}><VideoIcon size={20} /></div> : <img decoding="async" loading="lazy" src={m.url} alt="plan" style={{width: '100%', height: '100%', objectFit: 'cover'}} />}
                              <div className="asset-actions-overlay">
                                 <button style={{padding: '4px', fontSize: '0.6rem'}} onClick={() => { setPendingReplace({ type: 'plan', planIdx: pIdx, mediaIdx: mIdx }); replacerRef.current?.click(); }}>EDIT</button>
                              </div>
@@ -3517,7 +3517,7 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
                        {isInterior ? (
                          [0, 1, 2, 3].map(imgIdx => (
                            <div key={imgIdx} className="asset-preview-box" style={{ height: '120px' }}>
-                             <img src={v.images?.[imgIdx] || "https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=600"} alt={`${v.name} ${imgIdx + 1}`} />
+                             <img decoding="async" loading="lazy" src={v.images?.[imgIdx] || "https://images.unsplash.com/photo-1546027667-435374996526?q=80&w=600"} alt={`${v.name} ${imgIdx + 1}`} />
                              <div className="asset-actions-overlay">
                                <button onClick={() => { 
                                  setPendingReplace({ 
@@ -3534,7 +3534,7 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
                          ))
                        ) : (
                          <div className="asset-preview-box">
-                           <img src={v.url} alt={v.name} />
+                           <img decoding="async" loading="lazy" src={v.url} alt={v.name} />
                            <div className="asset-actions-overlay">
                              <button onClick={() => { 
                                setPendingReplace({ type: 'variant', cat: selectedCat, itemId: selectedItem.id, variantId: v.id }); 
@@ -3628,7 +3628,7 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
                     {isInterior ? (
                       [0, 1, 2, 3].map(imgIdx => (
                         <div key={imgIdx} className="asset-preview-box" style={{ height: '120px' }}>
-                          <img src={item.images?.[imgIdx] || item.url} alt={`${item.name} ${imgIdx + 1}`} />
+                          <img decoding="async" loading="lazy" src={item.images?.[imgIdx] || item.url} alt={`${item.name} ${imgIdx + 1}`} />
                           <div className="asset-actions-overlay" onClick={e => e.stopPropagation()}>
                             <button onClick={() => { 
                               setPendingReplace({ 
@@ -3644,7 +3644,7 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
                       ))
                     ) : (
                       <div className="asset-preview-box">
-                        <img src={item.url} alt={item.name} />
+                        <img decoding="async" loading="lazy" src={item.url} alt={item.name} />
                         <div className="asset-actions-overlay" onClick={e => e.stopPropagation()}>
                           <button onClick={() => { 
                             setPendingReplace({ type: 'library', cat: selectedCat, itemId: item.id }); 
@@ -4907,7 +4907,7 @@ function AdminView({
                   {isVideoAsset(asset.url) ? (
                     <video src={asset.url} controls />
                   ) : (
-                    <img src={asset.url} alt={asset.label} />
+                    <img decoding="async" loading="lazy" src={asset.url} alt={asset.label} />
                   )}
                 </div>
                 <div className="asset-meta">
@@ -4985,7 +4985,7 @@ function AdminView({
                     {isVideo ? (
                       <video src={mediaUrl} controls style={{ width: '100%', borderRadius: '8px' }} />
                     ) : (
-                      <img src={mediaUrl} alt={`AI Generation ${index + 1}`} />
+                      <img decoding="async" loading="lazy" src={mediaUrl} alt={`AI Generation ${index + 1}`} />
                     )}
                     <div className="ai-result-actions">
                       <button className="btn-link-inline" onClick={() => window.open(mediaUrl, '_blank')}><ExternalLink size={16} /> {isVideo ? 'Xem video' : 'Xem ảnh'}</button>
@@ -5050,7 +5050,7 @@ function AdminView({
                     const info = getAssetInfo(item.id, item.cat);
                     return (
                       <div key={idx} className="req-asset-preview" title={info?.name || item.id}>
-                        <div className="req-asset-thumb"><img src={info?.url} alt={info?.name} /></div>
+                        <div className="req-asset-thumb"><img decoding="async" loading="lazy" src={info?.url} alt={info?.name} /></div>
                         <div className="req-asset-info"><div className="req-asset-name">{info?.name || item.id}</div></div>
                       </div>
                     );
@@ -5105,7 +5105,7 @@ function AdminView({
             <div className="designer-library-grid">
               {visibleDesignerLibrary.map(item => (
                 <div key={item.id} className="designer-library-card" draggable onDragStart={event => handleDesignerAssetDragStart(event, item)}>
-                  <div className="designer-library-thumb"><img src={item.url} alt={item.label} /></div>
+                  <div className="designer-library-thumb"><img decoding="async" loading="lazy" src={item.url} alt={item.label} /></div>
                   <div className="designer-library-meta"><strong>{item.label}</strong><span>{item.note || item.group}</span></div>
                   <div className="designer-library-actions">
                     <button type="button" className="btn-link-inline" onClick={() => pushAssetToDesigner(item)}><Upload size={14} /> Nạp nhanh</button>
@@ -5266,12 +5266,12 @@ function AdminView({
                   <div className="image-luxe-card">
                     <div className="card-label-orb">01</div>
                     <label>Ảnh hiện trạng gốc</label>
-                    <div className="image-frame"><img src={selectedProject.rawImage} alt="Ảnh gốc" /></div>
+                    <div className="image-frame"><img decoding="async" loading="lazy" src={selectedProject.rawImage} alt="Ảnh gốc" /></div>
                   </div>
                   <div className="image-luxe-card">
                     <div className="card-label-orb">02</div>
                     <label>{projectReferenceAsset?.label || 'Ảnh khoanh vùng ý tưởng'}</label>
-                    <div className="image-frame"><img src={projectReferenceAsset?.url || selectedProject.annotatedImage} alt={projectReferenceAsset?.alt || 'Ảnh khoanh vùng'} /></div>
+                    <div className="image-frame"><img decoding="async" loading="lazy" src={projectReferenceAsset?.url || selectedProject.annotatedImage} alt={projectReferenceAsset?.alt || 'Ảnh khoanh vùng'} /></div>
                   </div>
                   {(selectedProject.extraAssets || []).length > 0 && (
                      <div className="extra-media-luxe">
@@ -5279,7 +5279,7 @@ function AdminView({
                         <div className="extra-luxe-scroll">
                           {selectedProject.extraAssets?.map((asset, i) => (
                             <div key={i} className="extra-item-frame" onClick={() => window.open(asset, '_blank')}>
-                              {isVideoAsset(asset) ? <div className="video-thumb-placeholder"><ExternalLink size={24} /></div> : <img src={asset} alt="Extra" />}
+                              {isVideoAsset(asset) ? <div className="video-thumb-placeholder"><ExternalLink size={24} /></div> : <img decoding="async" loading="lazy" src={asset} alt="Extra" />}
                             </div>
                           ))}
                         </div>
@@ -5302,43 +5302,43 @@ function AdminView({
                   <div className="asset-luxe-grid">
                     {selectedProject.selections.ho && (
                       <div className="asset-luxe-pill">
-                        <img src={getAssetInfo(selectedProject.selections.ho, 'HO')?.url} alt="" />
+                        <img decoding="async" loading="lazy" src={getAssetInfo(selectedProject.selections.ho, 'HO')?.url} alt="" />
                         <span>{getAssetName(selectedProject.selections.ho, 'HO')} (Hồ Koi Cổ Điển)</span>
                       </div>
                     )}
                     {selectedProject.selections.ho_hien_dai && (
                       <div className="asset-luxe-pill">
-                        <img src={getAssetInfo(selectedProject.selections.ho_hien_dai, 'HO_HIEN_DAI')?.url} alt="" />
+                        <img decoding="async" loading="lazy" src={getAssetInfo(selectedProject.selections.ho_hien_dai, 'HO_HIEN_DAI')?.url} alt="" />
                         <span>{getAssetName(selectedProject.selections.ho_hien_dai, 'HO_HIEN_DAI')} (Hồ Koi Hiện Đại)</span>
                       </div>
                     )}
                     {selectedProject.selections.tuong_da && (
                       <div className="asset-luxe-pill">
-                        <img src={getAssetInfo(selectedProject.selections.tuong_da, 'TUONG_DA')?.url} alt="" />
+                        <img decoding="async" loading="lazy" src={getAssetInfo(selectedProject.selections.tuong_da, 'TUONG_DA')?.url} alt="" />
                         <span>{getAssetName(selectedProject.selections.tuong_da, 'TUONG_DA')} (Tường Đá)</span>
                       </div>
                     )}
                     {selectedProject.selections.tuong_cay && (
                       <div className="asset-luxe-pill">
-                        <img src={getAssetInfo(selectedProject.selections.tuong_cay, 'TUONG_CAY')?.url} alt="" />
+                        <img decoding="async" loading="lazy" src={getAssetInfo(selectedProject.selections.tuong_cay, 'TUONG_CAY')?.url} alt="" />
                         <span>{getAssetName(selectedProject.selections.tuong_cay, 'TUONG_CAY')} (Tường Cây)</span>
                       </div>
                     )}
                     {selectedProject.selections.farm && (
                       <div className="asset-luxe-pill">
-                        <img src={getAssetInfo(selectedProject.selections.farm, 'FARM')?.url} alt="" />
+                        <img decoding="async" loading="lazy" src={getAssetInfo(selectedProject.selections.farm, 'FARM')?.url} alt="" />
                         <span>{getAssetName(selectedProject.selections.farm, 'FARM')} (Farm & Du Lịch)</span>
                       </div>
                     )}
                     {selectedProject.selections.cafe && (
                       <div className="asset-luxe-pill">
-                        <img src={getAssetInfo(selectedProject.selections.cafe, 'CAFE')?.url} alt="" />
+                        <img decoding="async" loading="lazy" src={getAssetInfo(selectedProject.selections.cafe, 'CAFE')?.url} alt="" />
                         <span>{getAssetName(selectedProject.selections.cafe, 'CAFE')} (Cà Phê)</span>
                       </div>
                     )}
                     {selectedProject.selections.ho_boi && (
                       <div className="asset-luxe-pill">
-                        <img src={getAssetInfo(selectedProject.selections.ho_boi, 'HO_BOI')?.url} alt="" />
+                        <img decoding="async" loading="lazy" src={getAssetInfo(selectedProject.selections.ho_boi, 'HO_BOI')?.url} alt="" />
                         <span>{getAssetName(selectedProject.selections.ho_boi, 'HO_BOI')} (Hồ Bơi)</span>
                       </div>
                     )}
@@ -5434,7 +5434,7 @@ function AdminView({
                               transition: 'all 0.2s'
                             }}
                           >
-                            <img src={url} alt={`Ảnh ${i+1}`} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }} />
+                            <img decoding="async" loading="lazy" src={url} alt={`Ảnh ${i+1}`} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }} />
                           </div>
                         ))}
                       </div>
@@ -5516,7 +5516,7 @@ function AdminView({
                               transition: 'all 0.2s'
                             }}
                           >
-                            <img src={url} alt={`PA ${i+1}`} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }} />
+                            <img decoding="async" loading="lazy" src={url} alt={`PA ${i+1}`} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }} />
                           </div>
                         ))}
                       </div>
@@ -5594,7 +5594,7 @@ function AdminView({
                                   task.type === 'video' ? (
                                     <video src={task.url} controls style={{ width: '100%', display: 'block' }} />
                                   ) : (
-                                    <img src={task.url} alt={task.label} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }} />
+                                    <img decoding="async" loading="lazy" src={task.url} alt={task.label} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }} />
                                   )
                                 ) : (
                                   <div style={{ aspectRatio: '16/10', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>
@@ -5709,7 +5709,7 @@ function AdminView({
                                const isVid = media.endsWith('.mp4') || media.includes('/video/');
                                return (
                                <div key={i} className="card-ai-thumb" title={isVid ? "Video AI" : "Ảnh AI"}>
-                                  {isVid ? <video src={media} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={media} alt={`AI Thumb ${i+1}`} />}
+                                  {isVid ? <video src={media} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img decoding="async" loading="lazy" src={media} alt={`AI Thumb ${i+1}`} />}
                                </div>
                                );
                             })}
