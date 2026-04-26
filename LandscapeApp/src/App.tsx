@@ -49,6 +49,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import './App.css';
+import { PaymentModal } from './PaymentModal';
 
 // --- API BASE ---
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -2781,6 +2782,8 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
   const [pass2Msg, setPass2Msg] = useState('');
   const [project, setProject] = useState<Project | null>(null);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const isPaid = (project as any)?.payment?.status === 'paid';
 
   useEffect(() => {
     // Poll for Gói Cơ bản and Gói Nâng cao
@@ -2913,6 +2916,52 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                  </button>
                </div>
              </div>
+             {/* PAYMENT BLOCK */}
+             <div style={{ marginBottom: '12px', padding: '14px', borderRadius: '14px', background: isPaid ? 'rgba(34,197,94,0.08)' : 'rgba(165,0,100,0.08)', border: isPaid ? '2px solid rgba(34,197,94,0.4)' : '2px solid rgba(165,0,100,0.45)', textAlign: 'left' }}>
+               {isPaid ? (
+                 <>
+                   <p style={{ fontSize: '0.9rem', fontWeight: 800, color: '#22c55e', marginBottom: '10px', textAlign: 'center' }}>
+                     ✅ Đã thanh toán — Tải về toàn bộ tài liệu
+                   </p>
+                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
+                     {[
+                       ...(project?.aiResults || []),
+                       ...((project as any)?.pass2Results?.tasks || []).filter((t: any) => t.url).map((t: any) => t.url)
+                     ].map((url: string, i: number) => {
+                       const isVid = url.endsWith('.mp4') || url.includes('/video/');
+                       return (
+                         <a key={`${url}-${i}`} href={url} download
+                           style={{ padding: '8px 10px', borderRadius: '10px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.35)', color: '#22c55e', fontWeight: 700, fontSize: '0.78rem', textAlign: 'center', textDecoration: 'none' }}
+                         >
+                           ⬇ {isVid ? `Video ${i + 1}` : `Ảnh ${i + 1}`}
+                         </a>
+                       );
+                     })}
+                   </div>
+                 </>
+               ) : (
+                 <>
+                   <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', marginBottom: '6px', textAlign: 'center' }}>
+                     Tải bản vẽ chất lượng cao
+                   </p>
+                   <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', marginBottom: '10px', textAlign: 'center' }}>
+                     Thanh toán qua MoMo để tải ảnh và video độ phân giải cao về máy.
+                   </p>
+                   <button
+                     onClick={() => setPaymentOpen(true)}
+                     style={{
+                       width: '100%', padding: '14px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 800,
+                       border: 'none', cursor: 'pointer',
+                       background: 'linear-gradient(135deg, #a50064, #d6336c)', color: '#fff',
+                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                     }}
+                   >
+                     💳 Thanh toán để tải bản vẽ
+                   </button>
+                 </>
+               )}
+             </div>
+
              {retryCount < 1 && onRetry && (
                <button
                  onClick={onRetry}
@@ -3056,6 +3105,18 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
              </button>
            </div>
          )}
+        <PaymentModal
+          projectId={projectId}
+          open={paymentOpen}
+          onClose={() => setPaymentOpen(false)}
+          onPaid={async () => {
+            try {
+              const res = await apiFetch(`/api/projects/${projectId}`);
+              if (res.ok) setProject(await res.json());
+            } catch { /* ignore */ }
+            setPaymentOpen(false);
+          }}
+        />
       </motion.div>
     );
   }

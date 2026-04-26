@@ -1,0 +1,83 @@
+- generic [ref=e4]:
+  - button "Quay lại" [ref=e5] [cursor=pointer]:
+    - img [ref=e6]
+    - text: Quay lại
+  - img [ref=e14]
+  - heading "Đã hoàn thành bản vẽ!" [level=2] [ref=e17]
+  - paragraph [ref=e12]: Tổng cộng 4 phương án từ 100 lần thiết kế.
+  - generic [ref=e18]:
+    - generic [ref=e19]:
+      - generic "Lần 1 - PA1" [ref=e21]
+      - generic [ref=e23]: Lần 1 - PA1
+    - generic [ref=e24]:
+      - generic "Lần 1 - PA2" [ref=e26]
+      - generic [ref=e28]: Lần 1 - PA2
+    - generic [ref=e29]:
+      - generic "Lần 2 - PA1" [ref=e31]
+      - generic [ref=e33]: Lần 2 - PA1
+    - generic [ref=e34]:
+      - generic "Lần 2 - PA2" [ref=e36]
+      - generic [ref=e38]: Lần 2 - PA2
+  - generic [ref=e39]:
+    - generic [ref=e40]:
+      - paragraph [ref=e41]: "Link xem kết quả:"
+      - generic [ref=e42]:
+        - code [ref=e43]: http://localhost:5173/result/test-payment-1777178895
+        - button "Sao chép" [ref=e44] [cursor=pointer]
+    - generic [ref=e45]:
+      - paragraph [ref=e46]: Tải bản vẽ chất lượng cao
+      - paragraph [ref=e47]: Thanh toán qua MoMo để tải ảnh và video độ phân giải cao về máy.
+      - button "💳 Thanh toán để tải bản vẽ" [ref=e48] [cursor=pointer]
+    - generic [ref=e49]:
+      - paragraph [ref=e50]: Tiếp tục tạo bổ sung (7 bản)
+      - paragraph [ref=e51]:
+        - text: "Chọn 1 phương án ưng ý nhất, hệ thống sẽ tạo thêm:"
+        - text: 3 góc chụp · 2 bản vẽ · 2 video
+      - generic [ref=e52]:
+        - generic [ref=e53] [cursor=pointer]:
+          - img "L1-1" [ref=e54]
+          - generic [ref=e55]: L1-1
+        - generic [ref=e56] [cursor=pointer]:
+          - img "L1-2" [ref=e57]
+          - generic [ref=e58]: L1-2
+        - generic [ref=e59] [cursor=pointer]:
+          - img "L2-1" [ref=e60]
+          - generic [ref=e61]: L2-1
+        - generic [ref=e62] [cursor=pointer]:
+          - img "L2-2" [ref=e63]
+          - generic [ref=e64]: L2-2
+      - generic [ref=e65]:
+        - spinbutton [ref=e66]: "4"
+        - generic [ref=e67]: ×
+        - spinbutton [ref=e68]: "4"
+      - button "✨ Tiếp tục tạo bổ sung" [disabled] [ref=e69]
+    - button "Tạo Dự Án Mới" [ref=e70] [cursor=pointer]
+  - generic [ref=e72]:
+    - generic [ref=e73]:
+      - generic [ref=e74]:
+        - generic [ref=e75]: Thanh toán để tải bản vẽ
+        - generic [ref=e76]: Quét QR bằng app MoMo để thanh toán
+      - button [ref=e77] [cursor=pointer]:
+        - img [ref=e78]
+    - generic [ref=e168]:
+      - generic [ref=e169]:
+        - img "QR MoMo" [ref=e170]
+        - generic [ref=e171]: Mở app MoMo và quét mã
+      - generic [ref=e172]:
+        - generic [ref=e173]: Số tiền
+        - generic [ref=e174]: 50.000đ
+        - generic [ref=e175]: Gói Cơ Bản — Tải 4 ảnh
+        - generic [ref=e176]:
+          - text: "Mã đơn: test-payment-1777178895-1777178988975"
+          - button "Copy" [ref=e177] [cursor=pointer]:
+            - img [ref=e178]
+        - link "Mở trang MoMo" [ref=e182] [cursor=pointer]:
+          - /url: https://test-payment.momo.vn/v2/gateway/pay?t=TU9NTzNOSEsyMDI2MDQyNl9URVNUfHRlc3QtcGF5bWVudC0xNzc3MTc4ODk1LTE3NzcxNzg5ODg5NzU&s=e42996e07ced2e44bf04bfae4d612172c12912f4f7c04d5fd28e27dbc564e5fb
+          - img [ref=e183]
+          - text: Mở trang MoMo
+        - generic [ref=e187]:
+          - generic [ref=e188]:
+            - img [ref=e189]
+            - generic [ref=e191]: Đang chờ thanh toán...
+          - generic [ref=e192]: Hệ thống tự động kiểm tra mỗi 3s. Sau khi MoMo xác nhận, ảnh sẽ được mở khoá.
+        - button "← Chọn gói khác" [ref=e193] [cursor=pointer]

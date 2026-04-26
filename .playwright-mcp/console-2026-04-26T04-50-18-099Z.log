@@ -1,0 +1,11 @@
+[    1590ms] [LOG] S.fn.init @ https://test-payment.momo.vn/v2/gateway/sh/scripts/core.js:0
+[    1591ms] [LOG] S.fn.init @ https://test-payment.momo.vn/v2/gateway/sh/scripts/core.js:0
+[  573790ms] [WARNING] The key "shrink-to-paymentcfit" is not recognized and ignored. @ https://test-payment.momo.vn/v2/gateway/action:27
+[  574231ms] Uncaught TypeError: Cannot read properties of undefined (reading 'appendChild')
+    at SVGRenderer.configAnimation (https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.4.3/lottie.min.js:0:94487)
+    at AnimationItem.configAnimation (https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.4.3/lottie.min.js:0:201955)
+    at AnimationItem.setParams (https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.4.3/lottie.min.js:0:197868)
+    at t.loadAnimation (https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.4.3/lottie.min.js:0:195094)
+    at loadAnimation (https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.4.3/lottie.min.js:0:244482)
+    at <anonymous> (https://test-payment.momo.vn/v2/gateway/sh/scripts/redirect.js:0:6666)
+[  577334ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=c503af04:14336

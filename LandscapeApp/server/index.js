@@ -488,6 +488,26 @@ const ProjectSchema = new mongoose.Schema({
       }]
     }, { _id: false }),
     default: null
+  },
+  payment: {
+    type: new mongoose.Schema({
+      packageId: String,
+      packageLabel: String,
+      area: Number,
+      amount: Number,
+      status: { type: String, default: 'pending' },
+      orderId: String,
+      requestId: String,
+      transId: String,
+      payUrl: String,
+      qrCodeUrl: String,
+      deeplink: String,
+      message: String,
+      resultCode: Number,
+      createdAt: Date,
+      paidAt: Date
+    }, { _id: false }),
+    default: null
   }
 });
 const Project = mongoose.model('Project', ProjectSchema);
@@ -1209,6 +1229,145 @@ app.post('/api/upload', async (req, res) => {
   }
 });
 
+// === MoMo Payment Routes ===
+const momo = require('./momoService');
+
+app.get('/api/payment/packages', (_req, res) => {
+  res.json({
+    packages: Object.values(momo.PACKAGES),
+    momoEnv: momo.MOMO_ENV
+  });
+});
+
+app.post('/api/projects/:id/payment/create', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { packageId, area } = req.body || {};
+    if (!packageId) return res.status(400).json({ error: 'packageId is required' });
+
+    const project = await Project.findOne({ id });
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    if (project.payment?.status === 'paid') {
+      return res.json({ alreadyPaid: true, payment: project.payment });
+    }
+
+    const priceInfo = momo.resolvePrice(packageId, area);
+    const orderId = `${id}-${Date.now()}`;
+    const requestId = orderId;
+    const orderInfo = `Thanh toan ${priceInfo.label} - Du an ${id}`;
+
+    const result = await momo.createPayment({
+      orderId,
+      requestId,
+      amount: priceInfo.price,
+      orderInfo,
+      extraData: Buffer.from(JSON.stringify({ projectId: id, packageId })).toString('base64')
+    });
+
+    project.payment = {
+      packageId,
+      packageLabel: priceInfo.label,
+      area: priceInfo.area || null,
+      amount: priceInfo.price,
+      status: 'pending',
+      orderId,
+      requestId,
+      payUrl: result.payUrl,
+      qrCodeUrl: result.qrCodeUrl,
+      deeplink: result.deeplink,
+      createdAt: new Date()
+    };
+    await project.save();
+
+    res.json({
+      orderId,
+      amount: priceInfo.price,
+      payUrl: result.payUrl,
+      qrCodeUrl: result.qrCodeUrl,
+      deeplink: result.deeplink,
+      packageLabel: priceInfo.label
+    });
+  } catch (err) {
+    console.error('[Payment][create] error:', err.message, err.momoResponse || '');
+    res.status(500).json({ error: err.message || 'Không thể tạo thanh toán.' });
+  }
+});
+
+app.post('/api/payment/momo/ipn', async (req, res) => {
+  try {
+    const payload = req.body || {};
+    const ok = momo.verifyIpnSignature(payload);
+    if (!ok) {
+      console.warn('[Payment][IPN] signature mismatch', payload.orderId);
+      return res.status(400).json({ resultCode: 99, message: 'Signature mismatch' });
+    }
+
+    const { orderId, resultCode, transId, message, amount } = payload;
+    const project = await Project.findOne({ 'payment.orderId': orderId });
+    if (!project) {
+      return res.status(404).json({ resultCode: 99, message: 'Order not found' });
+    }
+
+    if (Number(resultCode) === 0) {
+      project.payment.status = 'paid';
+      project.payment.transId = String(transId || '');
+      project.payment.paidAt = new Date();
+    } else {
+      project.payment.status = 'failed';
+    }
+    project.payment.resultCode = Number(resultCode);
+    project.payment.message = message;
+    if (amount) project.payment.amount = Number(amount);
+    await project.save();
+
+    res.json({ resultCode: 0, message: 'OK' });
+  } catch (err) {
+    console.error('[Payment][IPN] error:', err);
+    res.status(500).json({ resultCode: 99, message: err.message });
+  }
+});
+
+app.get('/api/projects/:id/payment/status', async (req, res) => {
+  try {
+    const project = await Project.findOne({ id: req.params.id });
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+    if (!project.payment) return res.json({ status: 'none' });
+
+    if (project.payment.status === 'pending' && project.payment.orderId) {
+      try {
+        const q = await momo.queryPayment({ orderId: project.payment.orderId, requestId: project.payment.requestId });
+        if (q && Number(q.resultCode) === 0) {
+          project.payment.status = 'paid';
+          project.payment.transId = String(q.transId || '');
+          project.payment.paidAt = new Date();
+          project.payment.resultCode = 0;
+          await project.save();
+        } else if (q && Number(q.resultCode) > 0 && Number(q.resultCode) !== 1000 && Number(q.resultCode) !== 9000) {
+          project.payment.status = 'failed';
+          project.payment.resultCode = Number(q.resultCode);
+          project.payment.message = q.message;
+          await project.save();
+        }
+      } catch (qErr) {
+        console.warn('[Payment][status] query failed:', qErr.message);
+      }
+    }
+
+    res.json({
+      status: project.payment.status,
+      amount: project.payment.amount,
+      packageId: project.payment.packageId,
+      packageLabel: project.payment.packageLabel,
+      paidAt: project.payment.paidAt,
+      message: project.payment.message
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`MoMo gateway: ${momo.MOMO_ENV}`);
 });

@@ -1,0 +1,33 @@
+- generic [ref=e2]:
+  - generic [ref=e53]:
+    - button "Quay lại" [ref=e54] [cursor=pointer]:
+      - img [ref=e55]
+      - text: Quay lại
+    - button "Tiếp theo" [ref=e57] [cursor=pointer]:
+      - text: Tiếp theo
+      - img [ref=e58]
+  - generic [ref=e61]:
+    - generic [ref=e62]:
+      - heading "Chọn mẫu thiết kế" [level=2] [ref=e63]
+      - paragraph [ref=e64]: Hãy chọn một danh mục để thực hiện dự án của bạn.
+    - generic [ref=e65]:
+      - button "Hiện đại Hiện đại" [ref=e66] [cursor=pointer]:
+        - img "Hiện đại" [ref=e67]
+        - heading "Hiện đại" [level=3] [ref=e68]
+        - img [ref=e70]
+      - button "Tân cổ điển Tân cổ điển" [ref=e72] [cursor=pointer]:
+        - img "Tân cổ điển" [ref=e73]
+        - heading "Tân cổ điển" [level=3] [ref=e74]
+        - img [ref=e76]
+      - button "Indochine Indochine" [ref=e78] [cursor=pointer]:
+        - img "Indochine" [ref=e79]
+        - heading "Indochine" [level=3] [ref=e80]
+        - img [ref=e82]
+      - button "Wabi sabi Wabi sabi" [ref=e84] [cursor=pointer]:
+        - img "Wabi sabi" [ref=e85]
+        - heading "Wabi sabi" [level=3] [ref=e86]
+        - img [ref=e88]
+      - button "Tân cổ điển gỗ Tân cổ điển gỗ" [ref=e90] [cursor=pointer]:
+        - img "Tân cổ điển gỗ" [ref=e91]
+        - heading "Tân cổ điển gỗ" [level=3] [ref=e92]
+        - img [ref=e94]

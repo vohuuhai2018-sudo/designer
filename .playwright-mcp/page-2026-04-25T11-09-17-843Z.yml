@@ -1,0 +1,37 @@
+- generic [ref=e6]:
+  - img "Logo" [ref=e8]
+  - heading "Hệ thống thiết kế bản vẽ nhanh nhất Việt Nam" [level=1]
+  - generic [ref=e9]:
+    - button "Cảnh quan Thiết kế cảnh quan Hồ koi, sân vườn, farm, hồ bơi Arrow" [ref=e10] [cursor=pointer]:
+      - img "Cảnh quan" [ref=e12]
+      - generic [ref=e13]:
+        - strong [ref=e14]: Thiết kế cảnh quan
+        - generic [ref=e15]: Hồ koi, sân vườn, farm, hồ bơi
+      - img "Arrow" [ref=e16]
+    - button "Kiến trúc Thiết kế kiến trúc Nhà phố, biệt thự, nhà tiền chế Arrow" [ref=e17] [cursor=pointer]:
+      - img "Kiến trúc" [ref=e19]
+      - generic [ref=e20]:
+        - strong [ref=e21]: Thiết kế kiến trúc
+        - generic [ref=e22]: Nhà phố, biệt thự, nhà tiền chế
+      - img "Arrow" [ref=e23]
+    - button "Nội thất Thiết kế nội thất Hiện đại, tân cổ điển, indochine Arrow" [ref=e24] [cursor=pointer]:
+      - img "Nội thất" [ref=e26]
+      - generic [ref=e27]:
+        - strong [ref=e28]: Thiết kế nội thất
+        - generic [ref=e29]: Hiện đại, tân cổ điển, indochine
+      - img "Arrow" [ref=e30]
+  - button "Dự án của bạn" [ref=e31] [cursor=pointer]:
+    - img [ref=e32]
+    - generic [ref=e34]: Dự án của bạn
+  - generic [ref=e35]:
+    - generic [ref=e36]:
+      - img "Chọn mẫu đẹp" [ref=e38]
+      - generic [ref=e39]: Chọn mẫu đẹp
+    - img "->" [ref=e41]
+    - generic [ref=e42]:
+      - img "Chụp hiện trạng" [ref=e44]
+      - generic [ref=e45]: Chụp hiện trạng
+    - img "->" [ref=e47]
+    - generic [ref=e48]:
+      - img "Nhận bản vẽ" [ref=e50]
+      - generic [ref=e51]: Nhận bản vẽ

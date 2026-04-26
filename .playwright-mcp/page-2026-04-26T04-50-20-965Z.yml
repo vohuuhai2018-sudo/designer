@@ -1,0 +1,15 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e5]:
+      - img [ref=e7]
+      - generic [ref=e9]: Cổng thanh toán MoMo
+  - generic [ref=e16]: Đang tải dữ liệu giao dịch
+  - contentinfo [ref=e18]:
+    - generic [ref=e20]:
+      - generic [ref=e22]: © 2023 - Cổng thanh toán MoMo
+      - generic [ref=e23]:
+        - generic [ref=e24]: "Hỗ trợ khách hàng:"
+        - link "1900 54 54 41 (1000đ/phút)" [ref=e25] [cursor=pointer]:
+          - /url: tel:1900545441
+        - link "hotro@momo.vn" [ref=e26] [cursor=pointer]:
+          - /url: mailto:hotro@momo.vn

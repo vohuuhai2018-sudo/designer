@@ -1,0 +1,10 @@
+- generic [ref=e4]:
+  - button "Quay lại" [ref=e5] [cursor=pointer]:
+    - img [ref=e6]
+    - text: Quay lại
+  - generic [ref=e10]: ĐANG XỬ LÝ
+  - heading "Hệ thống đang tạo phương án thiết kế (~5 phút)." [level=2] [ref=e11]
+  - paragraph [ref=e12]:
+    - text: Bạn có thể theo dõi trực tiếp tại đây hoặc xem trong mục
+    - strong [ref=e13]: “Dự án của bạn”
+    - text: khi hoàn tất.

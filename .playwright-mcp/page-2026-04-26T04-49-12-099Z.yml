@@ -1,0 +1,132 @@
+- generic [ref=e4]:
+  - button "Quay lại" [ref=e5] [cursor=pointer]:
+    - img [ref=e6]
+    - text: Quay lại
+  - img [ref=e14]
+  - heading "Đã hoàn thành bản vẽ!" [level=2] [ref=e17]
+  - paragraph [ref=e12]: Tổng cộng 4 phương án từ 100 lần thiết kế.
+  - generic [ref=e18]:
+    - generic [ref=e19]:
+      - generic "Lần 1 - PA1" [ref=e21]
+      - generic [ref=e23]: Lần 1 - PA1
+    - generic [ref=e24]:
+      - generic "Lần 1 - PA2" [ref=e26]
+      - generic [ref=e28]: Lần 1 - PA2
+    - generic [ref=e29]:
+      - generic "Lần 2 - PA1" [ref=e31]
+      - generic [ref=e33]: Lần 2 - PA1
+    - generic [ref=e34]:
+      - generic "Lần 2 - PA2" [ref=e36]
+      - generic [ref=e38]: Lần 2 - PA2
+  - generic [ref=e39]:
+    - generic [ref=e40]:
+      - paragraph [ref=e41]: "Link xem kết quả:"
+      - generic [ref=e42]:
+        - code [ref=e43]: http://localhost:5173/result/test-payment-1777178895
+        - button "Sao chép" [ref=e44] [cursor=pointer]
+    - generic [ref=e45]:
+      - paragraph [ref=e46]: Tải bản vẽ chất lượng cao
+      - paragraph [ref=e47]: Thanh toán qua MoMo để tải ảnh và video độ phân giải cao về máy.
+      - button "💳 Thanh toán để tải bản vẽ" [active] [ref=e48] [cursor=pointer]
+    - generic [ref=e49]:
+      - paragraph [ref=e50]: Tiếp tục tạo bổ sung (7 bản)
+      - paragraph [ref=e51]:
+        - text: "Chọn 1 phương án ưng ý nhất, hệ thống sẽ tạo thêm:"
+        - text: 3 góc chụp · 2 bản vẽ · 2 video
+      - generic [ref=e52]:
+        - generic [ref=e53] [cursor=pointer]:
+          - img "L1-1" [ref=e54]
+          - generic [ref=e55]: L1-1
+        - generic [ref=e56] [cursor=pointer]:
+          - img "L1-2" [ref=e57]
+          - generic [ref=e58]: L1-2
+        - generic [ref=e59] [cursor=pointer]:
+          - img "L2-1" [ref=e60]
+          - generic [ref=e61]: L2-1
+        - generic [ref=e62] [cursor=pointer]:
+          - img "L2-2" [ref=e63]
+          - generic [ref=e64]: L2-2
+      - generic [ref=e65]:
+        - spinbutton [ref=e66]: "4"
+        - generic [ref=e67]: ×
+        - spinbutton [ref=e68]: "4"
+      - button "✨ Tiếp tục tạo bổ sung" [disabled] [ref=e69]
+    - button "Tạo Dự Án Mới" [ref=e70] [cursor=pointer]
+  - generic [ref=e72]:
+    - generic [ref=e73]:
+      - generic [ref=e74]:
+        - generic [ref=e75]: Thanh toán để tải bản vẽ
+        - generic [ref=e76]: Chọn 1 gói phù hợp với dự án của bạn
+      - button [ref=e77] [cursor=pointer]:
+        - img [ref=e78]
+    - generic [ref=e81]:
+      - generic [ref=e82]:
+        - button "Cơ Bản Gói Cơ Bản Tải 4 ảnh 50.000đ Miễn phí lên phương án Tải 4 ảnh chất lượng cao (Giới hạn 2 lần chỉnh sửa)" [ref=e83] [cursor=pointer]:
+          - generic [ref=e84]: Cơ Bản
+          - generic [ref=e85]: Gói Cơ Bản
+          - generic [ref=e86]: Tải 4 ảnh
+          - generic [ref=e87]: 50.000đ
+          - list [ref=e88]:
+            - listitem [ref=e89]:
+              - img [ref=e90]
+              - generic [ref=e92]: Miễn phí lên phương án
+            - listitem [ref=e93]:
+              - img [ref=e94]
+              - generic [ref=e96]: Tải 4 ảnh chất lượng cao
+            - listitem [ref=e97]:
+              - img [ref=e98]
+              - generic [ref=e100]: (Giới hạn 2 lần chỉnh sửa)
+        - button "Cơ Bản+ Gói Cơ Bản Tải 8 ảnh + 2 video 200.000đ Tất cả phương án thiết kế 8 ảnh + 2 video phối cảnh (Giới hạn 2 lần chỉnh sửa)" [ref=e101] [cursor=pointer]:
+          - generic [ref=e102]: Cơ Bản+
+          - generic [ref=e103]: Gói Cơ Bản
+          - generic [ref=e104]: Tải 8 ảnh + 2 video
+          - generic [ref=e105]: 200.000đ
+          - list [ref=e106]:
+            - listitem [ref=e107]:
+              - img [ref=e108]
+              - generic [ref=e110]: Tất cả phương án thiết kế
+            - listitem [ref=e111]:
+              - img [ref=e112]
+              - generic [ref=e114]: 8 ảnh + 2 video phối cảnh
+            - listitem [ref=e115]:
+              - img [ref=e116]
+              - generic [ref=e118]: (Giới hạn 2 lần chỉnh sửa)
+        - 'button "Nâng Cao Gói Nâng Cao 500.000đ — 10 dự án 500.000đ Thực hiện được 10 dự án Mỗi dự án: 8 ảnh + 2 video (Giới hạn 4 lần chỉnh sửa)" [ref=e119] [cursor=pointer]':
+          - generic [ref=e120]: Nâng Cao
+          - generic [ref=e121]: Gói Nâng Cao
+          - generic [ref=e122]: 500.000đ — 10 dự án
+          - generic [ref=e123]: 500.000đ
+          - list [ref=e124]:
+            - listitem [ref=e125]:
+              - img [ref=e126]
+              - generic [ref=e128]: Thực hiện được 10 dự án
+            - listitem [ref=e129]:
+              - img [ref=e130]
+              - generic [ref=e132]: "Mỗi dự án: 8 ảnh + 2 video"
+            - listitem [ref=e133]:
+              - img [ref=e134]
+              - generic [ref=e136]: (Giới hạn 4 lần chỉnh sửa)
+        - button "3D KTS Gói 3D KTS Theo m² Theo m² 69.000đ /m² (dự án dưới 1.000m²) 20.000đ /m² (dự án trên 1.000m²) 8.000đ /m² (dự án trên 1 hecta) Thiết kế chuyên nghiệp với KTS Không giới hạn lần chỉnh sửa" [ref=e137] [cursor=pointer]:
+          - generic [ref=e138]: 3D KTS
+          - generic [ref=e139]: Gói 3D KTS
+          - generic [ref=e140]: Theo m²
+          - generic [ref=e141]: Theo m²
+          - list [ref=e142]:
+            - listitem [ref=e143]:
+              - img [ref=e144]
+              - generic [ref=e146]: 69.000đ /m² (dự án dưới 1.000m²)
+            - listitem [ref=e147]:
+              - img [ref=e148]
+              - generic [ref=e150]: 20.000đ /m² (dự án trên 1.000m²)
+            - listitem [ref=e151]:
+              - img [ref=e152]
+              - generic [ref=e154]: 8.000đ /m² (dự án trên 1 hecta)
+            - listitem [ref=e155]:
+              - img [ref=e156]
+              - generic [ref=e158]: Thiết kế chuyên nghiệp với KTS
+            - listitem [ref=e159]:
+              - img [ref=e160]
+              - generic [ref=e162]: Không giới hạn lần chỉnh sửa
+      - generic [ref=e163]:
+        - generic [ref=e164]: Chọn gói để tiếp tục
+        - button "Thanh toán qua MoMo" [disabled] [ref=e165]
