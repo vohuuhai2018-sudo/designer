@@ -505,7 +505,10 @@ const ProjectSchema = new mongoose.Schema({
       message: String,
       resultCode: Number,
       createdAt: Date,
-      paidAt: Date
+      paidAt: Date,
+      manual: { type: Boolean, default: false },
+      note: String,
+      cancelledAt: Date
     }, { _id: false }),
     default: null
   }
@@ -1364,6 +1367,270 @@ app.get('/api/projects/:id/payment/status', async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// === Admin Payment Endpoints ===
+
+// A. List payments by status
+app.get('/api/admin/payments', async (req, res) => {
+  try {
+    const allowed = ['paid', 'pending', 'failed', 'cancelled', 'none', 'all'];
+    const status = String(req.query.status || 'all').toLowerCase();
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ error: `Invalid status. Allowed: ${allowed.join(', ')}` });
+    }
+
+    let filter = {};
+    if (status === 'none') {
+      filter = { $or: [{ payment: null }, { payment: { $exists: false } }] };
+    } else if (status !== 'all') {
+      filter = { 'payment.status': status };
+    }
+
+    const projects = await Project.find(filter)
+      .select('id customerName customerPhone service mainBranch timestamp status payment')
+      .lean();
+
+    projects.sort((a, b) => {
+      const aT = a.payment?.createdAt ? new Date(a.payment.createdAt).getTime() : 0;
+      const bT = b.payment?.createdAt ? new Date(b.payment.createdAt).getTime() : 0;
+      if (bT !== aT) return bT - aT;
+      const aTs = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const bTs = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return bTs - aTs;
+    });
+
+    const result = projects.map(p => ({
+      id: p.id,
+      customerName: p.customerName || '',
+      customerPhone: p.customerPhone || '',
+      service: p.service || '',
+      mainBranch: p.mainBranch || '',
+      timestamp: p.timestamp,
+      status: p.status || '',
+      payment: p.payment || null
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error('[Admin][payments] error:', err);
+    res.status(500).json({ error: err.message || 'Internal error' });
+  }
+});
+
+// B. Recheck payment via MoMo query
+app.post('/api/projects/:id/payment/recheck', async (req, res) => {
+  try {
+    const project = await Project.findOne({ id: req.params.id });
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+    if (!project.payment || !project.payment.orderId || !project.payment.requestId) {
+      return res.status(400).json({ error: 'Payment orderId/requestId not found' });
+    }
+
+    const q = await momo.queryPayment({
+      orderId: project.payment.orderId,
+      requestId: project.payment.requestId
+    });
+
+    const code = Number(q?.resultCode);
+    if (code === 0) {
+      project.payment.status = 'paid';
+      project.payment.transId = String(q.transId || '');
+      project.payment.paidAt = new Date();
+      project.payment.resultCode = 0;
+      project.payment.message = q.message;
+      await project.save();
+    } else if (Number.isFinite(code) && code > 0 && code !== 1000 && code !== 9000) {
+      project.payment.status = 'failed';
+      project.payment.resultCode = code;
+      project.payment.message = q.message;
+      await project.save();
+    }
+
+    res.json({ payment: project.payment, momoQuery: q });
+  } catch (err) {
+    console.error('[Admin][recheck] error:', err);
+    res.status(500).json({ error: err.message || 'Internal error' });
+  }
+});
+
+// C. Mark payment as paid (manual)
+app.post('/api/projects/:id/payment/mark-paid', async (req, res) => {
+  try {
+    const { note, amount, packageId } = req.body || {};
+    const project = await Project.findOne({ id: req.params.id });
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    const noteStr = typeof note === 'string' ? note : '';
+    const now = new Date();
+
+    if (!project.payment) {
+      const base = {
+        status: 'paid',
+        paidAt: now,
+        manual: true,
+        note: noteStr,
+        message: '[Manual] ' + (noteStr || 'admin marked paid'),
+        createdAt: now
+      };
+      if (packageId && momo.PACKAGES[packageId]) {
+        base.packageId = packageId;
+        base.packageLabel = momo.PACKAGES[packageId].label;
+        if (typeof amount === 'number' && Number.isFinite(amount)) {
+          base.amount = amount;
+        } else if (typeof momo.PACKAGES[packageId].price === 'number') {
+          base.amount = momo.PACKAGES[packageId].price;
+        }
+      } else if (typeof amount === 'number' && Number.isFinite(amount)) {
+        base.amount = amount;
+      }
+      project.payment = base;
+    } else {
+      project.payment.status = 'paid';
+      project.payment.paidAt = now;
+      project.payment.manual = true;
+      project.payment.note = noteStr;
+      project.payment.message = '[Manual] ' + (noteStr || 'admin marked paid');
+      if (packageId && momo.PACKAGES[packageId]) {
+        project.payment.packageId = packageId;
+        project.payment.packageLabel = momo.PACKAGES[packageId].label;
+        if (typeof amount === 'number' && Number.isFinite(amount)) {
+          project.payment.amount = amount;
+        } else if (project.payment.amount == null && typeof momo.PACKAGES[packageId].price === 'number') {
+          project.payment.amount = momo.PACKAGES[packageId].price;
+        }
+      } else if (typeof amount === 'number' && Number.isFinite(amount)) {
+        project.payment.amount = amount;
+      }
+    }
+
+    await project.save();
+    res.json({ payment: project.payment });
+  } catch (err) {
+    console.error('[Admin][mark-paid] error:', err);
+    res.status(500).json({ error: err.message || 'Internal error' });
+  }
+});
+
+// D. Cancel pending payment
+app.post('/api/projects/:id/payment/cancel', async (req, res) => {
+  try {
+    const { note } = req.body || {};
+    const project = await Project.findOne({ id: req.params.id });
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+    if (!project.payment) return res.status(400).json({ error: 'No payment to cancel' });
+    if (project.payment.status !== 'pending') {
+      return res.status(400).json({ error: `Cannot cancel payment with status '${project.payment.status}'` });
+    }
+
+    project.payment.status = 'cancelled';
+    project.payment.cancelledAt = new Date();
+    project.payment.note = typeof note === 'string' ? note : '';
+    await project.save();
+
+    res.json({ payment: project.payment });
+  } catch (err) {
+    console.error('[Admin][cancel] error:', err);
+    res.status(500).json({ error: err.message || 'Internal error' });
+  }
+});
+
+// E. Revenue report
+app.get('/api/admin/revenue', async (req, res) => {
+  try {
+    // Asia/Ho_Chi_Minh = UTC+7
+    const TZ_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+    function ymdToUtcStart(ymd) {
+      // Parse 'YYYY-MM-DD' as midnight Asia/Ho_Chi_Minh -> UTC date
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+      if (!m) return null;
+      const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3]);
+      // 00:00 ICT == (00:00 - 7h) UTC == 17:00 prev day UTC
+      return new Date(Date.UTC(y, mo, d) - TZ_OFFSET_MS);
+    }
+    function dateToIctYmd(d) {
+      const ict = new Date(d.getTime() + TZ_OFFSET_MS);
+      const y = ict.getUTCFullYear();
+      const mo = String(ict.getUTCMonth() + 1).padStart(2, '0');
+      const da = String(ict.getUTCDate()).padStart(2, '0');
+      return `${y}-${mo}-${da}`;
+    }
+    function addDaysYmd(ymd, days) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+      if (!m) return ymd;
+      const dt = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+      dt.setUTCDate(dt.getUTCDate() + days);
+      return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+    }
+
+    const todayYmd = dateToIctYmd(new Date());
+    const defaultFromYmd = addDaysYmd(todayYmd, -30);
+
+    const fromYmd = (req.query.from && /^\d{4}-\d{2}-\d{2}$/.test(req.query.from)) ? req.query.from : defaultFromYmd;
+    const toYmd = (req.query.to && /^\d{4}-\d{2}-\d{2}$/.test(req.query.to)) ? req.query.to : todayYmd;
+
+    const fromUtc = ymdToUtcStart(fromYmd);
+    const toExclusiveUtc = ymdToUtcStart(addDaysYmd(toYmd, 1));
+    if (!fromUtc || !toExclusiveUtc) {
+      return res.status(400).json({ error: 'Invalid from/to date' });
+    }
+    if (fromUtc.getTime() >= toExclusiveUtc.getTime()) {
+      return res.status(400).json({ error: '`from` must be <= `to`' });
+    }
+
+    const projects = await Project.find({
+      'payment.status': 'paid',
+      'payment.paidAt': { $gte: fromUtc, $lt: toExclusiveUtc }
+    }).select('mainBranch payment').lean();
+
+    let totalAmount = 0;
+    const totalCount = projects.length;
+    const byPackage = {};
+    const byBranch = {};
+    const byDayMap = {};
+
+    for (const p of projects) {
+      const amt = Number(p.payment?.amount) || 0;
+      totalAmount += amt;
+
+      const pkgId = p.payment?.packageId || 'unknown';
+      const pkgLabel = p.payment?.packageLabel || (momo.PACKAGES[pkgId]?.label || pkgId);
+      if (!byPackage[pkgId]) byPackage[pkgId] = { count: 0, amount: 0, label: pkgLabel };
+      byPackage[pkgId].count += 1;
+      byPackage[pkgId].amount += amt;
+
+      const branch = p.mainBranch || 'unknown';
+      if (!byBranch[branch]) byBranch[branch] = { count: 0, amount: 0 };
+      byBranch[branch].count += 1;
+      byBranch[branch].amount += amt;
+
+      const dayKey = dateToIctYmd(new Date(p.payment.paidAt));
+      if (!byDayMap[dayKey]) byDayMap[dayKey] = { date: dayKey, count: 0, amount: 0 };
+      byDayMap[dayKey].count += 1;
+      byDayMap[dayKey].amount += amt;
+    }
+
+    const byDay = [];
+    let cursor = fromYmd;
+    while (cursor <= toYmd) {
+      byDay.push(byDayMap[cursor] || { date: cursor, count: 0, amount: 0 });
+      cursor = addDaysYmd(cursor, 1);
+    }
+
+    res.json({
+      from: fromYmd,
+      to: toYmd,
+      totalAmount,
+      totalCount,
+      byPackage,
+      byBranch,
+      byDay
+    });
+  } catch (err) {
+    console.error('[Admin][revenue] error:', err);
+    res.status(500).json({ error: err.message || 'Internal error' });
   }
 });
 

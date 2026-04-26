@@ -1,15 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Upload, 
-  Paintbrush, 
-  Image as ImageIcon, 
-  CheckCircle2, 
+  Upload,
+  Paintbrush,
+  Image as ImageIcon,
+  CheckCircle2,
   RefreshCcw,
   RefreshCw,
-  ArrowRight, 
-  User, 
-  Send, 
-  Undo2, 
+  ArrowRight,
+  User,
+  Undo2,
   Trash2,
   ChevronLeft,
   Camera,
@@ -44,7 +43,13 @@ import {
   Coffee,
   Droplets,
   Home,
-  Settings
+  Settings,
+  Search,
+  CircleDollarSign,
+  TrendingUp,
+  Clock,
+  Hash,
+  Circle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -166,6 +171,27 @@ interface Selection {
   tan_co_dien_go?: string;
 }
 
+interface PaymentInfo {
+  packageId?: string;
+  packageLabel?: string;
+  area?: number;
+  amount?: number;
+  status?: 'pending' | 'paid' | 'failed' | 'cancelled';
+  orderId?: string;
+  requestId?: string;
+  transId?: string;
+  payUrl?: string;
+  qrCodeUrl?: string;
+  deeplink?: string;
+  message?: string;
+  resultCode?: number | string;
+  createdAt?: string;
+  paidAt?: string;
+  manual?: boolean;
+  note?: string;
+  cancelledAt?: string;
+}
+
 interface Project {
   id: string;
   timestamp: string;
@@ -186,6 +212,7 @@ interface Project {
   deviceId?: string;
   pass2Results?: Pass2Results | null;
   interiorPairs?: { siteImage: string; referenceImage: string }[];
+  payment?: PaymentInfo;
 }
 
 interface Pass2Task {
@@ -1253,51 +1280,169 @@ export default function App() {
 function LoginView({ onSuccess, onBack }: { onSuccess: () => void, onBack: () => void }) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
+  const [shake, setShake] = useState(false);
 
   const handleLogin = () => {
-    if (pin === '2024') { // Mã PIN mặc định cho anh Hải
+    if (pin === '2024') {
       onSuccess();
     } else {
       setError(true);
-      setTimeout(() => setError(false), 500);
+      setShake(true);
+      setTimeout(() => { setError(false); setShake(false); }, 600);
       setPin('');
     }
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="view login-view">
-      <div className="login-card glass-panel" style={{ padding: '40px', maxWidth: '400px', width: '90%', textAlign: 'center' }}>
-        <ShieldCheck size={48} color="var(--accent)" style={{ marginBottom: '20px' }} />
-        <h2>Xác thực Quản trị viên</h2>
-        <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)', marginBottom: '30px' }}>
-          Mục này chứa tài nguyên và cấu hình hệ thống chuyên môn. Vui lòng nhập mã PIN để tiếp tục.
-        </p>
-        <input 
-          type="password" 
-          value={pin} 
-          onChange={(e) => setPin(e.target.value)}
-          placeholder="Nhập mã PIN..."
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      style={{
+        position: 'fixed', inset: 0, display: 'grid', placeItems: 'center',
+        background: 'radial-gradient(ellipse at top, #1a1f2e 0%, #0d1117 60%, #06080d 100%)',
+        fontFamily: '"IBM Plex Mono", ui-monospace, SFMono-Regular, monospace',
+        padding: '24px', overflow: 'auto', zIndex: 100
+      }}
+    >
+      <motion.div
+        animate={shake ? { x: [-8, 8, -6, 6, -3, 3, 0] } : {}}
+        transition={{ duration: 0.5 }}
+        style={{
+          width: '100%', maxWidth: 460,
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 20,
+          padding: '48px 44px',
+          boxShadow: '0 30px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
+          position: 'relative'
+        }}
+      >
+        {/* Hairline gold rule */}
+        <div style={{ position: 'absolute', top: 0, left: 24, right: 24, height: 1, background: 'linear-gradient(90deg, transparent, rgba(226,177,112,0.5), transparent)' }} />
+
+        {/* Brand mark */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 6, background: 'rgba(226,177,112,0.12)', border: '1px solid rgba(226,177,112,0.4)', display: 'grid', placeItems: 'center', color: '#e2b170', fontWeight: 800, fontSize: 13, letterSpacing: '-0.02em' }}>SH</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+            Sơn Hải · Atelier
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 10, color: '#e2b170', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 10 }}>
+            — Khu vực hạn chế
+          </div>
+          <h2 style={{
+            margin: 0,
+            fontFamily: '"Fraunces", "Times New Roman", serif',
+            fontWeight: 600,
+            fontSize: 36,
+            lineHeight: 1.05,
+            letterSpacing: '-0.02em',
+            color: '#fff'
+          }}>
+            Xác thực <em style={{ color: '#e2b170', fontStyle: 'italic', fontWeight: 500 }}>Quản trị</em>
+          </h2>
+          <p style={{
+            marginTop: 14, marginBottom: 0,
+            fontSize: 13, lineHeight: 1.55,
+            color: 'rgba(255,255,255,0.55)',
+            fontFamily: 'inherit'
+          }}>
+            Khu vực chứa tài nguyên & cấu hình hệ thống. Nhập mã PIN 4 chữ số để tiếp tục.
+          </p>
+        </div>
+
+        <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>
+          [ Mã PIN ]
+        </label>
+        <input
+          type="password"
+          value={pin}
+          inputMode="numeric"
+          maxLength={6}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+          placeholder="••••"
           style={{
             width: '100%',
-            padding: '16px',
-            borderRadius: '12px',
-            background: 'rgba(255,255,255,0.05)',
-            border: error ? '2px solid #ff4d4f' : '1px solid rgba(255,255,255,0.1)',
+            padding: '18px 16px',
+            borderRadius: 12,
+            background: 'rgba(0,0,0,0.35)',
+            border: error ? '1.5px solid #ef4444' : '1px solid rgba(255,255,255,0.12)',
             color: '#fff',
-            fontSize: '18px',
+            fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
+            fontSize: 22,
+            fontWeight: 600,
             textAlign: 'center',
-            letterSpacing: '10px',
-            marginBottom: '20px',
-            transition: 'all 0.3s'
+            letterSpacing: '0.6em',
+            outline: 'none',
+            transition: 'border-color .2s, box-shadow .2s',
+            boxShadow: error ? '0 0 0 4px rgba(239,68,68,0.15)' : 'none',
+            boxSizing: 'border-box'
           }}
+          onFocus={(e) => { if (!error) e.currentTarget.style.borderColor = 'rgba(226,177,112,0.5)'; e.currentTarget.style.boxShadow = error ? '0 0 0 4px rgba(239,68,68,0.15)' : '0 0 0 4px rgba(226,177,112,0.1)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = error ? '#ef4444' : 'rgba(255,255,255,0.12)'; e.currentTarget.style.boxShadow = error ? '0 0 0 4px rgba(239,68,68,0.15)' : 'none'; }}
           onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
           autoFocus
         />
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button className="btn-secondary" style={{ flex: 1 }} onClick={onBack}>Hủy</button>
-          <button className="btn-primary" style={{ flex: 1 }} onClick={handleLogin}>Vào Portal</button>
+        {error && (
+          <div style={{ marginTop: 10, fontSize: 12, color: '#fca5a5', fontFamily: 'inherit', letterSpacing: '0.05em' }}>
+            ✕ Mã PIN không chính xác — thử lại
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 28 }}>
+          <button
+            onClick={onBack}
+            style={{
+              flex: '0 0 auto', padding: '13px 22px',
+              background: 'transparent',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 11,
+              color: 'rgba(255,255,255,0.7)',
+              fontFamily: 'inherit',
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              transition: 'all .2s'
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'; }}
+            onMouseOut={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+          >
+            ← Hủy
+          </button>
+          <button
+            onClick={handleLogin}
+            disabled={pin.length < 1}
+            style={{
+              flex: 1, padding: '13px 22px',
+              background: pin.length < 1 ? 'rgba(226,177,112,0.2)' : 'linear-gradient(180deg, #e8b878 0%, #c8954f 100%)',
+              border: '1px solid rgba(226,177,112,0.5)',
+              borderRadius: 11,
+              color: pin.length < 1 ? 'rgba(13,17,23,0.4)' : '#0d1117',
+              fontFamily: 'inherit',
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              cursor: pin.length < 1 ? 'not-allowed' : 'pointer',
+              transition: 'all .2s',
+              boxShadow: pin.length < 1 ? 'none' : '0 8px 20px rgba(226,177,112,0.25)'
+            }}
+            onMouseOver={(e) => { if (pin.length >= 1) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 12px 28px rgba(226,177,112,0.35)'; }}}
+            onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = pin.length < 1 ? 'none' : '0 8px 20px rgba(226,177,112,0.25)'; }}
+          >
+            Vào Portal →
+          </button>
         </div>
-      </div>
+
+        <div style={{ marginTop: 32, paddingTop: 18, borderTop: '1px dashed rgba(255,255,255,0.08)', fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between' }}>
+          <span>v1.0 · Production</span>
+          <span>{new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+        </div>
+      </motion.div>
     </motion.div>
   );
 }
@@ -3988,6 +4133,953 @@ Hãy nhìn trực tiếp vào hình ảnh khoanh vùng thiết kế (File 2) mà
   );
 }
 
+// --- REVENUE DASHBOARD ---
+interface RevenueData {
+  totalAmount: number;
+  totalCount: number;
+  byPackage: Record<string, { count: number; amount: number; label?: string }>;
+  byBranch: Record<string, { count: number; amount: number }>;
+  byDay: Array<{ date: string; count: number; amount: number }>;
+}
+
+function RevenueDashboard() {
+  const todayStr = () => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  const daysAgoStr = (days: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const [from, setFrom] = useState<string>(daysAgoStr(30));
+  const [to, setTo] = useState<string>(todayStr());
+  const [data, setData] = useState<RevenueData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const fmtVND = (v: number) => {
+    try {
+      return new Intl.NumberFormat('vi-VN').format(v) + ' đ';
+    } catch {
+      return `${v} đ`;
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await apiFetch(`/api/admin/revenue?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+        if (!res.ok) {
+          const t = await res.text();
+          throw new Error(t || `Lỗi ${res.status}`);
+        }
+        const json = await res.json();
+        if (!cancelled) setData(json);
+      } catch (err: any) {
+        if (!cancelled) setError(err?.message || 'Không tải được dữ liệu doanh thu');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    if (from && to) load();
+    return () => { cancelled = true; };
+  }, [from, to]);
+
+  const totalAmount = data?.totalAmount ?? 0;
+  const totalCount = data?.totalCount ?? 0;
+  const avg = totalCount > 0 ? Math.round(totalAmount / totalCount) : 0;
+
+  const byDay = data?.byDay ?? [];
+  const peakAmount = byDay.reduce((m, d) => Math.max(m, d.amount || 0), 0);
+  const peakDate = byDay.find(d => d.amount === peakAmount && peakAmount > 0)?.date;
+
+  const cardStyle: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '14px',
+    padding: '18px 20px'
+  };
+
+  return (
+    <div style={{ padding: '8px 4px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end' }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>Từ ngày</label>
+          <input
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            style={{ padding: '8px 10px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid rgba(255,255,255,0.12)', fontSize: '0.85rem' }}
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>Đến ngày</label>
+          <input
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            style={{ padding: '8px 10px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid rgba(255,255,255,0.12)', fontSize: '0.85rem' }}
+          />
+        </div>
+        {loading && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem' }}>
+            <span className="generating-spinner" style={{ width: 16, height: 16 }} />
+            Đang tải...
+          </div>
+        )}
+      </div>
+
+      {error && (
+        <div style={{ padding: '12px 14px', borderRadius: '10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>
+          {error}
+        </div>
+      )}
+
+      {/* KPI cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+        <div style={cardStyle}>
+          <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.55)', fontWeight: 700 }}>Tổng doanh thu</div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--accent, #facc15)', marginTop: 6 }}>{fmtVND(totalAmount)}</div>
+        </div>
+        <div style={cardStyle}>
+          <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.55)', fontWeight: 700 }}>Số đơn</div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', marginTop: 6 }}>{totalCount}</div>
+        </div>
+        <div style={cardStyle}>
+          <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.55)', fontWeight: 700 }}>Trung bình / đơn</div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', marginTop: 6 }}>{fmtVND(avg)}</div>
+        </div>
+      </div>
+
+      {/* Daily bar chart */}
+      <div style={cardStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <h4 style={{ margin: 0, fontWeight: 800, color: '#fff' }}>Doanh thu theo ngày</h4>
+          {peakDate && peakAmount > 0 && (
+            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Đỉnh: {peakDate} · {fmtVND(peakAmount)}</div>
+          )}
+        </div>
+        {byDay.length === 0 ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>Không có dữ liệu trong khoảng này.</div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '160px', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              {byDay.map((d, idx) => {
+                const h = peakAmount > 0 ? Math.max(2, Math.round((d.amount / peakAmount) * 150)) : 2;
+                const isPeak = d.date === peakDate && d.amount > 0;
+                return (
+                  <div
+                    key={d.date + idx}
+                    title={`${d.date} · ${fmtVND(d.amount)} · ${d.count} đơn`}
+                    style={{
+                      flex: 1,
+                      minWidth: '4px',
+                      height: `${h}px`,
+                      background: isPeak ? 'linear-gradient(180deg, #facc15, #f59e0b)' : 'linear-gradient(180deg, rgba(99,102,241,0.85), rgba(99,102,241,0.4))',
+                      borderRadius: '4px 4px 0 0',
+                      transition: 'all 0.2s',
+                      cursor: 'pointer'
+                    }}
+                  />
+                );
+              })}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)' }}>
+              <span>{byDay[0]?.date}</span>
+              {peakDate && peakDate !== byDay[0]?.date && peakDate !== byDay[byDay.length - 1]?.date && (
+                <span style={{ color: '#facc15' }}>{peakDate}</span>
+              )}
+              <span>{byDay[byDay.length - 1]?.date}</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* By package table */}
+      <div style={cardStyle}>
+        <h4 style={{ margin: '0 0 12px', fontWeight: 800, color: '#fff' }}>Theo gói</h4>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+            <thead>
+              <tr style={{ textAlign: 'left', color: 'rgba(255,255,255,0.55)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <th style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>Package ID</th>
+                <th style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>Tên gói</th>
+                <th style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'right' }}>Số đơn</th>
+                <th style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'right' }}>Tổng tiền</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(data?.byPackage || {}).length === 0 ? (
+                <tr><td colSpan={4} style={{ padding: '16px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>Chưa có dữ liệu.</td></tr>
+              ) : (
+                Object.entries(data?.byPackage || {})
+                  .sort((a, b) => (b[1].amount || 0) - (a[1].amount || 0))
+                  .map(([pkgId, info]) => (
+                    <tr key={pkgId}>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.05)', fontFamily: 'monospace', color: '#fff' }}>{pkgId}</td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.8)' }}>{info.label || '—'}</td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'right', color: '#fff' }}>{info.count}</td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'right', color: 'var(--accent, #facc15)', fontWeight: 700 }}>{fmtVND(info.amount)}</td>
+                    </tr>
+                  ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* By branch table */}
+      <div style={cardStyle}>
+        <h4 style={{ margin: '0 0 12px', fontWeight: 800, color: '#fff' }}>Theo branch</h4>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+            <thead>
+              <tr style={{ textAlign: 'left', color: 'rgba(255,255,255,0.55)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <th style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>Branch</th>
+                <th style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'right' }}>Số đơn</th>
+                <th style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'right' }}>Tổng tiền</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(data?.byBranch || {}).length === 0 ? (
+                <tr><td colSpan={3} style={{ padding: '16px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>Chưa có dữ liệu.</td></tr>
+              ) : (
+                Object.entries(data?.byBranch || {})
+                  .sort((a, b) => (b[1].amount || 0) - (a[1].amount || 0))
+                  .map(([branch, info]) => (
+                    <tr key={branch}>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#fff', fontWeight: 600 }}>{branch}</td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'right', color: '#fff' }}>{info.count}</td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'right', color: 'var(--accent, #facc15)', fontWeight: 700 }}>{fmtVND(info.amount)}</td>
+                    </tr>
+                  ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- PROJECT DETAIL FLOW (admin) -----------------------------------
+// Vertical step-flow panel reflecting the operator's actual workflow.
+// Each step has a status dot (gray=todo, info=running, ok=done, err=failed).
+function ProjectDetailFlow(props: any) {
+  const {
+    project,
+    branchLabel,
+    activeStepKey,
+    setActiveStepKey,
+    onBack,
+    onDelete,
+    deleting,
+    getStatusLabel,
+    renderPaymentBadge,
+    getWorkflowShortLabel,
+    formatVND,
+    copyText,
+    getAssetInfo,
+    getAssetName,
+    isVideoAsset,
+    projectReferenceAsset,
+    workflowOptions,
+    handleWorkflowSelect,
+    handleUploadResult,
+    fileRef,
+    paymentBusy,
+    paymentError,
+    handlePaymentRecheck,
+    handlePaymentCancel,
+    handleMarkPaidSubmit,
+    showMarkPaidForm,
+    setShowMarkPaidForm,
+    markPaidNote,
+    setMarkPaidNote,
+    markPaidPackageId,
+    setMarkPaidPackageId,
+    markPaidAmount,
+    setMarkPaidAmount,
+    videoPrompt,
+    setVideoPrompt,
+    selectedVideoImage,
+    setSelectedVideoImage,
+    isGeneratingVideo,
+    setIsGeneratingVideo,
+    setSelectedProject,
+    systemContent,
+    setActionFeedback,
+    selectedPass2Image,
+    setSelectedPass2Image,
+    pass2Width,
+    setPass2Width,
+    pass2Length,
+    setPass2Length,
+    isStartingPass2,
+    setIsStartingPass2,
+    setShowAIStudio,
+  } = props;
+
+  const aiResults: string[] = project.aiResults || [];
+  const photoResults = aiResults.filter((u: string) => !u.endsWith('.mp4') && !u.includes('/video/'));
+  const videoResults = aiResults.filter((u: string) => u.endsWith('.mp4') || u.includes('/video/'));
+
+  // status dot resolver per step
+  type Tone = 'gray' | 'info' | 'ok' | 'err' | 'warn' | 'gold';
+  const dotFor = (key: string): { tone: Tone; label: string } => {
+    if (key === 'customer') return { tone: 'gold', label: 'Sẵn sàng' };
+    if (key === 'request') return { tone: project.note || project.service ? 'gold' : 'gray', label: 'Đã ghi' };
+    if (key === 'ai') {
+      if (project.status === 'done' && photoResults.length > 0) return { tone: 'ok', label: 'Xong · ' + photoResults.length };
+      if (project.status === 'processing') return { tone: 'info', label: 'Đang chạy' };
+      return { tone: 'gray', label: 'Chưa' };
+    }
+    if (key === 'pass2') {
+      const s = project.pass2Results?.status;
+      if (s === 'done') return { tone: 'ok', label: 'Xong 7/7' };
+      if (s === 'running' || s === 'pending') return { tone: 'info', label: 'Đang chạy' };
+      if (s === 'failed') return { tone: 'err', label: 'Lỗi' };
+      return { tone: 'gray', label: 'Chưa' };
+    }
+    if (key === 'payment') {
+      const s = project.payment?.status;
+      if (s === 'paid') return { tone: 'ok', label: 'Đã trả' };
+      if (s === 'pending') return { tone: 'warn', label: 'Chờ' };
+      if (s === 'failed') return { tone: 'err', label: 'Lỗi' };
+      if (s === 'cancelled') return { tone: 'gray', label: 'Hủy' };
+      return { tone: 'gray', label: 'Chưa TT' };
+    }
+    if (key === 'final') {
+      if (project.status === 'done' && project.finalImage) return { tone: 'ok', label: 'Đã giao' };
+      if (project.finalImage) return { tone: 'ok', label: 'Có bản vẽ' };
+      return { tone: 'gray', label: 'Chưa' };
+    }
+    return { tone: 'gray', label: '—' };
+  };
+
+  const steps = [
+    { key: 'customer', num: '01', title: 'Khách hàng', sub: 'Hồ sơ liên hệ' },
+    { key: 'request', num: '02', title: 'Yêu cầu', sub: 'Gói · ghi chú · lựa chọn' },
+    { key: 'ai', num: '03', title: 'AI tạo phương án', sub: '4 phương án ảnh AI' },
+    { key: 'pass2', num: '04', title: 'Pass 2 — bổ sung', sub: '3 góc + 2 vẽ + 2 video' },
+    { key: 'payment', num: '05', title: 'Thanh toán', sub: 'MoMo · thủ công' },
+    { key: 'final', num: '06', title: 'Bản vẽ hoàn thiện', sub: 'Upload · giao khách' },
+  ];
+
+  // selections list (landscape branch only — falls back gracefully)
+  const selectionEntries: Array<[string, string, string]> = [
+    ['ho', 'HO', 'Hồ Koi cổ điển'],
+    ['ho_hien_dai', 'HO_HIEN_DAI', 'Hồ Koi hiện đại'],
+    ['tuong_da', 'TUONG_DA', 'Tường đá'],
+    ['tuong_cay', 'TUONG_CAY', 'Tường cây'],
+    ['farm', 'FARM', 'Farm & Du lịch'],
+    ['cafe', 'CAFE', 'Cà phê'],
+    ['ho_boi', 'HO_BOI', 'Hồ bơi'],
+  ];
+
+  const dimsLabel = project.payment?.area ? `${project.payment.area} m²` : '—';
+
+  return (
+    <>
+      {/* HEADER */}
+      <div className="as-detail-head">
+        <div className="who">
+          <span className="id">
+            <Hash size={11} /> {project.id}
+            <button className="copy" onClick={() => copyText(project.id, 'Đã copy ID dự án.')}>Copy</button>
+          </span>
+          <h2>{project.customerName}</h2>
+          <div className="badges">
+            <span className={`as-chip ${project.status === 'done' ? 'ok' : project.status === 'processing' ? 'info' : 'warn'}`}>
+              <Circle size={6} fill="currentColor" /> {getStatusLabel(project.status)}
+            </span>
+            {renderPaymentBadge(project.payment)}
+            <span className="as-chip gold">{branchLabel}</span>
+            <span className="as-chip muted">{project.service}</span>
+            <span className="as-chip muted">{getWorkflowShortLabel(project.workflowBranch)}</span>
+          </div>
+        </div>
+        <div className="badges" style={{ flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+          <div className="head-actions">
+            <button className="as-btn ghost" onClick={onBack}><ChevronLeft size={12} /> Sổ dự án</button>
+            <button className="as-btn danger" onClick={onDelete} disabled={deleting}>
+              <Trash2 size={12} /> {deleting ? 'Đang xóa…' : 'Xóa hồ sơ'}
+            </button>
+          </div>
+          <div style={{ fontFamily: 'var(--as-mono)', fontSize: 10, color: 'var(--as-text-2)', letterSpacing: '0.08em' }}>
+            Mở lúc · {new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
+      </div>
+
+      <div className="as-detail">
+        {/* RAIL */}
+        <aside className="as-rail" aria-label="Bước xử lý">
+          {steps.map(step => {
+            const { tone, label } = dotFor(step.key);
+            return (
+              <button
+                key={step.key}
+                className={`as-rail-step${activeStepKey === step.key ? ' active' : ''}`}
+                onClick={() => {
+                  setActiveStepKey(step.key);
+                  const el = document.getElementById('as-step-' + step.key);
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+              >
+                <span className="as-rail-num">{step.num}</span>
+                <span className={`as-rail-dot ${tone}`} />
+                <span className="as-rail-info">
+                  <span className="ttl">{step.title}</span>
+                  <span className="sub">{label}</span>
+                </span>
+              </button>
+            );
+          })}
+        </aside>
+
+        {/* STEP PANELS */}
+        <div className="as-steps">
+          {/* STEP 01 — Khách hàng ----------------------- */}
+          <section className="as-step" id="as-step-customer">
+            <div className="as-step-head">
+              <span className="as-step-num">[ 01 / 06 ]</span>
+              <h3 className="as-step-title">Khách hàng</h3>
+              <span className={`as-step-status ${dotFor('customer').tone}`}>{dotFor('customer').label}</span>
+            </div>
+            <div className="as-step-body">
+              <div className="as-fields">
+                <div className="as-field">
+                  <span className="lbl">[ ] Họ và tên</span>
+                  <span className="val">{project.customerName}</span>
+                </div>
+                <div className="as-field">
+                  <span className="lbl">[ ] Số điện thoại / Zalo</span>
+                  <span className="val mono">{project.customerPhone}</span>
+                  <span className="actions">
+                    <button className="as-btn sm ghost" onClick={() => copyText(project.customerPhone, 'Đã copy SĐT.')}><Copy size={11} /> Copy</button>
+                    <button className="as-btn sm ghost" onClick={() => window.open(`https://zalo.me/${project.customerPhone.replace(/\D/g, '')}`, '_blank')}><MessageCircle size={11} /> Zalo</button>
+                  </span>
+                </div>
+                <div className="as-field">
+                  <span className="lbl">[ ] ID dự án</span>
+                  <span className="val mono">#{project.id}</span>
+                  <span className="actions">
+                    <button className="as-btn sm ghost" onClick={() => copyText(project.id, 'Đã copy ID.')}><Copy size={11} /> Copy</button>
+                  </span>
+                </div>
+                <div className="as-field">
+                  <span className="lbl">[ ] Thời điểm gửi</span>
+                  <span className="val muted">{new Date(project.timestamp).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* STEP 02 — Yêu cầu --------------------------- */}
+          <section className="as-step" id="as-step-request">
+            <div className="as-step-head">
+              <span className="as-step-num">[ 02 / 06 ]</span>
+              <h3 className="as-step-title">Yêu cầu của khách</h3>
+              <span className={`as-step-status ${dotFor('request').tone}`}>{dotFor('request').label}</span>
+            </div>
+            <div className="as-step-body">
+              <div className="as-fields">
+                <div className="as-field">
+                  <span className="lbl">[ ] Gói dịch vụ</span>
+                  <span className="val mono">{project.service}</span>
+                </div>
+                <div className="as-field">
+                  <span className="lbl">[ ] Nhánh xử lý</span>
+                  <span className="val mono">{getWorkflowShortLabel(project.workflowBranch)}</span>
+                </div>
+                <div className="as-field">
+                  <span className="lbl">[ ] Diện tích / Kích thước</span>
+                  <span className="val mono">{dimsLabel}</span>
+                </div>
+              </div>
+
+              <div>
+                <div className="as-subhead">Ghi chú khách hàng</div>
+                <div className="as-quote">{project.note || 'Khách hàng không để lại ghi chú.'}</div>
+              </div>
+
+              <div>
+                <div className="as-subhead">Hiện trạng &amp; ảnh tham khảo</div>
+                <div className="as-media-grid">
+                  <div className="as-media-card">
+                    <div className="head"><span className="lbl">Ảnh hiện trạng</span><span className="num">[01]</span></div>
+                    <img decoding="async" loading="lazy" src={project.rawImage} alt="Ảnh gốc" />
+                  </div>
+                  <div className="as-media-card">
+                    <div className="head"><span className="lbl">{projectReferenceAsset?.label || 'Khoanh vùng ý tưởng'}</span><span className="num">[02]</span></div>
+                    <img decoding="async" loading="lazy" src={projectReferenceAsset?.url || project.annotatedImage} alt="Khoanh vùng" />
+                  </div>
+                </div>
+                {(project.extraAssets || []).length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <div className="as-subhead">Tham khảo bổ sung · {(project.extraAssets || []).length}</div>
+                    <div className="as-extra-strip">
+                      {project.extraAssets.map((asset: string, i: number) => (
+                        <div key={i} onClick={() => window.open(asset, '_blank')}>
+                          {isVideoAsset(asset) ? (
+                            <div style={{ display: 'grid', placeItems: 'center', height: '100%', color: 'var(--as-text-2)' }}><VideoIcon size={20} /></div>
+                          ) : (
+                            <img decoding="async" loading="lazy" src={asset} alt={`Extra ${i+1}`} />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div className="as-subhead">Hạng mục đã chọn</div>
+                <div className="as-selections">
+                  {selectionEntries.map(([key, cat, label]) => {
+                    const val = project.selections?.[key];
+                    if (!val) return null;
+                    const info = getAssetInfo(val, cat as any);
+                    return (
+                      <div className="as-sel-pill" key={key}>
+                        {info?.url && <img decoding="async" loading="lazy" src={info.url} alt={label} />}
+                        <div className="meta">
+                          <span className="nm">{getAssetName(val, cat as any)}</span>
+                          <span className="cat">{label}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {selectionEntries.every(([k]) => !project.selections?.[k]) && (
+                    <div className="as-ai-empty">Khách chưa chọn mẫu cụ thể.</div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <div className="as-subhead">Nhánh xử lý</div>
+                <div className="as-actions-row">
+                  {workflowOptions.map((option: any) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`as-btn ${project.workflowBranch === option.id ? 'primary' : 'ghost'}`}
+                      onClick={() => handleWorkflowSelect(option.id)}
+                    >
+                      {option.icon} {option.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* STEP 03 — AI ------------------------------ */}
+          <section className="as-step" id="as-step-ai">
+            <div className="as-step-head">
+              <span className="as-step-num">[ 03 / 06 ]</span>
+              <h3 className="as-step-title">AI tạo phương án</h3>
+              <span className={`as-step-status ${dotFor('ai').tone}`}>{dotFor('ai').label}</span>
+            </div>
+            <div className="as-step-body">
+              {project.workflowBranch === 'chatgpt_image' && (
+                <div className="as-actions-row">
+                  <button className="as-btn primary" onClick={() => setShowAIStudio(true)}><Bot size={12} /> Mở Trạm AI</button>
+                  <span style={{ fontFamily: 'var(--as-mono)', fontSize: 11, color: 'var(--as-text-2)', letterSpacing: '0.06em' }}>
+                    Lấy Master Prompt &amp; xử lý ảnh hiện trạng
+                  </span>
+                </div>
+              )}
+
+              {photoResults.length === 0 && videoResults.length === 0 ? (
+                <div className="as-ai-empty">Chưa có phương án AI. Mở Trạm AI để tạo.</div>
+              ) : (
+                <div>
+                  <div className="as-subhead">Ảnh phương án · {photoResults.length}</div>
+                  <div className="as-ai-grid">
+                    {photoResults.map((url: string, i: number) => (
+                      <div key={i} className="as-ai-card">
+                        <img decoding="async" loading="lazy" src={url} alt={`PA ${i+1}`} />
+                        <div className="meta">
+                          <span className="nm">PA-{String(i+1).padStart(2, '0')}</span>
+                          <button className="as-btn sm ghost" onClick={() => copyText(url, 'Đã copy link ảnh.')}><Copy size={10} /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {videoResults.length > 0 && (
+                    <>
+                      <div className="as-subhead" style={{ marginTop: 16 }}>Video AI · {videoResults.length}</div>
+                      <div className="as-ai-grid">
+                        {videoResults.map((url: string, i: number) => (
+                          <div key={i} className="as-ai-card">
+                            <video src={url} controls />
+                            <div className="meta">
+                              <span className="nm">VID-{String(i+1).padStart(2, '0')}</span>
+                              <a href={url} download className="as-btn sm ghost" style={{ textDecoration: 'none' }}><Upload size={10} style={{ transform: 'rotate(180deg)' }} /></a>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {project.status === 'done' && photoResults.length > 0 && (
+                <div>
+                  <div className="as-subhead">Tạo video AI từ một phương án</div>
+                  <div className="as-image-picker">
+                    {photoResults.map((url: string, i: number) => (
+                      <div
+                        key={i}
+                        className={`pick${selectedVideoImage === url ? ' active' : ''}`}
+                        onClick={() => setSelectedVideoImage(url)}
+                      >
+                        <img decoding="async" loading="lazy" src={url} alt={`PA ${i+1}`} />
+                      </div>
+                    ))}
+                  </div>
+                  <textarea
+                    className="as-textarea"
+                    placeholder="Prompt video (tùy chọn — để trống dùng mặc định)"
+                    value={videoPrompt}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setVideoPrompt(e.target.value)}
+                  />
+                  <div className="as-actions-row">
+                    <button
+                      className="as-btn primary"
+                      disabled={!selectedVideoImage || isGeneratingVideo}
+                      onClick={async () => {
+                        if (!selectedVideoImage) return;
+                        setIsGeneratingVideo(true);
+                        setActionFeedback('Đang gửi lệnh tạo video AI… (3–10 phút)');
+                        try {
+                          const defaultPrompt = systemContent.promptVideo || 'Smooth cinematic camera slowly panning through this beautiful landscape garden. Gentle water flowing over rocks, koi fish swimming, leaves swaying in soft breeze. Golden hour warm lighting, photorealistic quality, peaceful atmosphere. 16:9 cinematic ratio.';
+                          const res = await apiFetch(`/api/projects/${project.id}/generate-video`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ prompt: videoPrompt.trim() || defaultPrompt, imageUrl: selectedVideoImage })
+                          });
+                          const data = await res.json();
+                          if (data.videoUrl) {
+                            setActionFeedback('Video AI đã tạo thành công.');
+                            setSelectedProject(data.project);
+                          } else {
+                            setActionFeedback('Không tạo được video. Thử lại sau.');
+                          }
+                        } catch (e: any) {
+                          setActionFeedback(`Lỗi: ${e.message}`);
+                        } finally {
+                          setIsGeneratingVideo(false);
+                        }
+                      }}
+                    >
+                      {isGeneratingVideo ? <><RefreshCcw size={12} className="spin" /> Đang tạo…</> : <><VideoIcon size={12} /> Tạo Video AI</>}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* STEP 04 — Pass 2 -------------------------- */}
+          <section className={`as-step${project.status !== 'done' || photoResults.length === 0 ? ' dim' : ''}`} id="as-step-pass2">
+            <div className="as-step-head">
+              <span className="as-step-num">[ 04 / 06 ]</span>
+              <h3 className="as-step-title">Pass 2 — Bổ sung 7 phương án</h3>
+              <span className={`as-step-status ${dotFor('pass2').tone}`}>{dotFor('pass2').label}</span>
+            </div>
+            <div className="as-step-body">
+              {photoResults.length === 0 ? (
+                <div className="as-ai-empty">Chưa có ảnh AI ở bước 03 — chưa thể chạy Pass 2.</div>
+              ) : (
+                <>
+                  <div>
+                    <div className="as-subhead">Chọn 1 ảnh PA làm reference</div>
+                    <div className="as-image-picker">
+                      {photoResults.map((url: string, i: number) => (
+                        <div
+                          key={i}
+                          className={`pick${selectedPass2Image === url ? ' active' : ''}`}
+                          onClick={() => setSelectedPass2Image(url)}
+                        >
+                          <img decoding="async" loading="lazy" src={url} alt={`PA ${i+1}`} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="as-subhead">Kích thước khu vực (m)</div>
+                    <div className="as-form" style={{ background: 'transparent', border: '1px solid var(--as-line)' }}>
+                      <div className="row">
+                        <label>
+                          <span>Chiều ngang (m)</span>
+                          <input type="number" min="1" step="0.5" className="as-input" value={pass2Width} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPass2Width(e.target.value)} />
+                        </label>
+                        <label>
+                          <span>Chiều dài (m)</span>
+                          <input type="number" min="1" step="0.5" className="as-input" value={pass2Length} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPass2Length(e.target.value)} />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="as-actions-row">
+                    <button
+                      className="as-btn primary"
+                      disabled={!selectedPass2Image || isStartingPass2 || project.pass2Results?.status === 'running'}
+                      onClick={async () => {
+                        if (!selectedPass2Image) return;
+                        setIsStartingPass2(true);
+                        setActionFeedback('Đang khởi động Pass 2 (7 tab Flow song song)…');
+                        try {
+                          const width = parseFloat(pass2Width) || 4;
+                          const length = parseFloat(pass2Length) || 4;
+                          const res = await apiFetch(`/api/projects/${project.id}/pass2`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ referenceImageUrl: selectedPass2Image, dimensions: { width, length } })
+                          });
+                          const data = await res.json();
+                          if (!res.ok) throw new Error(data.error || 'Không khởi động được Pass 2.');
+                          setActionFeedback('Pass 2 đã khởi động.');
+                          if (data.pass2Results) {
+                            setSelectedProject((prev: any) => prev ? { ...prev, pass2Results: data.pass2Results } : prev);
+                          }
+                        } catch (e: any) {
+                          setActionFeedback(`Lỗi: ${e.message}`);
+                        } finally {
+                          setIsStartingPass2(false);
+                        }
+                      }}
+                    >
+                      {project.pass2Results?.status === 'running' ? (<><RefreshCcw size={12} className="spin" /> Đang chạy Pass 2…</>) : isStartingPass2 ? (<><RefreshCcw size={12} className="spin" /> Đang khởi động…</>) : 'Chạy Pass 2 (7 output)'}
+                    </button>
+                    {project.pass2Results && (
+                      <span style={{ fontFamily: 'var(--as-mono)', fontSize: 11, color: 'var(--as-text-2)', letterSpacing: '0.08em' }}>
+                        {project.pass2Results.tasks?.filter((t: any) => t.status === 'done').length || 0}/7 xong
+                      </span>
+                    )}
+                  </div>
+
+                  {project.pass2Results && project.pass2Results.tasks?.length > 0 && (
+                    <div>
+                      <div className="as-subhead">Kết quả</div>
+                      <div className="as-pass2-tasks">
+                        {project.pass2Results.tasks.map((task: any) => (
+                          <div key={task.taskId} className="as-pass2-task">
+                            <div className={`body${task.url ? '' : ' placeholder'}`}>
+                              {task.url ? (
+                                task.type === 'video' ? <video src={task.url} controls /> : <img decoding="async" loading="lazy" src={task.url} alt={task.label} />
+                              ) : (
+                                task.status === 'failed' ? '× Lỗi' : task.status === 'running' ? 'Đang chạy…' : 'Chờ…'
+                              )}
+                            </div>
+                            <div className="foot">
+                              <span className="nm">{task.label}</span>
+                              <span className={`as-chip ${task.status === 'done' ? 'ok' : task.status === 'failed' ? 'err' : task.status === 'running' ? 'info' : 'muted'}`}>{task.status}</span>
+                            </div>
+                            {task.error && <div className="err">{task.error}</div>}
+                            {(task.status === 'failed' || (task.status === 'done' && !task.url)) && (
+                              <button
+                                className="as-btn sm primary"
+                                style={{ width: '100%', borderRadius: 0 }}
+                                onClick={async () => {
+                                  try {
+                                    const res = await apiFetch(`/api/projects/${project.id}/pass2/retry`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ taskId: task.taskId })
+                                    });
+                                    const data = await res.json();
+                                    if (!res.ok) throw new Error(data.error || 'Retry failed');
+                                    setActionFeedback(`Đang thử lại: ${task.label}`);
+                                  } catch (e: any) { setActionFeedback(`Lỗi: ${e.message}`); }
+                                }}
+                              >
+                                <RefreshCcw size={11} /> Thử lại
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </section>
+
+          {/* STEP 05 — Thanh toán ---------------------- */}
+          <section className="as-step" id="as-step-payment">
+            <div className="as-step-head">
+              <span className="as-step-num">[ 05 / 06 ]</span>
+              <h3 className="as-step-title">Thanh toán</h3>
+              <span className={`as-step-status ${dotFor('payment').tone}`}>{dotFor('payment').label}</span>
+            </div>
+            <div className="as-step-body">
+              {project.payment ? (
+                <>
+                  <div className="as-fields">
+                    <div className="as-field">
+                      <span className="lbl">[ ] Gói</span>
+                      <span className="val">{project.payment.packageLabel || project.payment.packageId || '—'}</span>
+                      {typeof project.payment.area === 'number' && <span className="lbl" style={{ marginTop: 4 }}>Diện tích · {project.payment.area} m²</span>}
+                    </div>
+                    <div className="as-field">
+                      <span className="lbl">[ ] Số tiền</span>
+                      <span className="val amount">{formatVND(project.payment.amount)}</span>
+                    </div>
+                    <div className="as-field">
+                      <span className="lbl">[ ] Trạng thái</span>
+                      <span className="val">
+                        {renderPaymentBadge(project.payment)}
+                        {project.payment.manual && <span className="lbl" style={{ marginLeft: 8, display: 'inline' }}>· thủ công</span>}
+                      </span>
+                    </div>
+                    {project.payment.orderId && (
+                      <div className="as-field">
+                        <span className="lbl">[ ] Order ID</span>
+                        <span className="val mono">{project.payment.orderId}</span>
+                      </div>
+                    )}
+                    {project.payment.transId && (
+                      <div className="as-field">
+                        <span className="lbl">[ ] Trans ID</span>
+                        <span className="val mono">{project.payment.transId}</span>
+                      </div>
+                    )}
+                    {project.payment.paidAt && (
+                      <div className="as-field">
+                        <span className="lbl">[ ] Đã trả lúc</span>
+                        <span className="val muted">{new Date(project.payment.paidAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span>
+                      </div>
+                    )}
+                    {project.payment.cancelledAt && (
+                      <div className="as-field">
+                        <span className="lbl">[ ] Đã hủy lúc</span>
+                        <span className="val muted">{new Date(project.payment.cancelledAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span>
+                      </div>
+                    )}
+                  </div>
+                  {(project.payment.message || project.payment.note) && (
+                    <div>
+                      <div className="as-subhead">Ghi chú</div>
+                      <div className="as-quote">{project.payment.note || project.payment.message}</div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="as-ai-empty">Chưa có giao dịch nào.</div>
+              )}
+
+              <div>
+                <div className="as-subhead">Hành động</div>
+                <div className="as-actions-row">
+                  <button className="as-btn ghost" onClick={handlePaymentRecheck} disabled={paymentBusy}>
+                    <RefreshCcw size={12} /> Kiểm tra lại MoMo
+                  </button>
+                  <button className="as-btn success" onClick={() => setShowMarkPaidForm((v: boolean) => !v)} disabled={paymentBusy}>
+                    <CheckCircle2 size={12} /> Đánh dấu đã trả thủ công
+                  </button>
+                  {project.payment?.status === 'pending' && (
+                    <button className="as-btn danger" onClick={handlePaymentCancel} disabled={paymentBusy}>
+                      <X size={12} /> Hủy đơn
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {showMarkPaidForm && (
+                <div className="as-form">
+                  <div className="row">
+                    <label>
+                      <span>[ ] Package ID</span>
+                      <select className="as-input" value={markPaidPackageId} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setMarkPaidPackageId(e.target.value)}>
+                        <option value="">— Giữ nguyên / Tự động —</option>
+                        <option value="basic">basic</option>
+                        <option value="standard">standard</option>
+                        <option value="premium">premium</option>
+                        <option value="custom">custom</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>[ ] Số tiền (VND)</span>
+                      <input type="number" min="0" step="1000" className="as-input" value={markPaidAmount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMarkPaidAmount(e.target.value)} placeholder="VD 500000" />
+                    </label>
+                  </div>
+                  <label>
+                    <span>[ ] Ghi chú</span>
+                    <textarea className="as-textarea" rows={2} value={markPaidNote} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMarkPaidNote(e.target.value)} placeholder="VD: Khách chuyển khoản trực tiếp…" />
+                  </label>
+                  <div className="footer">
+                    <button className="as-btn ghost" onClick={() => setShowMarkPaidForm(false)} disabled={paymentBusy}>Hủy</button>
+                    <button className="as-btn primary" onClick={handleMarkPaidSubmit} disabled={paymentBusy}>
+                      {paymentBusy ? 'Đang lưu…' : 'Xác nhận đã trả'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {paymentError && (
+                <div className="as-form" style={{ background: 'rgba(248,113,113,0.06)', borderColor: 'rgba(248,113,113,0.3)' }}>
+                  <div style={{ color: 'var(--as-err)', fontFamily: 'var(--as-mono)', fontSize: 12 }}>{paymentError}</div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* STEP 06 — Bản vẽ hoàn thiện -------------- */}
+          <section className="as-step" id="as-step-final">
+            <div className="as-step-head">
+              <span className="as-step-num">[ 06 / 06 ]</span>
+              <h3 className="as-step-title">Bản vẽ hoàn thiện</h3>
+              <span className={`as-step-status ${dotFor('final').tone}`}>{dotFor('final').label}</span>
+            </div>
+            <div className="as-step-body">
+              {project.finalImage && (
+                <div className="as-media-card" style={{ maxWidth: 540 }}>
+                  <div className="head"><span className="lbl">Bản vẽ đã giao</span><span className="num">FINAL</span></div>
+                  <img decoding="async" loading="lazy" src={project.finalImage} alt="Bản vẽ" />
+                </div>
+              )}
+              <div className="as-actions-row">
+                <button className="as-btn primary" onClick={() => handleWorkflowSelect('manual_design')}>
+                  <Paintbrush size={12} /> Mở trình thiết kế chuyên sâu
+                </button>
+                <button className="as-btn ghost" onClick={() => fileRef.current?.click()}>
+                  <Upload size={12} /> {project.status === 'done' ? 'Cập nhật bản vẽ mới' : 'Tải bản vẽ hoàn thiện'}
+                </button>
+                <input type="file" accept="image/*" ref={fileRef} onChange={handleUploadResult} hidden />
+                {project.status === 'done' && (
+                  <button className="as-btn success" onClick={() => window.open(`https://zalo.me/${project.customerPhone.replace(/\D/g, '')}`, '_blank')}>
+                    <MessageCircle size={12} /> Phản hồi qua Zalo
+                  </button>
+                )}
+              </div>
+              {!project.finalImage && project.status !== 'done' && (
+                <div className="as-ai-empty">Chưa có bản vẽ hoàn thiện. Upload để chuyển trạng thái sang &ldquo;Đã giao&rdquo;.</div>
+              )}
+            </div>
+          </section>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // --- ADMIN VIEW ---
 function AdminView({
   projects, isLoading, systemContent, onSystemContentUpdate, onSync, onBack, onUpdateProject, onDeleteProject, onDeleteAllProjects, onGenerateAiImage, onRefreshConfig
@@ -4004,10 +5096,19 @@ function AdminView({
   onGenerateAiImage: (id: string, payload: any) => Promise<Project>;
   onRefreshConfig: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<'projects' | 'resources' | 'prompt' | 'config'>('projects');
+  const [activeTab, setActiveTab] = useState<'projects' | 'resources' | 'prompt' | 'config' | 'revenue'>('projects');
   const [adminBranch, setAdminBranch] = useState<MainBranch>('landscape');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [actionFeedback, setActionFeedback] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState<'all' | 'paid' | 'pending' | 'failed' | 'cancelled' | 'none'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeStepKey, setActiveStepKey] = useState<string>('customer');
+  const [paymentBusy, setPaymentBusy] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
+  const [showMarkPaidForm, setShowMarkPaidForm] = useState(false);
+  const [markPaidNote, setMarkPaidNote] = useState('');
+  const [markPaidPackageId, setMarkPaidPackageId] = useState('');
+  const [markPaidAmount, setMarkPaidAmount] = useState('');
   const [showDesigner, setShowDesigner] = useState(false);
   const [showAIStudio, setShowAIStudio] = useState(false);
   const [designerReady, setDesignerReady] = useState(false);
@@ -4045,7 +5146,47 @@ function AdminView({
   }, [projects, selectedProject?.id]);
 
   // Filter projects by adminBranch
-  const filteredProjects = projects.filter(p => (p as any).mainBranch === adminBranch || (!p.hasOwnProperty('mainBranch') && adminBranch === 'landscape'));
+  const branchProjects = projects.filter(p => (p as any).mainBranch === adminBranch || (!p.hasOwnProperty('mainBranch') && adminBranch === 'landscape'));
+  const filteredProjects = branchProjects
+    .filter(p => {
+      if (paymentFilter === 'all') return true;
+      const status = p.payment?.status;
+      if (paymentFilter === 'none') return !p.payment || !status;
+      return status === paymentFilter;
+    })
+    .filter(p => {
+      const q = searchQuery.trim().toLowerCase();
+      if (!q) return true;
+      return (
+        (p.customerName || '').toLowerCase().includes(q) ||
+        (p.customerPhone || '').toLowerCase().includes(q) ||
+        (p.id || '').toLowerCase().includes(q)
+      );
+    });
+
+  // KPIs computed from branchProjects (not search-filtered, so they reflect totals)
+  const adminKpis = (() => {
+    const todayVNDate = new Date().toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    let todayCount = 0;
+    let processingCount = 0;
+    let paidCount = 0;
+    let revenueToday = 0;
+    branchProjects.forEach(p => {
+      const pVN = new Date(p.timestamp).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+      if (pVN === todayVNDate) todayCount += 1;
+      if (p.status === 'processing') processingCount += 1;
+      if (p.payment?.status === 'paid') {
+        paidCount += 1;
+        if (p.payment.paidAt) {
+          const paidVN = new Date(p.payment.paidAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+          if (paidVN === todayVNDate && typeof p.payment.amount === 'number') {
+            revenueToday += p.payment.amount;
+          }
+        }
+      }
+    });
+    return { total: branchProjects.length, todayCount, processingCount, paidCount, revenueToday };
+  })();
 
   // Pass 2 polling — khi đang chạy thì refresh project mỗi 5s để cập nhật trạng thái task
   useEffect(() => {
@@ -4061,6 +5202,144 @@ function AdminView({
     }, 5000);
     return () => clearInterval(interval);
   }, [selectedProject?.id, selectedProject?.pass2Results?.status]);
+
+  // Reset mark-paid form when switching project
+  useEffect(() => {
+    setShowMarkPaidForm(false);
+    setMarkPaidNote('');
+    setMarkPaidPackageId('');
+    setMarkPaidAmount('');
+    setPaymentError('');
+  }, [selectedProject?.id]);
+
+  const refreshSelectedProject = async (id: string) => {
+    try {
+      const res = await apiFetch(`/api/projects/${id}`);
+      if (!res.ok) return;
+      const fresh = await res.json();
+      setSelectedProject(fresh);
+    } catch { /* ignore */ }
+  };
+
+  const handlePaymentRecheck = async () => {
+    if (!selectedProject) return;
+    setPaymentBusy(true);
+    setPaymentError('');
+    try {
+      const res = await apiFetch(`/api/projects/${selectedProject.id}/payment/recheck`, { method: 'POST' });
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || 'Không thể kiểm tra trạng thái MoMo');
+      }
+      await refreshSelectedProject(selectedProject.id);
+      setActionFeedback('Đã kiểm tra lại trạng thái MoMo.');
+    } catch (err: any) {
+      setPaymentError(err?.message || 'Lỗi kiểm tra MoMo');
+    } finally {
+      setPaymentBusy(false);
+    }
+  };
+
+  const handleMarkPaidSubmit = async () => {
+    if (!selectedProject) return;
+    setPaymentBusy(true);
+    setPaymentError('');
+    try {
+      const body: any = {};
+      if (markPaidNote.trim()) body.note = markPaidNote.trim();
+      if (markPaidPackageId.trim()) body.packageId = markPaidPackageId.trim();
+      const amt = parseFloat(markPaidAmount);
+      if (!isNaN(amt) && amt > 0) body.amount = amt;
+      const res = await apiFetch(`/api/projects/${selectedProject.id}/payment/mark-paid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || 'Không thể đánh dấu đã trả');
+      }
+      await refreshSelectedProject(selectedProject.id);
+      setShowMarkPaidForm(false);
+      setMarkPaidNote('');
+      setMarkPaidPackageId('');
+      setMarkPaidAmount('');
+      setActionFeedback('Đã đánh dấu đã thanh toán thủ công.');
+    } catch (err: any) {
+      setPaymentError(err?.message || 'Lỗi đánh dấu đã trả');
+    } finally {
+      setPaymentBusy(false);
+    }
+  };
+
+  const handlePaymentCancel = async () => {
+    if (!selectedProject) return;
+    if (!window.confirm('Hủy đơn thanh toán này?')) return;
+    const note = window.prompt('Lý do hủy (tùy chọn):', '') || '';
+    setPaymentBusy(true);
+    setPaymentError('');
+    try {
+      const body: any = {};
+      if (note.trim()) body.note = note.trim();
+      const res = await apiFetch(`/api/projects/${selectedProject.id}/payment/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || 'Không thể hủy đơn');
+      }
+      await refreshSelectedProject(selectedProject.id);
+      setActionFeedback('Đã hủy đơn thanh toán.');
+    } catch (err: any) {
+      setPaymentError(err?.message || 'Lỗi hủy đơn');
+    } finally {
+      setPaymentBusy(false);
+    }
+  };
+
+  const formatVND = (amount: number | undefined | null) => {
+    if (typeof amount !== 'number' || isNaN(amount)) return '—';
+    try {
+      return new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
+    } catch {
+      return `${amount} đ`;
+    }
+  };
+
+  const renderPaymentBadge = (payment?: PaymentInfo) => {
+    const baseStyle: React.CSSProperties = {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '4px',
+      padding: '2px 8px',
+      borderRadius: '999px',
+      fontSize: '0.7rem',
+      fontWeight: 700,
+      whiteSpace: 'nowrap',
+      lineHeight: 1.4,
+      border: '1px solid transparent'
+    };
+    if (!payment || !payment.status) {
+      return <span style={{ ...baseStyle, background: 'rgba(148,163,184,0.15)', color: '#94a3b8', borderColor: 'rgba(148,163,184,0.3)' }}>Chưa TT</span>;
+    }
+    if (payment.status === 'paid') {
+      const k = typeof payment.amount === 'number' ? Math.round(payment.amount / 1000) : 0;
+      const kLabel = new Intl.NumberFormat('vi-VN').format(k);
+      return <span style={{ ...baseStyle, background: 'rgba(34,197,94,0.15)', color: '#22c55e', borderColor: 'rgba(34,197,94,0.4)' }}>💰 Đã trả {kLabel}k</span>;
+    }
+    if (payment.status === 'pending') {
+      return <span style={{ ...baseStyle, background: 'rgba(250,204,21,0.15)', color: '#facc15', borderColor: 'rgba(250,204,21,0.4)' }}>⏳ Đang chờ</span>;
+    }
+    if (payment.status === 'failed') {
+      return <span style={{ ...baseStyle, background: 'rgba(239,68,68,0.15)', color: '#ef4444', borderColor: 'rgba(239,68,68,0.4)' }}>❌ Lỗi</span>;
+    }
+    if (payment.status === 'cancelled') {
+      return <span style={{ ...baseStyle, background: 'rgba(148,163,184,0.15)', color: '#94a3b8', borderColor: 'rgba(148,163,184,0.3)' }}>🚫 Hủy</span>;
+    }
+    return null;
+  };
 
   // --- HELPERS ---
   const getAssetInfo = (id: string, category: 'THAC' | 'KE' | 'CANH' | 'HO' | 'HO_HIEN_DAI' | 'TUONG_DA' | 'TUONG_CAY' | 'FARM' | 'CAFE' | 'HO_BOI'): { name: string, url: string } | null => {
@@ -5183,66 +6462,41 @@ function AdminView({
   }
 
   // --- RENDER: DEFAULT ADMIN ---
+  const branchLabel = adminBranch === 'landscape' ? 'Cảnh quan' : adminBranch === 'architecture' ? 'Kiến trúc' : 'Nội thất';
+  const fmtAbbrev = (n: number) => {
+    if (!isFinite(n)) return '—';
+    if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(1).replace(/\.0$/, '') + 'B';
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (n >= 1_000) return Math.round(n / 1_000) + 'K';
+    return String(n);
+  };
   return (
-    <motion.div className="view admin-view">
+    <motion.div className="view admin-view admin-shell">
       <div className="admin-content">
-        <header className="admin-header-premium">
-          <div className="admin-nav-row">
-            <button onClick={onBack} className="btn-back-premium"><ChevronLeft size={18} /> Về trang chủ</button>
-            <div className="admin-tabs-luxe">
-               <button className={activeTab === 'projects' ? 'active' : ''} onClick={() => setActiveTab('projects')}><Folder size={18} /> QUẢN LÝ DỰ ÁN</button>
-               <button className={activeTab === 'resources' ? 'active' : ''} onClick={() => setActiveTab('resources')}><Layers size={18} /> TÀI NGUYÊN</button>
-               <button className={activeTab === 'prompt' ? 'active' : ''} onClick={() => setActiveTab('prompt')}><Bot size={18} /> PROMPT AI</button>
-               <button className={activeTab === 'config' ? 'active' : ''} onClick={() => setActiveTab('config')}><Settings size={18} /> CẤU HÌNH UI</button>
+        {/* MASTHEAD */}
+        <header className="as-masthead">
+          <div className="as-brand">
+            <div className="as-brand-mark">SH</div>
+            <div className="as-brand-text">
+              <span className="eyebrow">Sơn Hải · Atelier</span>
+              <span className="name">Control Center</span>
             </div>
           </div>
-          
-          {/* BRANCH SELECTION SUB-NAV */}
-          <div className="admin-branch-subnav" style={{ display: 'flex', gap: '10px', marginTop: '15px', padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px' }}>
-            <button 
-              className={`branch-tab ${adminBranch === 'landscape' ? 'active' : ''}`} 
-              onClick={() => { setAdminBranch('landscape'); setSelectedProject(null); }}
-              style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminBranch === 'landscape' ? 'var(--accent)' : 'transparent', color: adminBranch === 'landscape' ? '#000' : '#fff', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-            >
-              <Map size={18} /> CẢNH QUAN
-            </button>
-            <button 
-              className={`branch-tab ${adminBranch === 'architecture' ? 'active' : ''}`} 
-              onClick={() => { setAdminBranch('architecture'); setSelectedProject(null); }}
-              style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminBranch === 'architecture' ? '#3b82f6' : 'transparent', color: '#fff', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-            >
-              <Box size={18} /> KIẾN TRÚC
-            </button>
-            <button 
-              className={`branch-tab ${adminBranch === 'interior' ? 'active' : ''}`} 
-              onClick={() => { setAdminBranch('interior'); setSelectedProject(null); }}
-              style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminBranch === 'interior' ? '#a855f7' : 'transparent', color: '#fff', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-            >
-              <Coffee size={18} /> NỘI THẤT
-            </button>
-          </div>
-
-          <div className="admin-title-section">
-            <h1>Sơn Hải Landscape Control Center</h1>
-            <div className="admin-project-toolbar">
-              <div className="stats-pill-bar">
-                 <span className="count-badge">{filteredProjects.length}</span>
-                 <span>Dự án {adminBranch === 'landscape' ? 'Cảnh quan' : adminBranch === 'architecture' ? 'Kiến trúc' : 'Nội thất'}</span>
-              </div>
-              {activeTab === 'projects' && filteredProjects.length > 0 && (
-                <button
-                  type="button"
-                  className="btn-admin-delete-all"
-                  onClick={handleDeleteAllProjects}
-                  disabled={isDeletingAllProjects}
-                >
-                  <Trash2 size={16} />
-                  {isDeletingAllProjects ? 'Đang xóa...' : 'Xóa tất cả'}
-                </button>
-              )}
-            </div>
+          <nav className="as-tabs" aria-label="Admin sections">
+            <button className={activeTab === 'projects' ? 'active' : ''} onClick={() => setActiveTab('projects')}><Folder size={13} /> Dự án</button>
+            <button className={activeTab === 'resources' ? 'active' : ''} onClick={() => setActiveTab('resources')}><Layers size={13} /> Tài nguyên</button>
+            <button className={activeTab === 'prompt' ? 'active' : ''} onClick={() => setActiveTab('prompt')}><Bot size={13} /> Prompt AI</button>
+            <button className={activeTab === 'revenue' ? 'active' : ''} onClick={() => setActiveTab('revenue')}><CircleDollarSign size={13} /> Doanh thu</button>
+            <button className={activeTab === 'config' ? 'active' : ''} onClick={() => setActiveTab('config')}><Settings size={13} /> Cấu hình</button>
+          </nav>
+          <div className="as-meta">
+            <span>{new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: 'short', timeZone: 'Asia/Ho_Chi_Minh' })}</span>
+            <button onClick={onBack} className="as-back"><ChevronLeft size={13} /> Trang chủ</button>
           </div>
         </header>
+
+        {/* PAGE BODY */}
+        <div className="as-page">
 
         {activeTab === 'resources' && (
           <AssetManagerView
@@ -5266,526 +6520,272 @@ function AdminView({
         )}
 
         {activeTab === 'config' && (
-          <div className="admin-content-p-20">
+          <>
+            <div className="as-context">
+              <div>
+                <span className="as-eyebrow">Cấu hình giao diện</span>
+                <h1 className="as-title">Theme &amp; <em>UI tokens</em></h1>
+              </div>
+            </div>
             <ConfigEditorTab />
-          </div>
+          </>
+        )}
+
+        {activeTab === 'revenue' && (
+          <>
+            <div className="as-context">
+              <div>
+                <span className="as-eyebrow">Doanh thu</span>
+                <h1 className="as-title">Sổ <em>Doanh thu</em> · {branchLabel}</h1>
+              </div>
+              <div className="as-context-meta">
+                <div>VAT &amp; phí · <b>chưa tính</b></div>
+                <div>Múi giờ · <b>Asia/Ho_Chi_Minh</b></div>
+              </div>
+            </div>
+            <RevenueDashboard />
+          </>
         )}
 
         {activeTab === 'projects' && (
           <>
             {selectedProject ? (
-          <div className="project-detail-premium">
-            <div className="detail-header-row">
-              <button onClick={() => setSelectedProject(null)} className="btn-back-premium"><ChevronLeft size={18} /> Danh sách dự án</button>
-              <button
-                type="button"
-                className="btn-delete-project-detail"
-                onClick={(event) => handleDeleteProject(selectedProject, event)}
-                disabled={deletingProjectId === selectedProject.id}
-              >
-                <Trash2 size={16} />
-                {deletingProjectId === selectedProject.id ? 'Đang xóa...' : 'Xóa dự án'}
-              </button>
-            </div>
-
-            <div className="dossier-layout">
-              {/* SECTION: CUSTOMER IDENTITY */}
-              <div className="section-card glass-panel profile-section">
-                <div className="section-header luxe"><User size={24} color="var(--accent)" /> <h3>Hồ sơ khách hàng</h3></div>
-                <div className="profile-identity">
-                  <div className="id-group">
-                    <label>ID dự án</label>
-                    <div className="id-value" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'monospace', fontSize: '0.85rem' }}>
-                      <span style={{ color: 'var(--accent)' }}>{selectedProject.id}</span>
-                      <button
-                        onClick={() => copyText(selectedProject.id, 'Đã copy ID dự án.')}
-                        style={{ padding: '2px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', fontSize: '0.7rem', cursor: 'pointer' }}
-                      >
-                        Copy
-                      </button>
-                    </div>
-                  </div>
-                  <div className="id-group">
-                    <label>Họ và tên khách hàng</label>
-                    <div className="id-value">{selectedProject.customerName}</div>
-                  </div>
-                  <div className="id-group">
-                    <label>Số điện thoại / Zalo</label>
-                    <div className="id-value">{selectedProject.customerPhone}</div>
-                  </div>
-                  <div className="id-group">
-                    <label>Gói dịch vụ đã đăng ký</label>
-                    <div className="val-tag service-hero">{selectedProject.service}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION: PROJECT MEDIA */}
-              <div className="section-card glass-panel media-section">
-                <div className="section-header luxe"><ImageIcon size={24} color="var(--accent)" /> <h3>Dữ liệu hiện trạng công trình</h3></div>
-                <div className="media-dossier-grid">
-                  <div className="image-luxe-card">
-                    <div className="card-label-orb">01</div>
-                    <label>Ảnh hiện trạng gốc</label>
-                    <div className="image-frame"><img decoding="async" loading="lazy" src={selectedProject.rawImage} alt="Ảnh gốc" /></div>
-                  </div>
-                  <div className="image-luxe-card">
-                    <div className="card-label-orb">02</div>
-                    <label>{projectReferenceAsset?.label || 'Ảnh khoanh vùng ý tưởng'}</label>
-                    <div className="image-frame"><img decoding="async" loading="lazy" src={projectReferenceAsset?.url || selectedProject.annotatedImage} alt={projectReferenceAsset?.alt || 'Ảnh khoanh vùng'} /></div>
-                  </div>
-                  {(selectedProject.extraAssets || []).length > 0 && (
-                     <div className="extra-media-luxe">
-                        <label>Hình ảnh & Video tham khảo thêm</label>
-                        <div className="extra-luxe-scroll">
-                          {selectedProject.extraAssets?.map((asset, i) => (
-                            <div key={i} className="extra-item-frame" onClick={() => window.open(asset, '_blank')}>
-                              {isVideoAsset(asset) ? <div className="video-thumb-placeholder"><ExternalLink size={24} /></div> : <img decoding="async" loading="lazy" src={asset} alt="Extra" />}
-                            </div>
-                          ))}
-                        </div>
-                     </div>
-                  )}
-                </div>
-              </div>
-
-              {/* SECTION: ANALYSIS & CHOICES */}
-              <div className="section-card glass-panel analytic-section">
-                <div className="section-header luxe"><Layers size={24} color="var(--accent)" /> <h3>Phân tích yêu cầu & Mẫu đã chọn</h3></div>
-                
-                <div className="analytic-entry">
-                  <label>Mô tả chi tiết từ khách hàng</label>
-                  <div className="quote-box">{selectedProject.note || 'Khách hàng không để lại ghi chú thêm.'}</div>
-                </div>
-
-                <div className="analytic-entry">
-                  <label>Chi tiết các hạng mục đã lựa chọn</label>
-                  <div className="asset-luxe-grid">
-                    {selectedProject.selections.ho && (
-                      <div className="asset-luxe-pill">
-                        <img decoding="async" loading="lazy" src={getAssetInfo(selectedProject.selections.ho, 'HO')?.url} alt="" />
-                        <span>{getAssetName(selectedProject.selections.ho, 'HO')} (Hồ Koi Cổ Điển)</span>
-                      </div>
-                    )}
-                    {selectedProject.selections.ho_hien_dai && (
-                      <div className="asset-luxe-pill">
-                        <img decoding="async" loading="lazy" src={getAssetInfo(selectedProject.selections.ho_hien_dai, 'HO_HIEN_DAI')?.url} alt="" />
-                        <span>{getAssetName(selectedProject.selections.ho_hien_dai, 'HO_HIEN_DAI')} (Hồ Koi Hiện Đại)</span>
-                      </div>
-                    )}
-                    {selectedProject.selections.tuong_da && (
-                      <div className="asset-luxe-pill">
-                        <img decoding="async" loading="lazy" src={getAssetInfo(selectedProject.selections.tuong_da, 'TUONG_DA')?.url} alt="" />
-                        <span>{getAssetName(selectedProject.selections.tuong_da, 'TUONG_DA')} (Tường Đá)</span>
-                      </div>
-                    )}
-                    {selectedProject.selections.tuong_cay && (
-                      <div className="asset-luxe-pill">
-                        <img decoding="async" loading="lazy" src={getAssetInfo(selectedProject.selections.tuong_cay, 'TUONG_CAY')?.url} alt="" />
-                        <span>{getAssetName(selectedProject.selections.tuong_cay, 'TUONG_CAY')} (Tường Cây)</span>
-                      </div>
-                    )}
-                    {selectedProject.selections.farm && (
-                      <div className="asset-luxe-pill">
-                        <img decoding="async" loading="lazy" src={getAssetInfo(selectedProject.selections.farm, 'FARM')?.url} alt="" />
-                        <span>{getAssetName(selectedProject.selections.farm, 'FARM')} (Farm & Du Lịch)</span>
-                      </div>
-                    )}
-                    {selectedProject.selections.cafe && (
-                      <div className="asset-luxe-pill">
-                        <img decoding="async" loading="lazy" src={getAssetInfo(selectedProject.selections.cafe, 'CAFE')?.url} alt="" />
-                        <span>{getAssetName(selectedProject.selections.cafe, 'CAFE')} (Cà Phê)</span>
-                      </div>
-                    )}
-                    {selectedProject.selections.ho_boi && (
-                      <div className="asset-luxe-pill">
-                        <img decoding="async" loading="lazy" src={getAssetInfo(selectedProject.selections.ho_boi, 'HO_BOI')?.url} alt="" />
-                        <span>{getAssetName(selectedProject.selections.ho_boi, 'HO_BOI')} (Hồ Bơi)</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION: ACTIONS */}
-              <div className="section-card glass-panel action-section-luxe">
-                <div className="section-header luxe"><Send size={24} color="var(--accent)" /> <h3>Xử lý & Phản hồi</h3></div>
-                <div className="action-button-stack">
-                  <div className="workflow-status-bar">
-                    <label>Tiến trình hiện tại:</label>
-                    <div className="workflow-luxe-grid">
-                      {workflowOptions.map(option => (
-                        <button key={option.id} type="button" className={`workflow-luxe-card ${selectedProject.workflowBranch === option.id ? 'active' : ''}`} onClick={() => handleWorkflowSelect(option.id)}>
-                          <div className="workflow-card-orb">{option.icon}</div>
-                          <div className="workflow-card-txt">
-                            <strong>{option.title}</strong>
-                            <span>{option.description}</span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {selectedProject.workflowBranch === 'chatgpt_image' && (
-                    <div className="chatgpt-luxe-box">
-                      <div className="ai-status-pulse"><Bot size={24} /> <span>Hệ thống AI đã sẵn sàng</span></div>
-                      <p>KTS có thể sử dụng Trạm AI để lấy <strong>Master Prompt</strong> và xử lý ảnh hiện trạng.</p>
-                      <button className="btn-luxe-admin ai-btn" onClick={() => setShowAIStudio(true)}>
-                        Mở Trạm AI & Lấy Prompt
-                      </button>
-                    </div>
-                  )}
-                  <div className="btn-group-vertical">
-                    <button className="btn-luxe-admin main" onClick={() => handleWorkflowSelect('manual_design')}>
-                      <Paintbrush size={20} /> Mở trình thiết kế chuyên sâu
-                    </button>
-                    <button className="btn-luxe-admin outline" onClick={() => fileRef.current?.click()}>
-                      <Upload size={20} /> {selectedProject.status === 'done' ? 'Cập nhật bản vẽ mới' : 'Tải lên bản vẽ hoàn thiện'}
-                    </button>
-                    <input type="file" accept="image/*" ref={fileRef} onChange={handleUploadResult} hidden />
-                    {selectedProject.status === 'done' && (
-                      <button className="btn-luxe-admin zalo" onClick={() => window.open(`https://zalo.me/${selectedProject.customerPhone.replace(/\D/g, '')}`, '_blank')}>
-                         <MessageCircle size={20} /> Phản hồi qua Zalo khách hàng
-                      </button>
-                    )}
-                  </div>
-
-                  {/* VIDEO ĐÃ TẠO */}
-                  {selectedProject.aiResults && selectedProject.aiResults.some((r: string) => r.endsWith('.mp4') || r.includes('/video/')) && (
-                    <div style={{ marginTop: '24px', background: 'rgba(34,197,94,0.08)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(34,197,94,0.2)' }}>
-                      <h4 style={{ color: '#22c55e', fontWeight: 800, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <VideoIcon size={20} /> Video AI đã tạo
-                      </h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {selectedProject.aiResults.filter((r: string) => r.endsWith('.mp4') || r.includes('/video/')).map((videoUrl: string, i: number) => (
-                          <div key={i} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            <video src={videoUrl} controls style={{ width: '100%', display: 'block' }} />
-                            <div style={{ display: 'flex', gap: '8px', padding: '8px', background: 'rgba(0,0,0,0.3)' }}>
-                              <a href={videoUrl} download style={{ flex: 1, padding: '8px', borderRadius: '8px', background: '#22c55e', color: '#000', fontWeight: 700, fontSize: '0.85rem', textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                                <Upload size={14} style={{ transform: 'rotate(180deg)' }} /> Tải video về
-                              </a>
-                              <button onClick={() => copyText(videoUrl, 'Đã copy link video.')} style={{ padding: '8px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <Copy size={14} /> Link
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* VIDEO AI GENERATION */}
-                  {selectedProject.status === 'done' && selectedProject.aiResults && selectedProject.aiResults.length > 0 && (
-                    <div style={{ marginTop: '24px', background: 'rgba(99,102,241,0.08)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(99,102,241,0.2)' }}>
-                      <h4 style={{ color: '#6366f1', fontWeight: 800, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <VideoIcon size={20} /> Tạo Video AI từ ảnh
-                      </h4>
-                      <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', marginBottom: '12px' }}>
-                        Chọn 1 ảnh kết quả làm reference, hệ thống sẽ tạo video chuyển động từ ảnh đó.
-                      </p>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '8px', marginBottom: '12px' }}>
-                        {selectedProject.aiResults.filter((url: string) => !url.endsWith('.mp4') && !url.includes('/video/')).map((url: string, i: number) => (
-                          <div
-                            key={i}
-                            onClick={() => setSelectedVideoImage(url)}
-                            style={{
-                              borderRadius: '10px', overflow: 'hidden', cursor: 'pointer',
-                              border: selectedVideoImage === url ? '3px solid #6366f1' : '2px solid rgba(255,255,255,0.1)',
-                              opacity: selectedVideoImage === url ? 1 : 0.6,
-                              transition: 'all 0.2s'
-                            }}
-                          >
-                            <img decoding="async" loading="lazy" src={url} alt={`Ảnh ${i+1}`} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }} />
-                          </div>
-                        ))}
-                      </div>
-                      <textarea
-                        placeholder="Nhập prompt video (hoặc để trống dùng mặc định)..."
-                        value={videoPrompt}
-                        onChange={e => setVideoPrompt(e.target.value)}
-                        style={{
-                          width: '100%', minHeight: '80px', background: 'rgba(0,0,0,0.3)', color: '#fff',
-                          border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '12px',
-                          fontFamily: 'inherit', fontSize: '0.85rem', marginBottom: '12px', resize: 'vertical'
-                        }}
-                      />
-                      <button
-                        disabled={!selectedVideoImage || isGeneratingVideo}
-                        onClick={async () => {
-                          if (!selectedVideoImage) return;
-                          setIsGeneratingVideo(true);
-                          setActionFeedback('Đang gửi lệnh tạo video AI... (có thể mất 3-10 phút)');
-                          try {
-                            const defaultPrompt = systemContent.promptVideo || 'Smooth cinematic camera slowly panning through this beautiful landscape garden. Gentle water flowing over rocks, koi fish swimming, leaves swaying in soft breeze. Golden hour warm lighting, photorealistic quality, peaceful atmosphere. 16:9 cinematic ratio.';
-                            const res = await apiFetch(`/api/projects/${selectedProject.id}/generate-video`, {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ prompt: videoPrompt.trim() || defaultPrompt, imageUrl: selectedVideoImage })
-                            });
-                            const data = await res.json();
-                            if (data.videoUrl) {
-                              setActionFeedback('Video AI đã tạo thành công!');
-                              setSelectedProject(data.project);
-                            } else {
-                              setActionFeedback('Không tạo được video. Thử lại sau.');
-                            }
-                          } catch (e: any) {
-                            setActionFeedback(`Lỗi: ${e.message}`);
-                          } finally {
-                            setIsGeneratingVideo(false);
-                          }
-                        }}
-                        style={{
-                          width: '100%', padding: '14px', borderRadius: '12px', fontWeight: 800, fontSize: '0.9rem',
-                          border: 'none', cursor: (!selectedVideoImage || isGeneratingVideo) ? 'not-allowed' : 'pointer',
-                          background: selectedVideoImage ? '#6366f1' : 'rgba(255,255,255,0.08)',
-                          color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                        }}
-                      >
-                        {isGeneratingVideo ? (
-                          <><RefreshCcw size={18} className="spin" /> Đang tạo video...</>
-                        ) : (
-                          <><VideoIcon size={18} /> Tạo Video AI</>
-                        )}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* PASS 2 — BỔ SUNG 7 OUTPUT TỪ 1 PA ĐƯỢC CHỌN */}
-                  {selectedProject.status === 'done' && selectedProject.aiResults && selectedProject.aiResults.length > 0 && (
-                    <div style={{ marginTop: '24px', background: 'rgba(250,204,21,0.06)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(250,204,21,0.25)' }}>
-                      <h4 style={{ color: '#facc15', fontWeight: 800, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <span>Pass 2 — Bổ sung (3 góc chụp + 2 bản vẽ + 2 video)</span>
-                        <span style={{ marginLeft: 'auto', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.55)', fontFamily: 'monospace', background: 'rgba(0,0,0,0.3)', padding: '3px 8px', borderRadius: '6px' }}>
-                          ID: {selectedProject.id}
-                        </span>
-                      </h4>
-                      <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', marginBottom: '12px' }}>
-                        Chọn 1 ảnh PA làm reference, nhập kích thước khu vực (m), hệ thống sẽ mở 7 tab Flow song song để tạo bổ sung.
-                      </p>
-
-                      {/* Picker ảnh PA */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '8px', marginBottom: '12px' }}>
-                        {selectedProject.aiResults.filter((url: string) => !url.endsWith('.mp4') && !url.includes('/video/')).map((url: string, i: number) => (
-                          <div
-                            key={i}
-                            onClick={() => setSelectedPass2Image(url)}
-                            style={{
-                              borderRadius: '10px', overflow: 'hidden', cursor: 'pointer',
-                              border: selectedPass2Image === url ? '3px solid #facc15' : '2px solid rgba(255,255,255,0.1)',
-                              opacity: selectedPass2Image === url ? 1 : 0.6,
-                              transition: 'all 0.2s'
-                            }}
-                          >
-                            <img decoding="async" loading="lazy" src={url} alt={`PA ${i+1}`} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }} />
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Kích thước mặt bằng */}
-                      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                        <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>Chiều ngang (m)</span>
-                          <input type="number" min="1" step="0.5" value={pass2Width} onChange={e => setPass2Width(e.target.value)}
-                            style={{ padding: '10px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.85rem' }} />
-                        </label>
-                        <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>Chiều dài (m)</span>
-                          <input type="number" min="1" step="0.5" value={pass2Length} onChange={e => setPass2Length(e.target.value)}
-                            style={{ padding: '10px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.85rem' }} />
-                        </label>
-                      </div>
-
-                      {/* Nút chạy */}
-                      <button
-                        disabled={!selectedPass2Image || isStartingPass2 || selectedProject.pass2Results?.status === 'running'}
-                        onClick={async () => {
-                          if (!selectedPass2Image) return;
-                          setIsStartingPass2(true);
-                          setActionFeedback('Đang khởi động Pass 2 (7 tab Flow song song)...');
-                          try {
-                            const width = parseFloat(pass2Width) || 4;
-                            const length = parseFloat(pass2Length) || 4;
-                            const res = await apiFetch(`/api/projects/${selectedProject.id}/pass2`, {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ referenceImageUrl: selectedPass2Image, dimensions: { width, length } })
-                            });
-                            const data = await res.json();
-                            if (!res.ok) throw new Error(data.error || 'Không khởi động được Pass 2.');
-                            setActionFeedback('Pass 2 đã khởi động. Tiến độ sẽ tự cập nhật.');
-                            if (data.pass2Results) {
-                              setSelectedProject(prev => prev ? { ...prev, pass2Results: data.pass2Results } : prev);
-                            }
-                          } catch (e: any) {
-                            setActionFeedback(`Lỗi: ${e.message}`);
-                          } finally {
-                            setIsStartingPass2(false);
-                          }
-                        }}
-                        style={{
-                          width: '100%', padding: '14px', borderRadius: '12px', fontWeight: 800, fontSize: '0.9rem',
-                          border: 'none', cursor: (!selectedPass2Image || isStartingPass2 || selectedProject.pass2Results?.status === 'running') ? 'not-allowed' : 'pointer',
-                          background: selectedPass2Image && selectedProject.pass2Results?.status !== 'running' ? '#facc15' : 'rgba(255,255,255,0.08)',
-                          color: selectedPass2Image && selectedProject.pass2Results?.status !== 'running' ? '#000' : '#fff',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                        }}
-                      >
-                        {selectedProject.pass2Results?.status === 'running' ? (
-                          <><RefreshCcw size={18} className="spin" /> Đang chạy Pass 2...</>
-                        ) : isStartingPass2 ? (
-                          <><RefreshCcw size={18} className="spin" /> Đang khởi động...</>
-                        ) : (
-                          <>Chạy Pass 2 (7 output)</>
-                        )}
-                      </button>
-
-                      {/* Kết quả Pass 2 */}
-                      {selectedProject.pass2Results && (
-                        <div style={{ marginTop: '16px' }}>
-                          <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginBottom: '10px' }}>
-                            Trạng thái: <b style={{ color: selectedProject.pass2Results.status === 'done' ? '#22c55e' : selectedProject.pass2Results.status === 'failed' ? '#ef4444' : '#facc15' }}>{selectedProject.pass2Results.status}</b>
-                            {' · '}
-                            {selectedProject.pass2Results.tasks?.filter(t => t.status === 'done').length || 0}/7 xong
-                          </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
-                            {selectedProject.pass2Results.tasks?.map(task => (
-                              <div key={task.taskId} style={{ borderRadius: '10px', overflow: 'hidden', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                                {task.url ? (
-                                  task.type === 'video' ? (
-                                    <video src={task.url} controls style={{ width: '100%', display: 'block' }} />
-                                  ) : (
-                                    <img decoding="async" loading="lazy" src={task.url} alt={task.label} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }} />
-                                  )
-                                ) : (
-                                  <div style={{ aspectRatio: '16/10', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>
-                                    {task.status === 'failed' ? '❌ Lỗi' : task.status === 'running' ? 'Đang chạy...' : 'Chờ...'}
-                                  </div>
-                                )}
-                                <div style={{ padding: '8px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
-                                  <span style={{ fontSize: '0.75rem', color: '#fff', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.label}</span>
-                                  <span style={{
-                                    fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px',
-                                    background: task.status === 'done' ? 'rgba(34,197,94,0.2)' : task.status === 'failed' ? 'rgba(239,68,68,0.2)' : task.status === 'running' ? 'rgba(250,204,21,0.2)' : 'rgba(255,255,255,0.05)',
-                                    color: task.status === 'done' ? '#22c55e' : task.status === 'failed' ? '#ef4444' : task.status === 'running' ? '#facc15' : 'rgba(255,255,255,0.4)',
-                                    fontWeight: 700, textTransform: 'uppercase'
-                                  }}>{task.status}</span>
-                                </div>
-                                {task.error && (
-                                  <div style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#ef4444', background: 'rgba(239,68,68,0.05)' }}>{task.error}</div>
-                                )}
-                                {(task.status === 'failed' || (task.status === 'done' && !task.url)) && (
-                                  <button
-                                    onClick={async () => {
-                                      try {
-                                        const res = await apiFetch(`/api/projects/${selectedProject.id}/pass2/retry`, {
-                                          method: 'POST',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ taskId: task.taskId })
-                                        });
-                                        const data = await res.json();
-                                        if (!res.ok) throw new Error(data.error || 'Retry failed');
-                                        setActionFeedback(`Đang thử lại: ${task.label}`);
-                                      } catch (e: any) { setActionFeedback(`Lỗi: ${e.message}`); }
-                                    }}
-                                    style={{ width: '100%', padding: '6px', border: 'none', background: '#facc15', color: '#000', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer' }}
-                                  >
-                                    🔄 Thử lại
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+          <ProjectDetailFlow
+            project={selectedProject}
+            branchLabel={branchLabel}
+            adminBranch={adminBranch}
+            activeStepKey={activeStepKey}
+            setActiveStepKey={setActiveStepKey}
+            onBack={() => setSelectedProject(null)}
+            onDelete={(e: React.MouseEvent) => handleDeleteProject(selectedProject, e)}
+            deleting={deletingProjectId === selectedProject.id}
+            getStatusLabel={getStatusLabel}
+            renderPaymentBadge={renderPaymentBadge}
+            getWorkflowShortLabel={getWorkflowShortLabel}
+            formatVND={formatVND}
+            copyText={copyText}
+            getAssetInfo={getAssetInfo}
+            getAssetName={getAssetName}
+            isVideoAsset={isVideoAsset}
+            projectReferenceAsset={projectReferenceAsset}
+            workflowOptions={workflowOptions}
+            handleWorkflowSelect={handleWorkflowSelect}
+            handleUploadResult={handleUploadResult}
+            fileRef={fileRef}
+            paymentBusy={paymentBusy}
+            paymentError={paymentError}
+            handlePaymentRecheck={handlePaymentRecheck}
+            handlePaymentCancel={handlePaymentCancel}
+            handleMarkPaidSubmit={handleMarkPaidSubmit}
+            showMarkPaidForm={showMarkPaidForm}
+            setShowMarkPaidForm={setShowMarkPaidForm}
+            markPaidNote={markPaidNote}
+            setMarkPaidNote={setMarkPaidNote}
+            markPaidPackageId={markPaidPackageId}
+            setMarkPaidPackageId={setMarkPaidPackageId}
+            markPaidAmount={markPaidAmount}
+            setMarkPaidAmount={setMarkPaidAmount}
+            videoPrompt={videoPrompt}
+            setVideoPrompt={setVideoPrompt}
+            selectedVideoImage={selectedVideoImage}
+            setSelectedVideoImage={setSelectedVideoImage}
+            isGeneratingVideo={isGeneratingVideo}
+            setIsGeneratingVideo={setIsGeneratingVideo}
+            setSelectedProject={setSelectedProject}
+            systemContent={systemContent}
+            setActionFeedback={setActionFeedback}
+            selectedPass2Image={selectedPass2Image}
+            setSelectedPass2Image={setSelectedPass2Image}
+            pass2Width={pass2Width}
+            setPass2Width={setPass2Width}
+            pass2Length={pass2Length}
+            setPass2Length={setPass2Length}
+            isStartingPass2={isStartingPass2}
+            setIsStartingPass2={setIsStartingPass2}
+            setShowAIStudio={setShowAIStudio}
+          />
         ) : (
-          <div className="project-list-premium">
+          <>
+            {/* CONTEXT BAR */}
+            <div className="as-context">
+              <div>
+                <span className="as-eyebrow">Bộ phận {branchLabel}</span>
+                <h1 className="as-title">Sổ ghi <em>Dự án</em> · Kiểm soát Atelier</h1>
+              </div>
+              <div className="as-context-meta">
+                <div>Tổng · <b>{adminKpis.total}</b> · Hôm nay <b>{adminKpis.todayCount}</b></div>
+                <div>Đang xử lý · <b>{adminKpis.processingCount}</b> · Đã trả <b>{adminKpis.paidCount}</b></div>
+              </div>
+            </div>
+
+            {/* KPI STRIP */}
+            <div className="as-kpi-strip">
+              <div className="as-kpi accent">
+                <div className="as-kpi-label"><span className="as-icon-orb"><Folder size={11} /></span>Tổng dự án</div>
+                <div className="as-kpi-value">{adminKpis.total}<span className="unit">hồ sơ</span></div>
+                <div className="as-kpi-foot">Bộ phận · {branchLabel}</div>
+              </div>
+              <div className="as-kpi">
+                <div className="as-kpi-label"><span className="as-icon-orb"><Clock size={11} /></span>Hôm nay</div>
+                <div className="as-kpi-value">{adminKpis.todayCount}<span className="unit">đơn mới</span></div>
+                <div className="as-kpi-foot">{new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })}</div>
+              </div>
+              <div className="as-kpi warn">
+                <div className="as-kpi-label"><span className="as-icon-orb"><Loader2 size={11} /></span>Đang xử lý</div>
+                <div className="as-kpi-value">{adminKpis.processingCount}<span className="unit">/ {adminKpis.total}</span></div>
+                <div className="as-kpi-foot">Pipeline AI &amp; KTS</div>
+              </div>
+              <div className="as-kpi ok">
+                <div className="as-kpi-label"><span className="as-icon-orb"><CheckCircle2 size={11} /></span>Đã thanh toán</div>
+                <div className="as-kpi-value">{adminKpis.paidCount}<span className="unit">đơn</span></div>
+                <div className="as-kpi-foot">Tỷ lệ {adminKpis.total > 0 ? Math.round(adminKpis.paidCount / adminKpis.total * 100) : 0}%</div>
+              </div>
+              <div className="as-kpi accent">
+                <div className="as-kpi-label"><span className="as-icon-orb"><TrendingUp size={11} /></span>Doanh thu hôm nay</div>
+                <div className="as-kpi-value">{fmtAbbrev(adminKpis.revenueToday)}<span className="unit">VND</span></div>
+                <div className="as-kpi-foot">{formatVND(adminKpis.revenueToday)}</div>
+              </div>
+            </div>
+
+            {/* TOOLBAR */}
+            <div className="as-toolbar">
+              <div className="as-segmented" role="tablist" aria-label="Chọn bộ phận">
+                <button className={adminBranch === 'landscape' ? 'active' : ''} onClick={() => { setAdminBranch('landscape'); setSelectedProject(null); }}><Map size={12} /> Cảnh quan</button>
+                <button className={adminBranch === 'architecture' ? 'active' : ''} onClick={() => { setAdminBranch('architecture'); setSelectedProject(null); }}><Box size={12} /> Kiến trúc</button>
+                <button className={adminBranch === 'interior' ? 'active' : ''} onClick={() => { setAdminBranch('interior'); setSelectedProject(null); }}><Coffee size={12} /> Nội thất</button>
+              </div>
+              <div className="as-search">
+                <Search size={14} />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Tìm theo tên · SĐT · ID dự án"
+                  aria-label="Tìm dự án"
+                />
+              </div>
+              <select
+                className="as-select"
+                value={paymentFilter}
+                onChange={(e) => setPaymentFilter(e.target.value as any)}
+                aria-label="Lọc theo trạng thái thanh toán"
+              >
+                <option value="all">Tất cả TT</option>
+                <option value="paid">Đã trả</option>
+                <option value="pending">Đang chờ</option>
+                <option value="failed">Thất bại</option>
+                <option value="cancelled">Đã hủy</option>
+                <option value="none">Chưa TT</option>
+              </select>
+              {filteredProjects.length > 0 && (
+                <button
+                  type="button"
+                  className="as-btn danger"
+                  onClick={handleDeleteAllProjects}
+                  disabled={isDeletingAllProjects}
+                >
+                  <Trash2 size={12} />
+                  {isDeletingAllProjects ? 'Đang xóa…' : 'Xóa tất cả'}
+                </button>
+              )}
+            </div>
+
+            {/* GRID */}
             {isLoading ? (
-              <div className="empty-state glass-panel">
-                <div className="generating-spinner" style={{ width: 40, height: 40 }} />
-                <p>Đang tải danh sách dự án...</p>
+              <div className="as-empty">
+                <div className="ico"><Loader2 size={26} className="spin" /></div>
+                <div className="ttl">Đang tải sổ dự án</div>
+                <div className="sub">Truy vấn cơ sở dữ liệu…</div>
               </div>
             ) : Object.keys(grouped).length === 0 ? (
-              <div className="empty-state glass-panel"><FolderOpen size={64} /><p>Chưa có dữ liệu nào được gửi về hệ thống.</p></div>
+              <div className="as-empty">
+                <div className="ico"><FolderOpen size={26} /></div>
+                <div className="ttl">Chưa có dự án nào</div>
+                <div className="sub">Hồ sơ khách hàng sẽ xuất hiện tại đây</div>
+              </div>
             ) : (
               Object.keys(grouped).map(dateGroup => (
-                <div key={dateGroup} className="folder-date-section">
-                  <div className="date-badge-luxe"><Folder size={18} color="var(--accent)" /> {dateGroup}</div>
-                  <div className="customer-cards-grid">
-                    {grouped[dateGroup].map(project => (
+                <section key={dateGroup}>
+                  <div className="as-date-stripe">
+                    <span className="as-date-label">{dateGroup}</span>
+                    <span className="as-date-count">[ {grouped[dateGroup].length} hồ sơ ]</span>
+                  </div>
+                  <div className="as-grid">
+                    {grouped[dateGroup].map(project => {
+                      const photoResults = (project.aiResults || []).filter((u: string) => !u.endsWith('.mp4') && !u.includes('/video/'));
+                      const thumbCount = Math.max(4, photoResults.length || 4);
+                      return (
                       <div
                         key={project.id}
                         role="button"
                         tabIndex={0}
-                        className="management-card-luxe"
-                        onClick={() => setSelectedProject(project)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            setSelectedProject(project);
-                          }
-                        }}
+                        className="as-card"
+                        onClick={() => { setSelectedProject(project); setActiveStepKey('customer'); }}
+                        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedProject(project); setActiveStepKey('customer'); } }}
                       >
-                        <div className="card-top-row">
-                          <span className="time-stamp-luxe">
-                            {new Date(project.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}
+                        <div className="as-card-row">
+                          <span className="as-card-time">{new Date(project.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}</span>
+                          <span className="as-card-id">#{project.id.slice(-8).toUpperCase()}</span>
+                        </div>
+                        <div>
+                          <div className="as-card-name">{project.customerName}</div>
+                          <div className="as-card-phone"><Phone size={11} /> {project.customerPhone}</div>
+                        </div>
+                        <div className="as-card-chips">
+                          <span className={`as-chip ${project.status === 'done' ? 'ok' : project.status === 'processing' ? 'info' : 'warn'}`}>
+                            <Circle size={6} fill="currentColor" /> {getStatusLabel(project.status)}
                           </span>
-                          <div className="card-admin-actions">
-                            <div className={`status-badge-luxe ${project.status}`}>{getStatusLabel(project.status)}</div>
-                            <button
-                              type="button"
-                              className="btn-delete-project-card"
-                              onClick={(event) => handleDeleteProject(project, event)}
-                              disabled={deletingProjectId === project.id}
-                              aria-label={`Xóa dự án của ${project.customerName}`}
-                            >
-                              <Trash2 size={15} />
-                              {deletingProjectId === project.id ? 'Đang xóa' : 'Xóa'}
-                            </button>
-                          </div>
+                          <span className="as-chip gold">{project.service}</span>
+                          <span className="as-chip muted">{getWorkflowShortLabel(project.workflowBranch)}</span>
                         </div>
-                        <div className="card-client-info">
-                          <div className="client-name">{project.customerName}</div>
-                          <div className="client-phone"><Phone size={14} /> {project.customerPhone}</div>
-                        </div>
-                        <div className="card-package-row">
-                          <div className="pkg-tag">{project.service}</div>
-                          <div className="wf-tag">{getWorkflowShortLabel(project.workflowBranch)}</div>
+                        <div className="as-card-row">
+                          {renderPaymentBadge(project.payment)}
+                          <span className="as-card-id">{project.aiResults?.length || 0} ảnh / {project.pass2Results?.tasks?.filter(t => t.status === 'done').length || 0} pass2</span>
                         </div>
                         {project.status === 'processing' && (
-                          <div className="card-ai-generating">
+                          <div className="as-card-progress">
                             <span className="generating-spinner" />
-                            <span>Đã hoàn thiện {project.aiResults?.length || 0}/4 phương án...</span>
+                            <span>Đang xử lý · {project.aiResults?.length || 0}/4 phương án</span>
                           </div>
                         )}
-                        {project.aiResults && project.aiResults.length > 0 && (
-                          <div className="card-ai-preview-grid">
-                            {project.aiResults.slice(0, 4).reverse().map((media, i) => {
-                               const isVid = media.endsWith('.mp4') || media.includes('/video/');
-                               return (
-                               <div key={i} className="card-ai-thumb" title={isVid ? "Video AI" : "Ảnh AI"}>
-                                  {isVid ? <video src={media} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img decoding="async" loading="lazy" src={media} alt={`AI Thumb ${i+1}`} />}
-                               </div>
-                               );
-                            })}
-                          </div>
-                        )}
+                        <div className="as-card-thumbs">
+                          {Array.from({ length: thumbCount }).slice(0, 4).map((_, i) => {
+                            const media = photoResults[i];
+                            return (
+                              <div key={i} className={`thumb${media ? '' : ' empty'}`}>
+                                {media ? <img decoding="async" loading="lazy" src={media} alt={`AI ${i+1}`} /> : <span>—</span>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="as-card-actions">
+                          <button
+                            type="button"
+                            className="as-btn danger sm"
+                            onClick={(event) => { event.stopPropagation(); handleDeleteProject(project, event); }}
+                            disabled={deletingProjectId === project.id}
+                            aria-label={`Xóa dự án ${project.customerName}`}
+                          >
+                            <Trash2 size={11} />
+                            {deletingProjectId === project.id ? 'Xóa…' : 'Xóa'}
+                          </button>
+                        </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
-                </div>
-               ))
+                </section>
+              ))
             )}
-          </div>
+          </>
         )}
       </>
     )}
+
+        {actionFeedback && (
+          <div className="as-feedback">{actionFeedback}</div>
+        )}
+        </div>
       </div>
     </motion.div>
   );

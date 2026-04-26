@@ -1,0 +1,18 @@
+- generic [ref=e5]:
+  - generic [ref=e7]:
+    - generic [ref=e8]: SH
+    - generic [ref=e9]: Sơn Hải · Atelier
+  - generic [ref=e10]:
+    - generic [ref=e11]: — Khu vực hạn chế
+    - heading "Xác thực Quản trị" [level=2] [ref=e12]:
+      - text: Xác thực
+      - emphasis [ref=e13]: Quản trị
+    - paragraph [ref=e14]: Khu vực chứa tài nguyên & cấu hình hệ thống. Nhập mã PIN 4 chữ số để tiếp tục.
+  - generic [ref=e15]: "[ Mã PIN ]"
+  - textbox "••••" [active] [ref=e16]
+  - generic [ref=e17]:
+    - button "← Hủy" [ref=e18] [cursor=pointer]
+    - button "Vào Portal →" [disabled] [ref=e19]
+  - generic [ref=e20]:
+    - generic [ref=e21]: v1.0 · Production
+    - generic [ref=e22]: 26/04/2026

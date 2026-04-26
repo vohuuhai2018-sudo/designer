@@ -1,0 +1,148 @@
+- generic [ref=e16]:
+  - banner [ref=e17]:
+    - generic [ref=e18]:
+      - button "Về trang chủ" [ref=e19] [cursor=pointer]:
+        - img [ref=e20]
+        - text: Về trang chủ
+      - generic [ref=e22]:
+        - button "QUẢN LÝ DỰ ÁN" [active] [ref=e23] [cursor=pointer]:
+          - img [ref=e24]
+          - text: QUẢN LÝ DỰ ÁN
+        - button "TÀI NGUYÊN" [ref=e26] [cursor=pointer]:
+          - img [ref=e27]
+          - text: TÀI NGUYÊN
+        - button "PROMPT AI" [ref=e31] [cursor=pointer]:
+          - img [ref=e32]
+          - text: PROMPT AI
+        - button "DOANH THU" [ref=e35] [cursor=pointer]:
+          - img [ref=e36]
+          - text: DOANH THU
+        - button "CẤU HÌNH UI" [ref=e39] [cursor=pointer]:
+          - img [ref=e40]
+          - text: CẤU HÌNH UI
+    - generic [ref=e43]:
+      - button "CẢNH QUAN" [ref=e44] [cursor=pointer]:
+        - img [ref=e45]
+        - text: CẢNH QUAN
+      - button "KIẾN TRÚC" [ref=e47] [cursor=pointer]:
+        - img [ref=e48]
+        - text: KIẾN TRÚC
+      - button "NỘI THẤT" [ref=e51] [cursor=pointer]:
+        - img [ref=e52]
+        - text: NỘI THẤT
+    - generic [ref=e54]:
+      - heading "Sơn Hải Landscape Control Center" [level=1] [ref=e55]
+      - generic [ref=e56]:
+        - generic [ref=e57]:
+          - generic [ref=e58]: "5"
+          - generic [ref=e59]: Dự án Cảnh quan
+        - combobox "Lọc theo trạng thái thanh toán" [ref=e259] [cursor=pointer]:
+          - option "Tất cả thanh toán" [selected]
+          - option "Đã thanh toán"
+          - option "Đang chờ"
+          - option "Thất bại"
+          - option "Đã hủy"
+          - option "Chưa thanh toán"
+        - button "Xóa tất cả" [ref=e260] [cursor=pointer]:
+          - img [ref=e261]
+          - text: Xóa tất cả
+  - generic [ref=e264]:
+    - generic [ref=e265]:
+      - generic [ref=e266]:
+        - img [ref=e267]
+        - text: Hôm nay
+      - button "11:48 HOÀN THÀNH 💰 Đã trả 50k Xóa dự án của [TEST] Auto Test Payment [TEST] Auto Test Payment 0000000000 Gói Cơ Bản ChatGPT ảnh AI Thumb 1 AI Thumb 2" [ref=e270] [cursor=pointer]:
+        - generic [ref=e271]:
+          - generic [ref=e272]: 11:48
+          - generic [ref=e273]:
+            - generic [ref=e274]: HOÀN THÀNH
+            - generic [ref=e275]: 💰 Đã trả 50k
+            - button "Xóa dự án của [TEST] Auto Test Payment" [ref=e276]:
+              - img [ref=e277]
+              - text: Xóa
+        - generic [ref=e280]:
+          - generic [ref=e281]: "[TEST] Auto Test Payment"
+          - generic [ref=e282]:
+            - img [ref=e283]
+            - text: "0000000000"
+        - generic [ref=e285]:
+          - generic [ref=e286]: Gói Cơ Bản
+          - generic [ref=e287]: ChatGPT ảnh
+        - generic [ref=e288]:
+          - generic "Ảnh AI" [ref=e289]:
+            - img "AI Thumb 1" [ref=e290]
+          - generic "Ảnh AI" [ref=e291]:
+            - img "AI Thumb 2" [ref=e292]
+    - generic [ref=e293]:
+      - generic [ref=e294]:
+        - img [ref=e295]
+        - text: Hôm qua
+      - generic [ref=e297]:
+        - button "22:29 CHỜ XỬ LÝ 💰 Đã trả 50k Xóa dự án của a a a Gói Cơ bản ChatGPT ảnh" [ref=e298] [cursor=pointer]:
+          - generic [ref=e299]:
+            - generic [ref=e300]: 22:29
+            - generic [ref=e301]:
+              - generic [ref=e302]: CHỜ XỬ LÝ
+              - generic [ref=e303]: 💰 Đã trả 50k
+              - button "Xóa dự án của a" [ref=e304]:
+                - img [ref=e305]
+                - text: Xóa
+          - generic [ref=e308]:
+            - generic [ref=e309]: a
+            - generic [ref=e310]:
+              - img [ref=e311]
+              - text: a
+          - generic [ref=e313]:
+            - generic [ref=e314]: Gói Cơ bản
+            - generic [ref=e315]: ChatGPT ảnh
+        - button "15:40 CHỜ XỬ LÝ ❌ Lỗi Xóa dự án của A A D Gói Cơ bản ChatGPT ảnh" [ref=e316] [cursor=pointer]:
+          - generic [ref=e317]:
+            - generic [ref=e318]: 15:40
+            - generic [ref=e319]:
+              - generic [ref=e320]: CHỜ XỬ LÝ
+              - generic [ref=e321]: ❌ Lỗi
+              - button "Xóa dự án của A" [ref=e322]:
+                - img [ref=e323]
+                - text: Xóa
+          - generic [ref=e326]:
+            - generic [ref=e327]: A
+            - generic [ref=e328]:
+              - img [ref=e329]
+              - text: D
+          - generic [ref=e331]:
+            - generic [ref=e332]: Gói Cơ bản
+            - generic [ref=e333]: ChatGPT ảnh
+        - button "14:52 CHỜ XỬ LÝ ❌ Lỗi Xóa dự án của d d d Gói Cơ bản ChatGPT ảnh" [ref=e334] [cursor=pointer]:
+          - generic [ref=e335]:
+            - generic [ref=e336]: 14:52
+            - generic [ref=e337]:
+              - generic [ref=e338]: CHỜ XỬ LÝ
+              - generic [ref=e339]: ❌ Lỗi
+              - button "Xóa dự án của d" [ref=e340]:
+                - img [ref=e341]
+                - text: Xóa
+          - generic [ref=e344]:
+            - generic [ref=e345]: d
+            - generic [ref=e346]:
+              - img [ref=e347]
+              - text: d
+          - generic [ref=e349]:
+            - generic [ref=e350]: Gói Cơ bản
+            - generic [ref=e351]: ChatGPT ảnh
+        - button "13:56 CHỜ XỬ LÝ 🚫 Hủy Xóa dự án của d d d Gói Cơ bản ChatGPT ảnh" [ref=e352] [cursor=pointer]:
+          - generic [ref=e353]:
+            - generic [ref=e354]: 13:56
+            - generic [ref=e355]:
+              - generic [ref=e356]: CHỜ XỬ LÝ
+              - generic [ref=e357]: 🚫 Hủy
+              - button "Xóa dự án của d" [ref=e358]:
+                - img [ref=e359]
+                - text: Xóa
+          - generic [ref=e362]:
+            - generic [ref=e363]: d
+            - generic [ref=e364]:
+              - img [ref=e365]
+              - text: d
+          - generic [ref=e367]:
+            - generic [ref=e368]: Gói Cơ bản
+            - generic [ref=e369]: ChatGPT ảnh

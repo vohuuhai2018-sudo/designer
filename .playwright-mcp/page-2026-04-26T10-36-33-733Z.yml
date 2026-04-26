@@ -1,0 +1,266 @@
+- generic [ref=e16]:
+  - banner [ref=e17]:
+    - generic [ref=e18]:
+      - generic [ref=e19]: SH
+      - generic [ref=e20]:
+        - generic [ref=e21]: Sơn Hải · Atelier
+        - generic [ref=e22]: Control Center
+    - navigation "Admin sections" [ref=e23]:
+      - button "Dự án" [ref=e24] [cursor=pointer]:
+        - img [ref=e25]
+        - text: Dự án
+      - button "Tài nguyên" [ref=e27] [cursor=pointer]:
+        - img [ref=e28]
+        - text: Tài nguyên
+      - button "Prompt AI" [ref=e32] [cursor=pointer]:
+        - img [ref=e33]
+        - text: Prompt AI
+      - button "Doanh thu" [ref=e36] [cursor=pointer]:
+        - img [ref=e37]
+        - text: Doanh thu
+      - button "Cấu hình" [ref=e40] [cursor=pointer]:
+        - img [ref=e41]
+        - text: Cấu hình
+    - generic [ref=e44]:
+      - generic [ref=e45]: Chủ Nhật, 26 thg 4
+      - button "Trang chủ" [ref=e46] [cursor=pointer]:
+        - img [ref=e47]
+        - text: Trang chủ
+  - generic [ref=e49]:
+    - generic [ref=e291]:
+      - generic [ref=e292]:
+        - generic [ref=e293]:
+          - img [ref=e294]
+          - text: test-payment-1777178895
+          - button "Copy" [ref=e297] [cursor=pointer]
+        - heading "[TEST] Auto Test Payment" [level=2] [ref=e298]
+        - generic [ref=e299]:
+          - generic [ref=e300]:
+            - img [ref=e301]
+            - text: HOÀN THÀNH
+          - generic [ref=e303]: ❌ Lỗi
+          - generic [ref=e304]: Cảnh quan
+          - generic [ref=e305]: Gói Cơ Bản
+          - generic [ref=e306]: ChatGPT ảnh
+      - generic [ref=e307]:
+        - generic [ref=e308]:
+          - button "Sổ dự án" [ref=e309] [cursor=pointer]:
+            - img [ref=e310]
+            - text: Sổ dự án
+          - button "Xóa hồ sơ" [ref=e312] [cursor=pointer]:
+            - img [ref=e313]
+            - text: Xóa hồ sơ
+        - generic [ref=e316]: Mở lúc · 17:36
+    - generic [ref=e317]:
+      - complementary "Bước xử lý" [ref=e318]:
+        - button "01 Khách hàng Sẵn sàng" [ref=e319] [cursor=pointer]:
+          - generic [ref=e320]: "01"
+          - generic [ref=e322]:
+            - generic [ref=e323]: Khách hàng
+            - generic [ref=e324]: Sẵn sàng
+        - button "02 Yêu cầu Đã ghi" [ref=e325] [cursor=pointer]:
+          - generic [ref=e326]: "02"
+          - generic [ref=e328]:
+            - generic [ref=e329]: Yêu cầu
+            - generic [ref=e330]: Đã ghi
+        - button "03 AI tạo phương án Xong · 2" [ref=e331] [cursor=pointer]:
+          - generic [ref=e332]: "03"
+          - generic [ref=e334]:
+            - generic [ref=e335]: AI tạo phương án
+            - generic [ref=e336]: Xong · 2
+        - button "04 Pass 2 — bổ sung Chưa" [ref=e337] [cursor=pointer]:
+          - generic [ref=e338]: "04"
+          - generic [ref=e340]:
+            - generic [ref=e341]: Pass 2 — bổ sung
+            - generic [ref=e342]: Chưa
+        - button "05 Thanh toán Lỗi" [ref=e343] [cursor=pointer]:
+          - generic [ref=e344]: "05"
+          - generic [ref=e346]:
+            - generic [ref=e347]: Thanh toán
+            - generic [ref=e348]: Lỗi
+        - button "06 Bản vẽ hoàn thiện Chưa" [ref=e349] [cursor=pointer]:
+          - generic [ref=e350]: "06"
+          - generic [ref=e352]:
+            - generic [ref=e353]: Bản vẽ hoàn thiện
+            - generic [ref=e354]: Chưa
+      - generic [ref=e355]:
+        - generic [ref=e356]:
+          - generic [ref=e357]:
+            - generic [ref=e358]: "[ 01 / 06 ]"
+            - heading "Khách hàng" [level=3] [ref=e359]
+            - generic [ref=e360]: Sẵn sàng
+          - generic [ref=e362]:
+            - generic [ref=e363]:
+              - generic [ref=e364]: "[ ] Họ và tên"
+              - generic [ref=e365]: "[TEST] Auto Test Payment"
+            - generic [ref=e366]:
+              - generic [ref=e367]: "[ ] Số điện thoại / Zalo"
+              - generic [ref=e368]: "0000000000"
+              - generic [ref=e369]:
+                - button "Copy" [ref=e370] [cursor=pointer]:
+                  - img [ref=e371]
+                  - text: Copy
+                - button "Zalo" [ref=e374] [cursor=pointer]:
+                  - img [ref=e375]
+                  - text: Zalo
+            - generic [ref=e377]:
+              - generic [ref=e378]: "[ ] ID dự án"
+              - generic [ref=e379]: "#test-payment-1777178895"
+              - button "Copy" [ref=e381] [cursor=pointer]:
+                - img [ref=e382]
+                - text: Copy
+            - generic [ref=e385]:
+              - generic [ref=e386]: "[ ] Thời điểm gửi"
+              - generic [ref=e387]: 11:48:15 26/4/2026
+        - generic [ref=e388]:
+          - generic [ref=e389]:
+            - generic [ref=e390]: "[ 02 / 06 ]"
+            - heading "Yêu cầu của khách" [level=3] [ref=e391]
+            - generic [ref=e392]: Đã ghi
+          - generic [ref=e393]:
+            - generic [ref=e394]:
+              - generic [ref=e395]:
+                - generic [ref=e396]: "[ ] Gói dịch vụ"
+                - generic [ref=e397]: Gói Cơ Bản
+              - generic [ref=e398]:
+                - generic [ref=e399]: "[ ] Nhánh xử lý"
+                - generic [ref=e400]: ChatGPT ảnh
+              - generic [ref=e401]:
+                - generic [ref=e402]: "[ ] Diện tích / Kích thước"
+                - generic [ref=e403]: —
+            - generic [ref=e404]:
+              - generic [ref=e405]: Ghi chú khách hàng
+              - generic [ref=e406]: Khách hàng không để lại ghi chú.
+            - generic [ref=e407]:
+              - generic [ref=e408]: Hiện trạng & ảnh tham khảo
+              - generic [ref=e409]:
+                - generic [ref=e410]:
+                  - generic [ref=e411]:
+                    - generic [ref=e412]: Ảnh hiện trạng
+                    - generic [ref=e413]: "[01]"
+                  - img "Ảnh gốc" [ref=e414]
+                - generic [ref=e415]:
+                  - generic [ref=e416]:
+                    - generic [ref=e417]: Ảnh khoanh vùng ý tưởng
+                    - generic [ref=e418]: "[02]"
+                  - img "Khoanh vùng" [ref=e419]
+            - generic [ref=e420]:
+              - generic [ref=e421]: Hạng mục đã chọn
+              - generic [ref=e423]: Khách chưa chọn mẫu cụ thể.
+            - generic [ref=e424]:
+              - generic [ref=e425]: Nhánh xử lý
+              - generic [ref=e426]:
+                - button "Thiết kế thủ công" [ref=e427] [cursor=pointer]:
+                  - img [ref=e428]
+                  - text: Thiết kế thủ công
+                - button "ChatGPT tạo ảnh" [ref=e432] [cursor=pointer]:
+                  - img [ref=e433]
+                  - text: ChatGPT tạo ảnh
+        - generic [ref=e436]:
+          - generic [ref=e437]:
+            - generic [ref=e438]: "[ 03 / 06 ]"
+            - heading "AI tạo phương án" [level=3] [ref=e439]
+            - generic [ref=e440]: Xong · 2
+          - generic [ref=e441]:
+            - generic [ref=e442]:
+              - button "Mở Trạm AI" [ref=e443] [cursor=pointer]:
+                - img [ref=e444]
+                - text: Mở Trạm AI
+              - generic [ref=e447]: Lấy Master Prompt & xử lý ảnh hiện trạng
+            - generic [ref=e448]:
+              - generic [ref=e449]: Ảnh phương án · 2
+              - generic [ref=e450]:
+                - generic [ref=e451]:
+                  - img "PA 1" [ref=e452]
+                  - generic [ref=e453]:
+                    - generic [ref=e454]: PA-01
+                    - button [ref=e455] [cursor=pointer]:
+                      - img [ref=e456]
+                - generic [ref=e459]:
+                  - img "PA 2" [ref=e460]
+                  - generic [ref=e461]:
+                    - generic [ref=e462]: PA-02
+                    - button [ref=e463] [cursor=pointer]:
+                      - img [ref=e464]
+            - generic [ref=e467]:
+              - generic [ref=e468]: Tạo video AI từ một phương án
+              - generic [ref=e469]:
+                - img "PA 1" [ref=e471] [cursor=pointer]
+                - img "PA 2" [ref=e473] [cursor=pointer]
+              - textbox "Prompt video (tùy chọn — để trống dùng mặc định)" [ref=e474]
+              - button "Tạo Video AI" [disabled] [ref=e476]:
+                - img [ref=e477]
+                - text: Tạo Video AI
+        - generic [ref=e480]:
+          - generic [ref=e481]:
+            - generic [ref=e482]: "[ 04 / 06 ]"
+            - heading "Pass 2 — Bổ sung 7 phương án" [level=3] [ref=e483]
+            - generic [ref=e484]: Chưa
+          - generic [ref=e485]:
+            - generic [ref=e486]:
+              - generic [ref=e487]: Chọn 1 ảnh PA làm reference
+              - generic [ref=e488]:
+                - img "PA 1" [ref=e490] [cursor=pointer]
+                - img "PA 2" [ref=e492] [cursor=pointer]
+            - generic [ref=e493]:
+              - generic [ref=e494]: Kích thước khu vực (m)
+              - generic [ref=e496]:
+                - generic [ref=e497]:
+                  - generic [ref=e498]: Chiều ngang (m)
+                  - spinbutton "Chiều ngang (m)" [ref=e499]: "4"
+                - generic [ref=e500]:
+                  - generic [ref=e501]: Chiều dài (m)
+                  - spinbutton "Chiều dài (m)" [ref=e502]: "4"
+            - button "Chạy Pass 2 (7 output)" [disabled] [ref=e504]
+        - generic [ref=e505]:
+          - generic [ref=e506]:
+            - generic [ref=e507]: "[ 05 / 06 ]"
+            - heading "Thanh toán" [level=3] [ref=e508]
+            - generic [ref=e509]: Lỗi
+          - generic [ref=e510]:
+            - generic [ref=e511]:
+              - generic [ref=e512]:
+                - generic [ref=e513]: "[ ] Gói"
+                - generic [ref=e514]: Gói Cơ Bản — Tải 4 ảnh
+              - generic [ref=e515]:
+                - generic [ref=e516]: "[ ] Số tiền"
+                - generic [ref=e517]: 50.000 đ
+              - generic [ref=e518]:
+                - generic [ref=e519]: "[ ] Trạng thái"
+                - generic [ref=e521]: ❌ Lỗi
+              - generic [ref=e522]:
+                - generic [ref=e523]: "[ ] Order ID"
+                - generic [ref=e524]: test-payment-1777178895-1777178988975
+              - generic [ref=e525]:
+                - generic [ref=e526]: "[ ] Trans ID"
+                - generic [ref=e527]: "99999999"
+              - generic [ref=e528]:
+                - generic [ref=e529]: "[ ] Đã trả lúc"
+                - generic [ref=e530]: 11:50:48 26/4/2026
+            - generic [ref=e531]:
+              - generic [ref=e532]: Ghi chú
+              - generic [ref=e533]: Giao dịch đã hết hạn hoặc không tồn tại.
+            - generic [ref=e534]:
+              - generic [ref=e535]: Hành động
+              - generic [ref=e536]:
+                - button "Kiểm tra lại MoMo" [ref=e537] [cursor=pointer]:
+                  - img [ref=e538]
+                  - text: Kiểm tra lại MoMo
+                - button "Đánh dấu đã trả thủ công" [ref=e543] [cursor=pointer]:
+                  - img [ref=e544]
+                  - text: Đánh dấu đã trả thủ công
+        - generic [ref=e547]:
+          - generic [ref=e548]:
+            - generic [ref=e549]: "[ 06 / 06 ]"
+            - heading "Bản vẽ hoàn thiện" [level=3] [ref=e550]
+            - generic [ref=e551]: Chưa
+          - generic [ref=e553]:
+            - button "Mở trình thiết kế chuyên sâu" [ref=e554] [cursor=pointer]:
+              - img [ref=e555]
+              - text: Mở trình thiết kế chuyên sâu
+            - button "Cập nhật bản vẽ mới" [ref=e559] [cursor=pointer]:
+              - img [ref=e560]
+              - text: Cập nhật bản vẽ mới
+            - button "Phản hồi qua Zalo" [ref=e563] [cursor=pointer]:
+              - img [ref=e564]
+              - text: Phản hồi qua Zalo

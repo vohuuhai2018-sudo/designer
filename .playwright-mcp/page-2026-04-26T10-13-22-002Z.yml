@@ -1,0 +1,8 @@
+- generic [ref=e5]:
+  - img [ref=e6]
+  - heading "Xác thực Quản trị viên" [level=2] [ref=e9]
+  - paragraph [ref=e10]: Mục này chứa tài nguyên và cấu hình hệ thống chuyên môn. Vui lòng nhập mã PIN để tiếp tục.
+  - textbox "Nhập mã PIN..." [active] [ref=e11]
+  - generic [ref=e12]:
+    - button "Hủy" [ref=e13] [cursor=pointer]
+    - button "Vào Portal" [ref=e14] [cursor=pointer]

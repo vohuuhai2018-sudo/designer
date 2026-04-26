@@ -1,0 +1,185 @@
+- generic [ref=e16]:
+  - banner [ref=e17]:
+    - generic [ref=e18]:
+      - button "Về trang chủ" [ref=e19] [cursor=pointer]:
+        - img [ref=e20]
+        - text: Về trang chủ
+      - generic [ref=e22]:
+        - button "QUẢN LÝ DỰ ÁN" [ref=e23] [cursor=pointer]:
+          - img [ref=e24]
+          - text: QUẢN LÝ DỰ ÁN
+        - button "TÀI NGUYÊN" [ref=e26] [cursor=pointer]:
+          - img [ref=e27]
+          - text: TÀI NGUYÊN
+        - button "PROMPT AI" [ref=e31] [cursor=pointer]:
+          - img [ref=e32]
+          - text: PROMPT AI
+        - button "DOANH THU" [ref=e35] [cursor=pointer]:
+          - img [ref=e36]
+          - text: DOANH THU
+        - button "CẤU HÌNH UI" [ref=e39] [cursor=pointer]:
+          - img [ref=e40]
+          - text: CẤU HÌNH UI
+    - generic [ref=e43]:
+      - button "CẢNH QUAN" [ref=e44] [cursor=pointer]:
+        - img [ref=e45]
+        - text: CẢNH QUAN
+      - button "KIẾN TRÚC" [ref=e47] [cursor=pointer]:
+        - img [ref=e48]
+        - text: KIẾN TRÚC
+      - button "NỘI THẤT" [ref=e51] [cursor=pointer]:
+        - img [ref=e52]
+        - text: NỘI THẤT
+    - generic [ref=e54]:
+      - heading "Sơn Hải Landscape Control Center" [level=1] [ref=e55]
+      - generic [ref=e56]:
+        - generic [ref=e57]:
+          - generic [ref=e58]: "5"
+          - generic [ref=e59]: Dự án Cảnh quan
+        - combobox "Lọc theo trạng thái thanh toán" [ref=e259] [cursor=pointer]:
+          - option "Tất cả thanh toán" [selected]
+          - option "Đã thanh toán"
+          - option "Đang chờ"
+          - option "Thất bại"
+          - option "Đã hủy"
+          - option "Chưa thanh toán"
+        - button "Xóa tất cả" [ref=e260] [cursor=pointer]:
+          - img [ref=e261]
+          - text: Xóa tất cả
+  - generic [ref=e264]:
+    - generic [ref=e370]:
+      - button "Danh sách dự án" [ref=e371] [cursor=pointer]:
+        - img [ref=e372]
+        - text: Danh sách dự án
+      - button "Xóa dự án" [ref=e374] [cursor=pointer]:
+        - img [ref=e375]
+        - text: Xóa dự án
+    - generic [ref=e378]:
+      - generic [ref=e379]:
+        - generic [ref=e380]:
+          - img [ref=e381]
+          - heading "Hồ sơ khách hàng" [level=3] [ref=e384]
+        - generic [ref=e385]:
+          - generic [ref=e386]:
+            - generic [ref=e387]: ID dự án
+            - generic [ref=e388]:
+              - generic [ref=e389]: test-payment-1777178895
+              - button "Copy" [ref=e390] [cursor=pointer]
+          - generic [ref=e391]:
+            - generic [ref=e392]: Họ và tên khách hàng
+            - generic [ref=e393]: "[TEST] Auto Test Payment"
+          - generic [ref=e394]:
+            - generic [ref=e395]: Số điện thoại / Zalo
+            - generic [ref=e396]: "0000000000"
+          - generic [ref=e397]:
+            - generic [ref=e398]: Gói dịch vụ đã đăng ký
+            - generic [ref=e399]: Gói Cơ Bản
+      - generic [ref=e400]:
+        - generic [ref=e401]:
+          - generic [ref=e402]: 💳
+          - heading "Thanh toán" [level=3] [ref=e403]
+        - generic [ref=e404]:
+          - generic [ref=e405]:
+            - generic [ref=e406]:
+              - generic [ref=e407]: Gói
+              - generic [ref=e408]: Gói Cơ Bản — Tải 4 ảnh
+            - generic [ref=e409]:
+              - generic [ref=e410]: Số tiền
+              - generic [ref=e411]: 50.000 đ
+            - generic [ref=e412]:
+              - generic [ref=e413]: Trạng thái
+              - generic [ref=e415]: ❌ Lỗi
+          - generic [ref=e416]:
+            - generic [ref=e417]: "Order ID: test-payment-1777178895-1777178988975"
+            - generic [ref=e418]: "Trans ID: 99999999"
+            - generic [ref=e419]: "Đã trả lúc: 11:50:48 26/4/2026"
+            - generic [ref=e420]: "Ghi chú MoMo: Giao dịch đã hết hạn hoặc không tồn tại."
+          - generic [ref=e421]:
+            - button "🔄 Kiểm tra lại MoMo" [ref=e422] [cursor=pointer]
+            - button "✓ Đánh dấu đã trả thủ công" [ref=e423] [cursor=pointer]
+      - generic [ref=e424]:
+        - generic [ref=e425]:
+          - img [ref=e426]
+          - heading "Dữ liệu hiện trạng công trình" [level=3] [ref=e430]
+        - generic [ref=e431]:
+          - generic [ref=e432]:
+            - generic [ref=e433]: "01"
+            - text: Ảnh hiện trạng gốc
+            - img "Ảnh gốc" [ref=e435]
+          - generic [ref=e436]:
+            - generic [ref=e437]: "02"
+            - text: Ảnh khoanh vùng ý tưởng
+            - img "Ảnh khoanh vùng" [ref=e439]
+      - generic [ref=e440]:
+        - generic [ref=e441]:
+          - img [ref=e442]
+          - heading "Phân tích yêu cầu & Mẫu đã chọn" [level=3] [ref=e446]
+        - generic [ref=e447]:
+          - generic [ref=e448]: Mô tả chi tiết từ khách hàng
+          - generic [ref=e449]: Khách hàng không để lại ghi chú thêm.
+        - generic [ref=e451]: Chi tiết các hạng mục đã lựa chọn
+      - generic [ref=e452]:
+        - generic [ref=e453]:
+          - img [ref=e454]
+          - heading "Xử lý & Phản hồi" [level=3] [ref=e457]
+        - generic [ref=e458]:
+          - generic [ref=e459]:
+            - text: "Tiến trình hiện tại:"
+            - generic [ref=e460]:
+              - button "Thiết kế thủ công Dùng trình thiết kế trực tuyến (Photopea) để vẽ tay." [ref=e461] [cursor=pointer]:
+                - img [ref=e463]
+                - generic [ref=e467]:
+                  - strong [ref=e468]: Thiết kế thủ công
+                  - generic [ref=e469]: Dùng trình thiết kế trực tuyến (Photopea) để vẽ tay.
+              - button "ChatGPT tạo ảnh Dùng ảnh gốc, ảnh khoanh vùng và dữ liệu khách để tạo phương án mới bằng ChatGPT." [ref=e470] [cursor=pointer]:
+                - img [ref=e472]
+                - generic [ref=e475]:
+                  - strong [ref=e476]: ChatGPT tạo ảnh
+                  - generic [ref=e477]: Dùng ảnh gốc, ảnh khoanh vùng và dữ liệu khách để tạo phương án mới bằng ChatGPT.
+          - generic [ref=e478]:
+            - generic [ref=e479]:
+              - img [ref=e480]
+              - generic [ref=e483]: Hệ thống AI đã sẵn sàng
+            - paragraph [ref=e484]:
+              - text: KTS có thể sử dụng Trạm AI để lấy
+              - strong [ref=e485]: Master Prompt
+              - text: và xử lý ảnh hiện trạng.
+            - button "Mở Trạm AI & Lấy Prompt" [ref=e486] [cursor=pointer]
+          - generic [ref=e487]:
+            - button "Mở trình thiết kế chuyên sâu" [ref=e488] [cursor=pointer]:
+              - img [ref=e489]
+              - text: Mở trình thiết kế chuyên sâu
+            - button "Cập nhật bản vẽ mới" [ref=e493] [cursor=pointer]:
+              - img [ref=e494]
+              - text: Cập nhật bản vẽ mới
+            - button "Phản hồi qua Zalo khách hàng" [ref=e497] [cursor=pointer]:
+              - img [ref=e498]
+              - text: Phản hồi qua Zalo khách hàng
+          - generic [ref=e500]:
+            - heading "Tạo Video AI từ ảnh" [level=4] [ref=e501]:
+              - img [ref=e502]
+              - text: Tạo Video AI từ ảnh
+            - paragraph [ref=e505]: Chọn 1 ảnh kết quả làm reference, hệ thống sẽ tạo video chuyển động từ ảnh đó.
+            - generic [ref=e506]:
+              - img "Ảnh 1" [ref=e508] [cursor=pointer]
+              - img "Ảnh 2" [ref=e510] [cursor=pointer]
+            - textbox "Nhập prompt video (hoặc để trống dùng mặc định)..." [ref=e511]
+            - button "Tạo Video AI" [disabled] [ref=e512]:
+              - img [ref=e513]
+              - text: Tạo Video AI
+          - generic [ref=e516]:
+            - 'heading "Pass 2 — Bổ sung (3 góc chụp + 2 bản vẽ + 2 video) ID: test-payment-1777178895" [level=4] [ref=e517]':
+              - generic [ref=e518]: Pass 2 — Bổ sung (3 góc chụp + 2 bản vẽ + 2 video)
+              - generic [ref=e519]: "ID: test-payment-1777178895"
+            - paragraph [ref=e520]: Chọn 1 ảnh PA làm reference, nhập kích thước khu vực (m), hệ thống sẽ mở 7 tab Flow song song để tạo bổ sung.
+            - generic [ref=e521]:
+              - img "PA 1" [ref=e523] [cursor=pointer]
+              - img "PA 2" [ref=e525] [cursor=pointer]
+            - generic [ref=e526]:
+              - generic [ref=e527]:
+                - generic [ref=e528]: Chiều ngang (m)
+                - spinbutton "Chiều ngang (m)" [ref=e529]: "4"
+              - generic [ref=e530]:
+                - generic [ref=e531]: Chiều dài (m)
+                - spinbutton "Chiều dài (m)" [ref=e532]: "4"
+            - button "Chạy Pass 2 (7 output)" [disabled] [ref=e533]

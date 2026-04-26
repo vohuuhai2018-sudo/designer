@@ -1,0 +1,124 @@
+- generic [ref=e16]:
+  - banner [ref=e17]:
+    - generic [ref=e18]:
+      - generic [ref=e19]: SH
+      - generic [ref=e20]:
+        - generic [ref=e21]: Sơn Hải · Atelier
+        - generic [ref=e22]: Control Center
+    - navigation "Admin sections" [ref=e23]:
+      - button "Dự án" [ref=e24] [cursor=pointer]:
+        - img [ref=e25]
+        - text: Dự án
+      - button "Tài nguyên" [ref=e27] [cursor=pointer]:
+        - img [ref=e28]
+        - text: Tài nguyên
+      - button "Prompt AI" [ref=e32] [cursor=pointer]:
+        - img [ref=e33]
+        - text: Prompt AI
+      - button "Doanh thu" [active] [ref=e36] [cursor=pointer]:
+        - img [ref=e37]
+        - text: Doanh thu
+      - button "Cấu hình" [ref=e40] [cursor=pointer]:
+        - img [ref=e41]
+        - text: Cấu hình
+    - generic [ref=e44]:
+      - generic [ref=e45]: Chủ Nhật, 26 thg 4
+      - button "Trang chủ" [ref=e46] [cursor=pointer]:
+        - img [ref=e47]
+        - text: Trang chủ
+  - generic [ref=e49]:
+    - generic [ref=e566]:
+      - generic [ref=e567]:
+        - generic [ref=e568]: Doanh thu
+        - heading "Sổ Doanh thu · Cảnh quan" [level=1] [ref=e569]:
+          - text: Sổ
+          - emphasis [ref=e570]: Doanh thu
+          - text: · Cảnh quan
+      - generic [ref=e571]:
+        - generic [ref=e572]: VAT & phí · chưa tính
+        - generic [ref=e573]: Múi giờ · Asia/Ho_Chi_Minh
+    - generic [ref=e574]:
+      - generic [ref=e575]:
+        - generic [ref=e576]:
+          - generic [ref=e577]: Từ ngày
+          - textbox [ref=e578]: 2026-03-27
+        - generic [ref=e579]:
+          - generic [ref=e580]: Đến ngày
+          - textbox [ref=e581]: 2026-04-26
+      - generic [ref=e582]:
+        - generic [ref=e583]:
+          - generic [ref=e584]: Tổng doanh thu
+          - generic [ref=e585]: 50.000 đ
+        - generic [ref=e586]:
+          - generic [ref=e587]: Số đơn
+          - generic [ref=e588]: "1"
+        - generic [ref=e589]:
+          - generic [ref=e590]: Trung bình / đơn
+          - generic [ref=e591]: 50.000 đ
+      - generic [ref=e592]:
+        - generic [ref=e593]:
+          - heading "Doanh thu theo ngày" [level=4] [ref=e594]
+          - generic [ref=e595]: "Đỉnh: 2026-04-26 · 50.000 đ"
+        - generic [ref=e596]:
+          - generic "2026-03-27 · 0 đ · 0 đơn" [ref=e597] [cursor=pointer]
+          - generic "2026-03-28 · 0 đ · 0 đơn" [ref=e598] [cursor=pointer]
+          - generic "2026-03-29 · 0 đ · 0 đơn" [ref=e599] [cursor=pointer]
+          - generic "2026-03-30 · 0 đ · 0 đơn" [ref=e600] [cursor=pointer]
+          - generic "2026-03-31 · 0 đ · 0 đơn" [ref=e601] [cursor=pointer]
+          - generic "2026-04-01 · 0 đ · 0 đơn" [ref=e602] [cursor=pointer]
+          - generic "2026-04-02 · 0 đ · 0 đơn" [ref=e603] [cursor=pointer]
+          - generic "2026-04-03 · 0 đ · 0 đơn" [ref=e604] [cursor=pointer]
+          - generic "2026-04-04 · 0 đ · 0 đơn" [ref=e605] [cursor=pointer]
+          - generic "2026-04-05 · 0 đ · 0 đơn" [ref=e606] [cursor=pointer]
+          - generic "2026-04-06 · 0 đ · 0 đơn" [ref=e607] [cursor=pointer]
+          - generic "2026-04-07 · 0 đ · 0 đơn" [ref=e608] [cursor=pointer]
+          - generic "2026-04-08 · 0 đ · 0 đơn" [ref=e609] [cursor=pointer]
+          - generic "2026-04-09 · 0 đ · 0 đơn" [ref=e610] [cursor=pointer]
+          - generic "2026-04-10 · 0 đ · 0 đơn" [ref=e611] [cursor=pointer]
+          - generic "2026-04-11 · 0 đ · 0 đơn" [ref=e612] [cursor=pointer]
+          - generic "2026-04-12 · 0 đ · 0 đơn" [ref=e613] [cursor=pointer]
+          - generic "2026-04-13 · 0 đ · 0 đơn" [ref=e614] [cursor=pointer]
+          - generic "2026-04-14 · 0 đ · 0 đơn" [ref=e615] [cursor=pointer]
+          - generic "2026-04-15 · 0 đ · 0 đơn" [ref=e616] [cursor=pointer]
+          - generic "2026-04-16 · 0 đ · 0 đơn" [ref=e617] [cursor=pointer]
+          - generic "2026-04-17 · 0 đ · 0 đơn" [ref=e618] [cursor=pointer]
+          - generic "2026-04-18 · 0 đ · 0 đơn" [ref=e619] [cursor=pointer]
+          - generic "2026-04-19 · 0 đ · 0 đơn" [ref=e620] [cursor=pointer]
+          - generic "2026-04-20 · 0 đ · 0 đơn" [ref=e621] [cursor=pointer]
+          - generic "2026-04-21 · 0 đ · 0 đơn" [ref=e622] [cursor=pointer]
+          - generic "2026-04-22 · 0 đ · 0 đơn" [ref=e623] [cursor=pointer]
+          - generic "2026-04-23 · 0 đ · 0 đơn" [ref=e624] [cursor=pointer]
+          - generic "2026-04-24 · 0 đ · 0 đơn" [ref=e625] [cursor=pointer]
+          - generic "2026-04-25 · 0 đ · 0 đơn" [ref=e626] [cursor=pointer]
+          - generic "2026-04-26 · 50.000 đ · 1 đơn" [ref=e627] [cursor=pointer]
+        - generic [ref=e628]:
+          - generic [ref=e629]: 2026-03-27
+          - generic [ref=e630]: 2026-04-26
+      - generic [ref=e631]:
+        - heading "Theo gói" [level=4] [ref=e632]
+        - table [ref=e634]:
+          - rowgroup [ref=e635]:
+            - row "Package ID Tên gói Số đơn Tổng tiền" [ref=e636]:
+              - columnheader "Package ID" [ref=e637]
+              - columnheader "Tên gói" [ref=e638]
+              - columnheader "Số đơn" [ref=e639]
+              - columnheader "Tổng tiền" [ref=e640]
+          - rowgroup [ref=e641]:
+            - row "basic_4 Gói Cơ Bản — Tải 4 ảnh 1 50.000 đ" [ref=e642]:
+              - cell "basic_4" [ref=e643]
+              - cell "Gói Cơ Bản — Tải 4 ảnh" [ref=e644]
+              - cell "1" [ref=e645]
+              - cell "50.000 đ" [ref=e646]
+      - generic [ref=e647]:
+        - heading "Theo branch" [level=4] [ref=e648]
+        - table [ref=e650]:
+          - rowgroup [ref=e651]:
+            - row "Branch Số đơn Tổng tiền" [ref=e652]:
+              - columnheader "Branch" [ref=e653]
+              - columnheader "Số đơn" [ref=e654]
+              - columnheader "Tổng tiền" [ref=e655]
+          - rowgroup [ref=e656]:
+            - row "landscape 1 50.000 đ" [ref=e657]:
+              - cell "landscape" [ref=e658]
+              - cell "1" [ref=e659]
+              - cell "50.000 đ" [ref=e660]
