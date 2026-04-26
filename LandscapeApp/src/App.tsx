@@ -24,12 +24,10 @@ import {
   Monitor,
   Info,
   HelpCircle,
-  Mail,
   AlertTriangle,
   MessageCircle,
   Zap,
   Sparkles,
-  Infinity,
   Video as VideoIcon,
   Crown,
   Play,
@@ -37,7 +35,6 @@ import {
   Loader2,
   Share2,
   Waves,
-  Ruler,
   Sprout,
   Map,
   Coffee,
@@ -2469,10 +2466,10 @@ function ServiceView({
   );
 }
 
-function BasicSelectionView({ 
-  systemContent, onSelect, mainBranch, subStep, setSubStep, onBack, 
-  selectedCategory, onCategoryChange 
-}: { 
+function BasicSelectionView({
+  systemContent, onSelect, mainBranch, subStep, setSubStep, onBack: _onBack,
+  selectedCategory, onCategoryChange
+}: {
   systemContent: any, 
   onSelect: (url: string, category?: string, images?: string[]) => void, 
   mainBranch: MainBranch, 
