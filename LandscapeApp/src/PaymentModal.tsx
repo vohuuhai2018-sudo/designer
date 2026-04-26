@@ -3,7 +3,7 @@ import { X, Check, Copy as CopyIcon, ExternalLink, Loader2 } from 'lucide-react'
 
 const API_BASE = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
 
-type PackageId = 'basic_4' | 'basic_8' | 'advanced' | 'kts_3d';
+type PackageId = 'test_1k' | 'basic_4' | 'basic_8' | 'advanced' | 'kts_3d';
 
 type Pkg = {
   id: PackageId;
@@ -17,6 +17,15 @@ type Pkg = {
 };
 
 const PACKAGES: Pkg[] = [
+  {
+    id: 'test_1k',
+    title: 'Gói Test',
+    subtitle: 'Chỉ 1.000đ — kiểm tra MoMo',
+    bullets: ['Dùng để test cổng thanh toán', 'Mở khoá tải về như gói thật', 'Chỉ dành cho admin/dev'],
+    price: 1000,
+    badge: 'TEST',
+    color: '#f59e0b'
+  },
   {
     id: 'basic_4',
     title: 'Gói Cơ Bản',
@@ -74,9 +83,10 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onPaid: () => void;
+  presetPackageId?: PackageId;
 };
 
-export function PaymentModal({ projectId, open, onClose, onPaid }: Props) {
+export function PaymentModal({ projectId, open, onClose, onPaid, presetPackageId }: Props) {
   const [step, setStep] = useState<'choose' | 'pay'>('choose');
   const [picked, setPicked] = useState<PackageId | null>(null);
   const [area, setArea] = useState<string>('');
@@ -94,8 +104,10 @@ export function PaymentModal({ projectId, open, onClose, onPaid }: Props) {
       setOrder(null);
       setStatus('none');
       setCreating(false);
+    } else if (presetPackageId) {
+      setPicked(presetPackageId);
     }
-  }, [open]);
+  }, [open, presetPackageId]);
 
   useEffect(() => {
     if (step !== 'pay' || !order) return;

@@ -1148,6 +1148,40 @@ export default function App() {
               setService(s);
               setView('submit');
             }}
+            onTestPayment={async () => {
+              try {
+                const placeholder = 'https://res.cloudinary.com/dj9ge7jca/image/upload/v1777130977/landscape_app/usg0qckadpdexlrni1ww.jpg';
+                const res = await apiFetch('/api/projects', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    id: `test-quick-${Date.now()}`,
+                    timestamp: new Date().toISOString(),
+                    deviceId: getDeviceId(),
+                    customerName: '[TEST] Thanh toán nhanh',
+                    customerPhone: '0000000000',
+                    rawImage: placeholder,
+                    annotatedImage: placeholder,
+                    selections: { ke: [], canh: [] },
+                    service: 'Gói Test',
+                    mainBranch,
+                    workflowBranch: 'chatgpt_image',
+                    aiResults: [placeholder, placeholder],
+                    note: '[TEST_QUICK] tạo đơn để verify cổng thanh toán MoMo'
+                  })
+                });
+                if (!res.ok) throw new Error('Không tạo được dự án test');
+                const created = await res.json();
+                await apiFetch(`/api/projects/${created.id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ status: 'done' })
+                }).catch(() => {});
+                window.location.href = `/result/${created.id}?pay=test_1k`;
+              } catch (e: any) {
+                alert(`Lỗi: ${e.message || 'Không tạo được đơn test'}`);
+              }
+            }}
           />
         )}
         {view === 'submit' && (
@@ -2686,11 +2720,12 @@ function BasicSelectionView({
   );
 }
 
-function PlanSelectionView({ service, onServiceChange, systemContent, mainBranch }: {
+function PlanSelectionView({ service, onServiceChange, systemContent, mainBranch, onTestPayment }: {
   service: string;
   onServiceChange: (s: string) => void;
   systemContent: any;
   mainBranch: MainBranch;
+  onTestPayment?: () => void;
 }) {
   const t = (key: string, defaultVal: string) => systemContent.uiText?.[key] || defaultVal;
   const services = (mainBranch === 'landscape')
@@ -2715,7 +2750,7 @@ function PlanSelectionView({ service, onServiceChange, systemContent, mainBranch
             key={s.id}
             className={`service-card-premium ${service === s.name ? 'active' : ''}`}
             onClick={() => onServiceChange(s.name)}
-            style={{ 
+            style={{
               padding: 0,
               border: service === s.name ? `4px solid ${s.color}` : '2px solid transparent',
               borderRadius: '24px',
@@ -2725,16 +2760,16 @@ function PlanSelectionView({ service, onServiceChange, systemContent, mainBranch
               boxShadow: service === s.name ? `0 0 30px ${s.color}66` : '0 10px 30px rgba(0,0,0,0.3)'
             }}
           >
-            <img decoding="async" loading="lazy" 
-              src={s.img} 
-              alt={s.name} 
-              style={{ 
-                width: '100%', 
+            <img decoding="async" loading="lazy"
+              src={s.img}
+              alt={s.name}
+              style={{
+                width: '100%',
                 height: 'auto',
                 objectFit: 'contain',
                 display: 'block',
                 transition: 'transform 0.3s'
-              }} 
+              }}
             />
           </button>
         ))}
@@ -2742,6 +2777,33 @@ function PlanSelectionView({ service, onServiceChange, systemContent, mainBranch
 
       <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
         <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem', fontWeight: 600 }}>* Vui lòng chọn 1 gói bên trên để tiếp tục</span>
+
+        {onTestPayment && (
+          <button
+            onClick={onTestPayment}
+            style={{
+              marginTop: '12px',
+              padding: '12px 22px',
+              borderRadius: '12px',
+              border: '1.5px dashed rgba(245,158,11,0.55)',
+              background: 'rgba(245,158,11,0.08)',
+              color: '#f59e0b',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              letterSpacing: '0.04em',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all .2s'
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.18)'; e.currentTarget.style.borderStyle = 'solid'; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.08)'; e.currentTarget.style.borderStyle = 'dashed'; }}
+            title="Tạo đơn 1.000đ và đi thẳng tới cổng MoMo (không qua bước upload/AI)"
+          >
+            🧪 Test thanh toán nhanh — 1.000đ
+          </button>
+        )}
       </div>
 
     </motion.div>
@@ -2924,7 +2986,8 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
   const [pass2Msg, setPass2Msg] = useState('');
   const [project, setProject] = useState<Project | null>(null);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
-  const [paymentOpen, setPaymentOpen] = useState(false);
+  const presetPay = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('pay') : null;
+  const [paymentOpen, setPaymentOpen] = useState(!!presetPay);
   const isPaid = (project as any)?.payment?.status === 'paid';
 
   useEffect(() => {
@@ -3250,6 +3313,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
         <PaymentModal
           projectId={projectId}
           open={paymentOpen}
+          presetPackageId={presetPay as any || undefined}
           onClose={() => setPaymentOpen(false)}
           onPaid={async () => {
             try {

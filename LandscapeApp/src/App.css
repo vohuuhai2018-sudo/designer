@@ -5474,11 +5474,12 @@ canvas {
   }
 
   .service-list-premium {
-    max-width: 1240px;
+    max-width: min(1500px, 92vw);
     margin: 0 auto !important;
     display: grid !important;
     grid-template-columns: repeat(2, 1fr);
-    gap: 20px !important;
+    gap: 28px !important;
+    padding: 12px 0 !important;
   }
 
   /* ---------- General containers ---------- */
@@ -5504,7 +5505,16 @@ canvas {
     height: 160px;
   }
   .service-list-premium {
+    max-width: min(1640px, 92vw);
     grid-template-columns: repeat(3, 1fr);
+    gap: 32px !important;
+  }
+}
+
+@media (min-width: 1920px) {
+  .service-list-premium {
+    max-width: 1760px;
+    gap: 40px !important;
   }
 }
 

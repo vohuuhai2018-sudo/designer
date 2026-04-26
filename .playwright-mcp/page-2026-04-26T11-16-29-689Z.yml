@@ -1,0 +1,43 @@
+- generic [ref=e2]:
+  - generic [ref=e53]:
+    - button "Quay lại" [ref=e54] [cursor=pointer]:
+      - img [ref=e55]
+      - text: Quay lại
+    - button "Tiếp theo" [ref=e57] [cursor=pointer]:
+      - text: Tiếp theo
+      - img [ref=e58]
+  - generic [ref=e164]:
+    - heading "Tải ảnh hiện trạng công trình" [level=2] [ref=e165]
+    - generic [ref=e166] [cursor=pointer]:
+      - img [ref=e168]
+      - generic [ref=e171]: NHẤN ĐỂ CHỌN ẢNH CHÍNH
+    - generic [ref=e172]:
+      - generic [ref=e173]:
+        - generic [ref=e174]:
+          - img [ref=e175]
+          - generic [ref=e177]: MẸO CHỤP ẢNH
+        - list [ref=e178]:
+          - listitem [ref=e179]: ✦ Vị trí giống mẫu chọn
+          - listitem [ref=e180]: ✦ Bao quát không gian
+          - listitem [ref=e181]: ✦ Góc rộng chính diện
+      - generic [ref=e183]:
+        - generic [ref=e184]: ẢNH MẪU ĐÃ CHỌN
+        - img "Selected Template" [ref=e185]
+    - generic [ref=e186]:
+      - generic [ref=e188]:
+        - img [ref=e189]
+        - generic [ref=e192]: Mô tả ý tưởng chi tiết
+      - 'textbox "Ví dụ: • Kích thước khu vườn khoảng 50m2 (10x5m) • Góc trái bố trí hồ cá koi 12m2, thác nước cao 1.2m đổ từ hòn non bộ • Chính giữa là lối đi lát đá tự nhiên trên thảm cỏ nhung Nhật • Phía sau hồ đặt tiểu cảnh và cây tùng la hán trang trí" [ref=e193]':
+        - /placeholder: "Ví dụ:\n• Kích thước khu vườn khoảng 50m2 (10x5m)\n• Góc trái bố trí hồ cá koi 12m2, thác nước cao 1.2m đổ từ hòn non bộ\n• Chính giữa là lối đi lát đá tự nhiên trên thảm cỏ nhung Nhật\n• Phía sau hồ đặt tiểu cảnh và cây tùng la hán trang trí"
+    - generic [ref=e194]:
+      - generic [ref=e195]:
+        - generic [ref=e196]:
+          - img [ref=e197]
+          - heading "Hình ảnh, video và tài liệu liên quan" [level=3] [ref=e201]
+        - paragraph [ref=e202]: Gửi thêm ảnh, video, hoặc bản phác thảo để KTS hiểu rõ không gian và yêu cầu của bạn (áp dụng cho gói thiết kế chuyên nghiệp).
+      - generic [ref=e204] [cursor=pointer]:
+        - generic [ref=e205]:
+          - img [ref=e206]
+          - img [ref=e210]
+          - img [ref=e212]
+        - generic [ref=e214]: NHẤN ĐỂ CHỌN NHIỀU TÀI LIỆU CÙNG LÚC

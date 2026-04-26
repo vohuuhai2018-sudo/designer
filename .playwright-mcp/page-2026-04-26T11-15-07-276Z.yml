@@ -1,0 +1,41 @@
+- generic [ref=e2]:
+  - generic [ref=e53]:
+    - button "Quay lại" [ref=e54] [cursor=pointer]:
+      - img [ref=e55]
+      - text: Quay lại
+    - button "Tiếp theo" [ref=e57] [cursor=pointer]:
+      - text: Tiếp theo
+      - img [ref=e58]
+  - generic [ref=e61]:
+    - generic [ref=e62]:
+      - heading "Chọn mẫu thiết kế" [level=2] [ref=e63]
+      - paragraph [ref=e64]: Hãy chọn một danh mục để thực hiện dự án của bạn.
+    - generic [ref=e65]:
+      - button "Hồ koi sân vườn cổ điển Hồ koi sân vườn cổ điển" [ref=e66] [cursor=pointer]:
+        - img "Hồ koi sân vườn cổ điển" [ref=e67]
+        - heading "Hồ koi sân vườn cổ điển" [level=3] [ref=e68]
+        - img [ref=e70]
+      - button "Hồ koi sân vườn hiện đại Hồ koi sân vườn hiện đại" [ref=e72] [cursor=pointer]:
+        - img "Hồ koi sân vườn hiện đại" [ref=e73]
+        - heading "Hồ koi sân vườn hiện đại" [level=3] [ref=e74]
+        - img [ref=e76]
+      - button "Tường đá trang trí Tường đá trang trí" [ref=e78] [cursor=pointer]:
+        - img "Tường đá trang trí" [ref=e79]
+        - heading "Tường đá trang trí" [level=3] [ref=e80]
+        - img [ref=e82]
+      - button "Tường cây & vườn nhiệt đới Tường cây & vườn nhiệt đới" [ref=e84] [cursor=pointer]:
+        - img "Tường cây & vườn nhiệt đới" [ref=e85]
+        - heading "Tường cây & vườn nhiệt đới" [level=3] [ref=e86]
+        - img [ref=e88]
+      - button "Quy hoạch farm & du lịch Quy hoạch farm & du lịch" [ref=e90] [cursor=pointer]:
+        - img "Quy hoạch farm & du lịch" [ref=e91]
+        - heading "Quy hoạch farm & du lịch" [level=3] [ref=e92]
+        - img [ref=e94]
+      - button "Cảnh quan quán cà phê Cảnh quan quán cà phê" [ref=e96] [cursor=pointer]:
+        - img "Cảnh quan quán cà phê" [ref=e97]
+        - heading "Cảnh quan quán cà phê" [level=3] [ref=e98]
+        - img [ref=e100]
+      - button "Hồ bơi thiên nhiên Hồ bơi thiên nhiên" [ref=e102] [cursor=pointer]:
+        - img "Hồ bơi thiên nhiên" [ref=e103]
+        - heading "Hồ bơi thiên nhiên" [level=3] [ref=e104]
+        - img [ref=e106]

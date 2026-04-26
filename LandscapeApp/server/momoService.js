@@ -14,6 +14,7 @@ const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL
 const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:5173';
 
 const PACKAGES = {
+  test_1k: { id: 'test_1k', label: 'Gói Test 1.000đ', price: 1000 },
   basic_4: { id: 'basic_4', label: 'Gói Cơ Bản — Tải 4 ảnh', price: 50000 },
   basic_8: { id: 'basic_8', label: 'Gói Cơ Bản — Tải 8 ảnh + 2 video', price: 200000 },
   advanced: { id: 'advanced', label: 'Gói Nâng Cao — 10 dự án (8 ảnh + 2 video / dự án)', price: 500000 },
