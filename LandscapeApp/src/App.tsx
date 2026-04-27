@@ -46,7 +46,11 @@ import {
   TrendingUp,
   Clock,
   Hash,
-  Circle
+  Circle,
+  GripVertical,
+  Plus,
+  EyeOff,
+  Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -4041,225 +4045,327 @@ function AIStudioContent({ onFeedback }: { onFeedback: (msg: string) => void }) 
   );
 }
 
-// --- PROMPT EDITOR VIEW ---
-function PromptEditorView({ systemContent, onSystemContentUpdate, onSync, onFeedback, adminBranch }: {
-  systemContent: any;
-  onSystemContentUpdate: (c: any) => void;
-  onSync: () => Promise<boolean>;
+// --- PROMPT EDITOR VIEW (Tab Manager — CRUD tab + flowConfig + drag-drop reorder) ---
+const TAB_COLORS = [
+  '#d4a373', '#3b82f6', '#6366f1', '#10b981', '#22c55e',
+  '#f59e0b', '#ec4899', '#ef4444', '#8b5cf6', '#06b6d4'
+];
+const ASPECT_RATIOS = ['16:9', '4:3', '1:1', '3:4', '9:16'] as const;
+const VARIANT_COUNTS = [1, 2, 3, 4] as const;
+
+interface TabModel {
+  id: string;
+  branch: 'landscape' | 'architecture' | 'interior';
+  label: string;
+  color: string;
+  order: number;
+  prompt: string;
+  flowConfig: {
+    mode: 'image' | 'video';
+    variantCount: 1 | 2 | 3 | 4;
+    aspectRatio: '16:9' | '4:3' | '1:1' | '3:4' | '9:16';
+  };
+  hidden?: boolean;
+}
+
+const tmLabelStyle: React.CSSProperties = { display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'rgba(255,255,255,0.7)', marginBottom: '6px' };
+const tmInputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: '10px', background: 'rgba(0,0,0,0.4)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.9rem', boxSizing: 'border-box' };
+const tmSelectStyle: React.CSSProperties = { ...tmInputStyle, padding: '10px' };
+
+function PromptEditorView({ onFeedback, adminBranch }: {
+  systemContent?: any;
+  onSystemContentUpdate?: (c: any) => void;
+  onSync?: () => Promise<boolean>;
   onFeedback: (msg: string) => void;
   adminBranch: MainBranch;
 }) {
-  const defaultBasicPrompt = `ROLE: Landscape visualization expert (STRICT image-to-image transformation)
-
-====================================================
-OBJECTIVE
-====================================================
-
-Transform the real site (Image 1) into a built landscape design
-inspired by the reference model (Image 2).
-
-IMPORTANT:
-- Image 1 = ONLY base image (camera angle, walls, space must remain EXACT)
-- Image 2 = DESIGN REFERENCE ONLY (style, material, composition language)
-- DO NOT copy layout or scale from Image 2
-
-====================================================
-CORE DESIGN TRANSLATION (CRITICAL)
-====================================================
-
-From Image 2, extract ONLY:
-- Natural stone composition
-- Waterfall flowing naturally across rocks (if water features requested)
-- Integration between stone + plants
-- High-end garden feeling
-
-DO NOT copy:
-- Full size or full layout
-- Large mountain scale
-
-====================================================
-SITE ADAPTATION (VERY IMPORTANT)
-====================================================
-
-Adapt the design from Image 2 to fit the REAL residential yard in Image 1.
-- Scale DOWN all elements to match the real space
-- Keep proportions realistic to this yard size
-- Ensure the design feels buildable and not oversized
-
-====================================================
-OVERALL HARMONY
-====================================================
-
-- High-end residential garden
-- Balanced composition
-- Not crowded
-- Photorealistic, built project look
-- Correct scale, believable materials
-- NO CGI look, NO oversized elements`;
-
-  const defaultAdvancedPrompt = `Bạn là chuyên gia concept cảnh quan. Nhiệm vụ của bạn là tạo ra 1 hình ảnh phối cảnh photorealistic bám sát dữ liệu thực tế tôi cung cấp — không sáng tạo tuỳ tiện.
-
-═══ CÁCH ĐỌC ẢNH KHOANH VÙNG (File 2) ═══
-Hãy nhìn trực tiếp vào hình ảnh khoanh vùng thiết kế (File 2) mà tôi đính kèm.
-→ Chỉ xử lý đúng những vùng màu bạn thực sự nhìn thấy trong ảnh đó.
-→ Mỗi vùng màu tô là một khu vực công năng cần can thiệp.
-→ Nếu một loại công năng không có vùng màu tương ứng trong ảnh → TUYỆT ĐỐI không thêm vào.
-→ Khu vực không có màu khoanh vùng = giữ nguyên hiện trạng, không thay đổi.
-
-═══ GỢI Ý CÁCH HIỂU CÁC MÀU PHỔ BIẾN ═══
-  Đỏ / cam đậm → vị trí thác nước hoặc điểm nhấn nước rơi
-  Xanh dương / xanh da trời → vùng hồ nước, mặt nước
-  Tím / hoa cà → viền kè đá bao quanh hồ hoặc bồn
-  Xanh lá → cảnh quan, cây cối, thảm cỏ
-  Vàng → hệ thống lọc / hầm kỹ thuật
-  Trắng → vùng rải sỏi, vật liệu trang trí sáng
-  Nâu → lối đi, đá bước chân`;
-
-  const getBranchTabs = (branch: MainBranch) => {
-    if (branch === 'architecture') return [
-      { id: 'nha_pho', label: 'Nhà Phố', color: '#3b82f6', key: 'promptNhaPho' },
-      { id: 'biet_thu', label: 'Biệt Thự', color: '#6366f1', key: 'promptBietThu' },
-      { id: 'nha_cap_4', label: 'Nhà Cấp 4', color: '#10b981', key: 'promptNhaCap4' },
-      { id: 'nha_vuon', label: 'Nhà Vườn', color: '#f59e0b', key: 'promptNhaVuon' },
-      { id: 'nha_tien_che', label: 'Nhà Tiền Chế', color: '#ec4899', key: 'promptNhaTienChe' },
-    ];
-    if (branch === 'interior') return [
-      { id: 'hien_dai', label: 'Hiện Đại', color: '#3b82f6', key: 'promptHienDai' },
-      { id: 'tan_co_dien', label: 'Tân Cổ Điển', color: '#6366f1', key: 'promptTanCoDien' },
-      { id: 'indochine', label: 'Indochine', color: '#10b981', key: 'promptIndochine' },
-      { id: 'wabi_sabi', label: 'Wabi Sabi', color: '#f59e0b', key: 'promptWabiSabi' },
-      { id: 'tan_co_dien_go', label: 'Tân Cổ Điển Gỗ', color: '#ec4899', key: 'promptTanCoDienGo' },
-    ];
-    return [
-      { id: 'ho_co_dien', label: 'Hồ Koi Cổ Điển', color: 'var(--accent)', key: 'promptBasic' },
-      { id: 'ho_hien_dai', label: 'Hồ Koi Hiện Đại', color: '#3b82f6', key: 'promptHoHienDai' },
-      { id: 'tuong_da', label: 'Tường Đá Nhân Tạo', color: '#22c55e', key: 'promptTuongDa' },
-      { id: 'cafe_san_vuon', label: 'Cà Phê Sân Vườn', color: '#f59e0b', key: 'promptCafeSanVuon' },
-      { id: 'advanced', label: 'Nâng cao / Premium', color: '#6366f1', key: 'promptAdvanced' },
-      { id: 'video', label: 'Video AI', color: '#ec4899', key: 'promptVideo' },
-    ];
-  };
-
-  const tabs = getBranchTabs(adminBranch);
-
-  const [prompts, setPrompts] = useState<Record<string, string>>({
-    promptBasic: systemContent.promptBasic || '',
-    promptHoHienDai: systemContent.promptHoHienDai || '',
-    promptTuongDa: systemContent.promptTuongDa || '',
-    promptCafeSanVuon: systemContent.promptCafeSanVuon || '',
-    promptAdvanced: systemContent.promptAdvanced || '',
-    promptVideo: systemContent.promptVideo || '',
-    promptNhaPho: systemContent.promptNhaPho || '',
-    promptBietThu: systemContent.promptBietThu || '',
-    promptNhaCap4: systemContent.promptNhaCap4 || '',
-    promptNhaVuon: systemContent.promptNhaVuon || '',
-    promptNhaTienChe: systemContent.promptNhaTienChe || '',
-    promptHienDai: systemContent.promptHienDai || '',
-    promptTanCoDien: systemContent.promptTanCoDien || '',
-    promptIndochine: systemContent.promptIndochine || '',
-    promptWabiSabi: systemContent.promptWabiSabi || '',
-    promptTanCoDienGo: systemContent.promptTanCoDienGo || '',
-  });
-
-  const [editingTab, setEditingTab] = useState(tabs[0].id);
+  const [tabs, setTabs] = useState<TabModel[]>([]);
+  const [editingTabId, setEditingTabId] = useState<string | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
-  // Update editingTab when adminBranch changes
-  useEffect(() => {
-    setEditingTab(getBranchTabs(adminBranch)[0].id);
-  }, [adminBranch]);
-
-  const currentTab = tabs.find(t => t.id === editingTab) || tabs[0];
-  const currentPrompt = prompts[currentTab.key] || '';
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    const updated = { ...systemContent, ...prompts };
-    onSystemContentUpdate(updated);
-    onFeedback('Đang lưu prompt...');
-    const success = await onSync();
-    setIsSaving(false);
-    onFeedback(success ? '✅ Đã lưu prompt thành công!' : '❌ Lỗi khi lưu prompt.');
+  const fetchTabs = async () => {
+    setIsLoading(true);
+    try {
+      const res = await apiFetch(`/api/tabs?branch=${adminBranch}&includeHidden=${showHidden}`);
+      const data = await res.json();
+      setTabs(data);
+      if (data.length > 0 && !data.find((t: TabModel) => t.id === editingTabId)) {
+        setEditingTabId(data[0].id);
+      }
+    } catch {
+      onFeedback('❌ Lỗi tải danh sách tab.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleReset = () => {
-    if (!window.confirm('Bạn có chắc muốn khôi phục prompt mặc định cho tab này?')) return;
-    const defaults: Record<string, string> = {
-      promptBasic: defaultBasicPrompt,
-      promptHoHienDai: defaultBasicPrompt,
-      promptTuongDa: defaultBasicPrompt,
-      promptCafeSanVuon: defaultBasicPrompt,
-      promptAdvanced: defaultAdvancedPrompt,
-      promptVideo: 'Smooth cinematic camera slowly panning through this beautiful landscape garden. Gentle water flowing over rocks, koi fish swimming peacefully, leaves and branches swaying in soft breeze. Golden hour warm lighting with long shadows. Photorealistic quality, peaceful zen atmosphere. Camera moves from left to right revealing the full garden design.',
-    };
-    setPrompts(prev => ({ ...prev, [currentTab.key]: defaults[currentTab.key] }));
-    onFeedback('Đã khôi phục prompt mặc định. Nhấn LƯU để áp dụng.');
+  useEffect(() => { fetchTabs(); }, [adminBranch, showHidden]);
+
+  const editingTab = tabs.find(t => t.id === editingTabId);
+
+  const updateTab = async (id: string, patch: Partial<TabModel>) => {
+    setIsSaving(true);
+    try {
+      const res = await apiFetch(`/api/tabs/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch)
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const updated = await res.json();
+      setTabs(prev => prev.map(t => t.id === id ? updated : t));
+      onFeedback('✅ Đã lưu.');
+    } catch (e: any) {
+      onFeedback(`❌ Lỗi lưu: ${e.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const createTab = async (data: { id: string; label: string; color: string }) => {
+    try {
+      const res = await apiFetch('/api/tabs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, branch: adminBranch, prompt: '', flowConfig: { mode: 'image', variantCount: 4, aspectRatio: '16:9' } })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Tạo tab thất bại');
+      }
+      const created = await res.json();
+      setTabs(prev => [...prev, created]);
+      setEditingTabId(created.id);
+      setShowCreateModal(false);
+      onFeedback('✅ Đã tạo tab mới.');
+    } catch (e: any) {
+      onFeedback(`❌ ${e.message}`);
+    }
+  };
+
+  const deleteTab = async (id: string) => {
+    if (!window.confirm('Ẩn tab này? Project cũ ref tới nó vẫn xem được. Có thể bật "Hiện tab ẩn" để khôi phục.')) return;
+    try {
+      const res = await apiFetch(`/api/tabs/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(await res.text());
+      onFeedback('✅ Đã ẩn tab.');
+      fetchTabs();
+    } catch (e: any) {
+      onFeedback(`❌ ${e.message}`);
+    }
+  };
+
+  const restoreTab = async (id: string) => {
+    await updateTab(id, { hidden: false } as any);
+    fetchTabs();
+  };
+
+  const handleDragStart = (id: string) => setDraggedId(id);
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); };
+  const handleDrop = async (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedId || draggedId === targetId) return;
+    const oldIdx = tabs.findIndex(t => t.id === draggedId);
+    const newIdx = tabs.findIndex(t => t.id === targetId);
+    if (oldIdx < 0 || newIdx < 0) return;
+    const reordered = [...tabs];
+    const [moved] = reordered.splice(oldIdx, 1);
+    reordered.splice(newIdx, 0, moved);
+    setTabs(reordered);
+    setDraggedId(null);
+    try {
+      const res = await apiFetch('/api/tabs/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ branch: adminBranch, order: reordered.map(t => t.id) })
+      });
+      if (!res.ok) throw new Error('reorder fail');
+      onFeedback('✅ Đã đổi thứ tự.');
+    } catch {
+      onFeedback('❌ Lỗi lưu thứ tự.');
+      fetchTabs();
+    }
   };
 
   return (
     <div style={{ padding: '20px 0' }}>
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setEditingTab(tab.id)}
-            style={{
-              padding: '10px 16px', borderRadius: '12px', fontWeight: 800, fontSize: '0.85rem', border: 'none', cursor: 'pointer',
-              background: editingTab === tab.id ? tab.color : 'rgba(255,255,255,0.08)',
-              color: editingTab === tab.id ? (tab.id === 'ho_co_dien' ? '#000' : '#fff') : '#fff',
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
-          <button
-            onClick={handleReset}
-            style={{ padding: '10px 16px', borderRadius: '12px', background: 'rgba(255,60,60,0.1)', color: '#ff4d4f', border: '1px solid #ff4d4f', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}
-          >
-            Khôi phục mặc định
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            style={{ padding: '10px 24px', borderRadius: '12px', background: 'var(--accent)', color: '#000', fontWeight: 800, fontSize: '0.9rem', border: 'none', cursor: isSaving ? 'wait' : 'pointer' }}
-          >
-            {isSaving ? 'Đang lưu...' : 'LƯU PROMPT'}
-          </button>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <button onClick={() => setShowCreateModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', borderRadius: '12px', background: 'var(--accent)', color: '#000', fontWeight: 800, border: 'none', cursor: 'pointer' }}>
+          <Plus size={18} /> Thêm tab mới
+        </button>
+        <button onClick={() => setShowHidden(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px', background: showHidden ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.06)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', fontWeight: 700, cursor: 'pointer' }}>
+          {showHidden ? <Eye size={16} /> : <EyeOff size={16} />}
+          {showHidden ? 'Đang hiện tab ẩn' : 'Hiện tab ẩn'}
+        </button>
+        {isSaving && <span style={{ color: 'var(--accent)', fontSize: '0.85rem' }}>Đang lưu...</span>}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 1fr) 3fr', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {isLoading && <div style={{ color: 'rgba(255,255,255,0.5)' }}>Đang tải...</div>}
+          {tabs.map(tab => {
+            const isHidden = tab.hidden;
+            const isSelected = tab.id === editingTabId;
+            return (
+              <div
+                key={tab.id}
+                draggable={!isHidden}
+                onDragStart={() => handleDragStart(tab.id)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, tab.id)}
+                onClick={() => setEditingTabId(tab.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
+                  borderRadius: '12px',
+                  background: isSelected ? `${tab.color}33` : (isHidden ? 'rgba(80,80,80,0.15)' : 'rgba(255,255,255,0.04)'),
+                  border: isSelected ? `2px solid ${tab.color}` : '1px solid rgba(255,255,255,0.08)',
+                  cursor: 'pointer',
+                  opacity: isHidden ? 0.5 : 1,
+                  transition: 'all 0.15s'
+                }}
+              >
+                <GripVertical size={16} style={{ color: 'rgba(255,255,255,0.4)', cursor: isHidden ? 'not-allowed' : 'grab' }} />
+                <div style={{ width: 14, height: 14, borderRadius: '50%', background: tab.color, flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tab.label}</div>
+                  <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>{tab.id} · {tab.flowConfig?.mode === 'video' ? 'Video' : 'Ảnh'} · x{tab.flowConfig?.variantCount} · {tab.flowConfig?.aspectRatio}</div>
+                </div>
+                {isHidden ? (
+                  <button onClick={(e) => { e.stopPropagation(); restoreTab(tab.id); }} title="Hiện lại" style={{ background: 'transparent', border: 'none', color: '#22c55e', cursor: 'pointer', padding: 4 }}><Eye size={16} /></button>
+                ) : (
+                  <button onClick={(e) => { e.stopPropagation(); deleteTab(tab.id); }} title="Ẩn" style={{ background: 'transparent', border: 'none', color: '#ff6666', cursor: 'pointer', padding: 4 }}><Trash2 size={14} /></button>
+                )}
+              </div>
+            );
+          })}
+          {!isLoading && tabs.length === 0 && (
+            <div style={{ color: 'rgba(255,255,255,0.5)', padding: '20px', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.2)', borderRadius: '12px' }}>Chưa có tab.</div>
+          )}
+        </div>
+
+        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', padding: '20px' }}>
+          {editingTab ? (
+            <TabEditor key={editingTab.id} tab={editingTab} onSave={(patch) => updateTab(editingTab.id, patch)} disabled={isSaving} />
+          ) : (
+            <div style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '40px' }}>Chọn tab bên trái để chỉnh sửa</div>
+          )}
         </div>
       </div>
 
-      <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', padding: '20px' }}>
-        <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: currentTab.color }}>
-            Prompt — {currentTab.label}
-          </h3>
-          <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
-            {currentPrompt.length} ký tự
-          </span>
+      {showCreateModal && <CreateTabModal onCreate={createTab} onCancel={() => setShowCreateModal(false)} />}
+    </div>
+  );
+}
+
+function TabEditor({ tab, onSave, disabled }: { tab: TabModel; onSave: (patch: Partial<TabModel>) => void; disabled?: boolean }) {
+  const [draft, setDraft] = useState<TabModel>(tab);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(tab);
+  useEffect(() => { setDraft(tab); }, [tab.id]);
+  const setFlow = (k: keyof TabModel['flowConfig'], v: any) => setDraft(d => ({ ...d, flowConfig: { ...d.flowConfig, [k]: v } }));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: draft.color, margin: 0 }}>Chỉnh tab — {tab.id}</h3>
+        <button
+          onClick={() => onSave({ label: draft.label, color: draft.color, prompt: draft.prompt, flowConfig: draft.flowConfig })}
+          disabled={disabled || !dirty}
+          style={{ padding: '8px 18px', borderRadius: '10px', background: dirty ? 'var(--accent)' : 'rgba(255,255,255,0.1)', color: dirty ? '#000' : 'rgba(255,255,255,0.5)', fontWeight: 800, fontSize: '0.85rem', border: 'none', cursor: dirty ? 'pointer' : 'default' }}
+        >
+          {disabled ? 'Đang lưu...' : (dirty ? 'LƯU' : 'Đã lưu')}
+        </button>
+      </div>
+
+      <div>
+        <label style={tmLabelStyle}>Tên tab</label>
+        <input value={draft.label} onChange={e => setDraft(d => ({ ...d, label: e.target.value }))} style={tmInputStyle} />
+      </div>
+
+      <div>
+        <label style={tmLabelStyle}>Màu</label>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {TAB_COLORS.map(c => (
+            <button key={c} type="button" onClick={() => setDraft(d => ({ ...d, color: c }))} style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: draft.color === c ? '3px solid #fff' : '2px solid rgba(255,255,255,0.2)', cursor: 'pointer' }} />
+          ))}
         </div>
-        <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '12px', lineHeight: '1.5' }}>
-          Hệ thống tự động ghép thêm thông tin khách hàng, kích thước, file đính kèm vào cuối prompt.
-        </p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+        <div>
+          <label style={tmLabelStyle}>Chế độ</label>
+          <select value={draft.flowConfig.mode} onChange={e => setFlow('mode', e.target.value)} style={tmSelectStyle}>
+            <option value="image">Hình ảnh</option>
+            <option value="video">Video</option>
+          </select>
+        </div>
+        <div>
+          <label style={tmLabelStyle}>Số phương án</label>
+          <select value={draft.flowConfig.variantCount} onChange={e => setFlow('variantCount', Number(e.target.value))} style={tmSelectStyle}>
+            {VARIANT_COUNTS.map(v => <option key={v} value={v}>x{v}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={tmLabelStyle}>Tỉ lệ khung</label>
+          <select value={draft.flowConfig.aspectRatio} onChange={e => setFlow('aspectRatio', e.target.value)} style={tmSelectStyle}>
+            {ASPECT_RATIOS.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <label style={tmLabelStyle}>Prompt</label>
+          <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>{(draft.prompt || '').length} ký tự</span>
+        </div>
         <textarea
-          value={currentPrompt}
-          onChange={e => setPrompts(prev => ({ ...prev, [currentTab.key]: e.target.value }))}
-          style={{
-            width: '100%',
-            minHeight: '500px',
-            background: 'rgba(0,0,0,0.4)',
-            color: '#e2e8f0',
-            border: `1px solid ${currentTab.color}30`,
-            borderRadius: '12px',
-            padding: '16px',
-            fontFamily: "'Be Vietnam Pro', monospace",
-            fontSize: '0.85rem',
-            lineHeight: '1.7',
-            resize: 'vertical',
-            outline: 'none',
-          }}
-          spellCheck={false}
+          value={draft.prompt}
+          onChange={e => setDraft(d => ({ ...d, prompt: e.target.value }))}
+          style={{ ...tmInputStyle, minHeight: '400px', fontFamily: 'monospace', resize: 'vertical' }}
         />
+        <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '6px' }}>
+          Hệ thống tự ghép thông tin khách hàng + assets vào cuối prompt khi chạy Flow.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function CreateTabModal({ onCreate, onCancel }: { onCreate: (data: { id: string; label: string; color: string }) => void; onCancel: () => void }) {
+  const [id, setId] = useState('');
+  const [label, setLabel] = useState('');
+  const [color, setColor] = useState(TAB_COLORS[0]);
+  const idValid = /^[a-z0-9_]+$/.test(id) && id.length > 0;
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onCancel}>
+      <div style={{ background: '#1a1a1a', borderRadius: '16px', padding: '24px', maxWidth: '440px', width: '90%', border: '1px solid rgba(255,255,255,0.15)' }} onClick={e => e.stopPropagation()}>
+        <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '16px' }}>Thêm tab mới</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={tmLabelStyle}>ID (slug, a-z 0-9 _) *</label>
+            <input value={id} onChange={e => setId(e.target.value.toLowerCase())} placeholder="vd: san_vuon_nhiet_doi" style={tmInputStyle} autoFocus />
+            {id && !idValid && <span style={{ color: '#ff6666', fontSize: '0.75rem' }}>Chỉ a-z 0-9 _</span>}
+          </div>
+          <div>
+            <label style={tmLabelStyle}>Tên hiển thị *</label>
+            <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Sân vườn nhiệt đới" style={tmInputStyle} />
+          </div>
+          <div>
+            <label style={tmLabelStyle}>Màu</label>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {TAB_COLORS.map(c => (
+                <button key={c} type="button" onClick={() => setColor(c)} style={{ width: 28, height: 28, borderRadius: '50%', background: c, border: color === c ? '3px solid #fff' : '2px solid rgba(255,255,255,0.2)', cursor: 'pointer' }} />
+              ))}
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'flex-end' }}>
+          <button onClick={onCancel} style={{ padding: '10px 18px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', cursor: 'pointer' }}>Hủy</button>
+          <button onClick={() => onCreate({ id, label, color })} disabled={!idValid || !label.trim()} style={{ padding: '10px 18px', borderRadius: '10px', background: (idValid && label.trim()) ? 'var(--accent)' : 'rgba(255,255,255,0.1)', color: (idValid && label.trim()) ? '#000' : 'rgba(255,255,255,0.5)', fontWeight: 800, border: 'none', cursor: (idValid && label.trim()) ? 'pointer' : 'default' }}>Tạo</button>
+        </div>
       </div>
     </div>
   );
