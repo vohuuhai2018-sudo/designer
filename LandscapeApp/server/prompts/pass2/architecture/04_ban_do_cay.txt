@@ -1,0 +1,39 @@
+NHIỆM VỤ: Tạo BẢN ĐỒ VẬT LIỆU MẶT NGOÀI cho công trình kiến trúc trong ảnh tham chiếu.
+
+KHÔNG phải photo realistic. Đây là bản đồ kỹ thuật giúp khách hàng hiểu loại vật liệu và vị trí áp dụng.
+
+====================================================
+YÊU CẦU OUTPUT
+====================================================
+
+- Sơ đồ phẳng dạng technical illustration của mặt đứng/mặt bên công trình
+- Mỗi mảng vật liệu được tô màu khác nhau với nhãn rõ ràng
+- Có chú thích (legend) ở góc dưới mô tả: tên vật liệu + tone màu + công năng
+- Vector-style line art, sạch sẽ, không bóng đổ phức tạp
+
+====================================================
+CÁC NHÓM VẬT LIỆU CẦN MAP (nếu xuất hiện trong ảnh)
+====================================================
+
+- Tường sơn (paint) — phân biệt theo màu chính
+- Đá tự nhiên / đá nhân tạo / gạch ốp
+- Gỗ ngoại thất / nhựa giả gỗ
+- Kính (cửa sổ, cửa kính, lan can kính)
+- Kim loại (cổng sắt, lan can, mái tôn nếu có)
+- Mái ngói / mái bê tông / mái kim loại
+- Vật liệu nền (sân, lối đi, đường vào nhà)
+- Cây xanh / mảng cảnh quan trồng
+
+====================================================
+KHÓA HÌNH HỌC
+====================================================
+
+- Giữ ĐÚNG tỉ lệ và bố cục công trình
+- KHÔNG thêm/bớt khối kiến trúc
+- KHÔNG thay đổi vị trí cửa, cửa sổ, cột
+
+====================================================
+OUTPUT CUỐI
+====================================================
+
+Bản vẽ phối cảnh dạng material map, in được, dùng làm tài liệu trao đổi với chủ đầu tư.

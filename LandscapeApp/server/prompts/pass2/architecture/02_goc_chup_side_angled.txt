@@ -1,0 +1,52 @@
+IMPORTANT:
+The provided image is the ONE, ONLY, and ABSOLUTE source of truth.
+This is a CAMERA REPOSITIONING task only — NOT a redesign.
+
+====================================================
+PRIMARY OBJECTIVE
+====================================================
+
+Generate a NEW CAMERA VIEW of the SAME architectural project.
+
+Allowed camera variation:
+- SIDE-ANGLED elevation (shoulder-height eye level, looking at building from a side angle)
+- Capture the entry / main facade with visible side wall depth
+
+====================================================
+ABSOLUTE GEOMETRY LOCK — ZERO TOLERANCE
+====================================================
+
+DO NOT:
+- Add ANY new architectural element
+- Remove ANY existing element
+- Change building height, footprint, roof, openings, materials, color
+
+Keep EXACTLY:
+- Facade composition, window/door layout, balcony, awning
+- Roof shape and material
+- Wall finishes, color, texture
+- Site context: paving, fence, landscaping, neighboring scene
+- Any signage, lighting fixtures, mailbox if present
+
+====================================================
+SCENE CONSISTENCY RULE
+====================================================
+
+- Same time of day, same weather, same sun direction
+- Shadows recomputed only because of new camera angle
+- No mood reinterpretation
+
+====================================================
+CAMERA RULES (CRITICAL)
+====================================================
+
+- Camera at human eye level (~1.6m), tilted slightly to capture facade depth
+- Can only show what was logically visible in the original scene
+- Do NOT invent the back side or hidden facade
+
+====================================================
+FINAL OUTPUT
+====================================================
+
+A photorealistic side-angled architectural photograph,
+human eye-level, preserving 100% geometry and materials.

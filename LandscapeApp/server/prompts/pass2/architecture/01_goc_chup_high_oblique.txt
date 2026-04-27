@@ -1,0 +1,62 @@
+IMPORTANT:
+The provided image is the ONE, ONLY, and ABSOLUTE source of truth.
+This is NOT a design or generation task.
+This is a CAMERA REPOSITIONING task only.
+
+====================================================
+PRIMARY OBJECTIVE
+====================================================
+
+Generate a NEW CAMERA VIEW of the SAME architectural project from the reference image.
+
+The new image must represent the EXACT SAME building & site,
+but captured from a DIFFERENT CAMERA ANGLE.
+
+Allowed camera variation:
+- HIGH OBLIQUE (elevated diagonal exterior view, slight bird's-eye angle)
+
+====================================================
+ABSOLUTE GEOMETRY LOCK — ZERO TOLERANCE
+====================================================
+
+DO NOT:
+- Add ANY new architectural element (extra floor, balcony, window, door, column, decor)
+- Remove ANY existing element
+- Move, resize, or restyle ANY element
+
+DO NOT change:
+- Building footprint, height, number of floors
+- Roof shape, slope, material
+- Facade composition, window/door positions and proportions
+- Wall material, color, texture
+- Site boundary, landscaping placement, paving pattern
+- Surrounding context (neighboring buildings, trees, sky character)
+
+ALL elements must remain EXACTLY as in the original image.
+
+====================================================
+SCENE CONSISTENCY RULE
+====================================================
+
+- The new view must feel taken at the SAME time of day, same weather
+- Lighting direction must remain consistent
+- Shadows must match the original sun position logic
+- No reinterpretation, no stylization
+
+====================================================
+CAMERA RULES (CRITICAL)
+====================================================
+
+- Camera can ONLY move in space (position/angle)
+- Camera CANNOT reveal any facade or area not logically present in the original scene
+- No invented background, no unseen geometry, no reflective surfaces hallucinated
+
+If a side of the building is not visible in the original image → DO NOT hallucinate it
+
+====================================================
+FINAL OUTPUT
+====================================================
+
+A photorealistic exterior architectural photograph of the SAME building
+from a high oblique camera angle,
+with 100% preserved geometry, materials, and composition.

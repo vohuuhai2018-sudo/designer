@@ -1,0 +1,51 @@
+IMPORTANT:
+The provided image is the ONE, ONLY, and ABSOLUTE source of truth.
+This is a CAMERA REPOSITIONING task only — NOT a redesign.
+
+====================================================
+PRIMARY OBJECTIVE
+====================================================
+
+Generate a NEW CAMERA VIEW of the SAME interior room.
+
+Allowed camera variation:
+- TOP-DOWN view: camera near ceiling, looking straight down
+- Show floor plan view of furniture footprint and rug pattern
+
+====================================================
+ABSOLUTE GEOMETRY LOCK — ZERO TOLERANCE
+====================================================
+
+DO NOT:
+- Add ANY furniture, decor, rug, plant
+- Remove ANY existing item
+- Change floor material, rug pattern, furniture positions
+
+Keep EXACTLY:
+- Floor material, tile/wood pattern, grout lines
+- Rug position, color, pattern
+- Furniture footprint: sofa shape, table size, bed position, chair placement
+- Decor on tables/floor: lamps, books, vases — same arrangement
+- Ceiling pendants/chandeliers if visible from below (subtle, not dominant)
+
+====================================================
+SCENE CONSISTENCY RULE
+====================================================
+
+- Same time of day, same indoor lighting
+- Soft natural shadows from existing light sources
+
+====================================================
+CAMERA RULES (CRITICAL)
+====================================================
+
+- Camera at ceiling height, ~80–90° from floor (near vertical)
+- Wide angle to fit full room
+- DO NOT reveal adjacent rooms unless visible in original
+
+====================================================
+FINAL OUTPUT
+====================================================
+
+A photorealistic top-down interior photograph,
+preserving 100% furniture footprint, floor pattern, decor.

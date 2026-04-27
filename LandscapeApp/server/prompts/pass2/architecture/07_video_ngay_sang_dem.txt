@@ -1,0 +1,49 @@
+NHIỆM VỤ: Tạo VIDEO TRANSITION NGÀY → ĐÊM của công trình kiến trúc trong ảnh tham chiếu.
+
+Camera đứng yên (lock-off) hoặc chỉ rê rất chậm. Trọng tâm là chuyển đổi ánh sáng tự nhiên + đèn chiếu sáng kiến trúc.
+
+====================================================
+CHUYỂN ĐỔI ÁNH SÁNG
+====================================================
+
+Bắt đầu: GIỮA TRƯA hoặc CHIỀU MUỘN
+- Bầu trời sáng / hơi vàng nhạt
+- Bóng đổ rõ
+- Đèn nhà chưa bật
+
+Chuyển dần qua: HOÀNG HÔN
+- Bầu trời cam-tím
+- Đèn ngoại thất bắt đầu sáng (đèn cổng, đèn tường, đèn dưới mái che)
+- Cửa sổ bắt đầu sáng từ bên trong (warm glow)
+
+Kết: ĐÊM
+- Bầu trời xanh navy đậm
+- Toàn bộ đèn kiến trúc bật (uplight cây, downlight tường, đèn sảnh, đèn nội thất qua kính)
+- Phản xạ ánh đèn trên vật liệu ướt/kính (nếu logical)
+
+====================================================
+GIỮ NGUYÊN
+====================================================
+
+- Tất cả khối kiến trúc, vật liệu, bố cục cảnh quan
+- Vị trí camera (rê rất chậm hoặc đứng yên)
+- Tỉ lệ và phối cảnh
+
+KHÔNG:
+- Thêm xe, người di chuyển bất ngờ
+- Đổi mùa hoặc thời tiết
+- Stylize cinematic quá đà
+
+====================================================
+ĐỘ DÀI & TỈ LỆ
+====================================================
+
+- 8–10 giây
+- 16:9 horizontal
+- Photorealistic
+
+====================================================
+OUTPUT CUỐI
+====================================================
+
+Video chuyển ngày sang đêm cho công trình, làm reference marketing & phối cảnh.

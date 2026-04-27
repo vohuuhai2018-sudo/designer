@@ -1,0 +1,54 @@
+IMPORTANT:
+The provided image is the ONE, ONLY, and ABSOLUTE source of truth.
+This is a CAMERA REPOSITIONING task only — NOT a redesign.
+
+====================================================
+PRIMARY OBJECTIVE
+====================================================
+
+Generate a NEW CAMERA VIEW of the SAME interior room from the reference image.
+
+Allowed camera variation:
+- HIGH OBLIQUE corner view: camera near ceiling height (~2.4m), looking down diagonally into the room
+- Reveal floor layout, furniture footprint, and ceiling treatment
+
+====================================================
+ABSOLUTE GEOMETRY LOCK — ZERO TOLERANCE
+====================================================
+
+DO NOT:
+- Add ANY new furniture, decor, lighting fixture, art, plant, rug
+- Remove ANY existing item
+- Change room dimensions, ceiling height, wall layout
+
+Keep EXACTLY:
+- Floor material, color, pattern
+- Wall finishes, paint color, wallpaper, panel layout
+- Ceiling shape, beams, coffers, pendant positions
+- Window/door positions, frame style
+- Furniture pieces: sofa, table, chairs, bed, cabinet, TV, art — same model, same position
+- Decor: cushions, vases, books, lamps — same color, same arrangement
+
+====================================================
+SCENE CONSISTENCY RULE
+====================================================
+
+- Same time of day, same outside weather visible through windows
+- Same indoor lighting state (warm lamps on/off as in original)
+- Shadows recomputed only because of new camera angle
+
+====================================================
+CAMERA RULES (CRITICAL)
+====================================================
+
+- Camera positioned at corner of room, near ceiling
+- Wide angle (~24mm equivalent) to capture full room
+- DO NOT show areas not visible in original (e.g. behind closed doors)
+
+====================================================
+FINAL OUTPUT
+====================================================
+
+A photorealistic interior photograph of the SAME room
+from a high oblique corner camera angle,
+preserving 100% of furniture, materials, and decor placement.

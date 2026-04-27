@@ -1,0 +1,48 @@
+NHIỆM VỤ: Tạo VIDEO INTERIOR WALK-THROUGH giữ nguyên cảnh.
+
+Camera chậm rãi đi qua / quanh phòng trong ảnh tham chiếu, không thay đổi đồ đạc, ánh sáng hay mood.
+
+====================================================
+CHUYỂN ĐỘNG CAMERA CHO PHÉP
+====================================================
+
+- Slow forward dolly (đi vào từ cửa)
+- Gentle pan trái-phải khi qua giữa phòng
+- Slight orbit quanh sofa/giường (rất chậm)
+- Camera chiều cao mắt người (~1.5m)
+
+KHÔNG dùng:
+- Cuts đột ngột
+- Zoom số
+- Hiệu ứng cinematic stylized quá đà
+- Wide-angle distortion lớn
+
+====================================================
+GIỮ NGUYÊN
+====================================================
+
+- Tất cả đồ nội thất, decor, cây cảnh
+- Vật liệu: sàn, tường, trần
+- Ánh sáng: đèn vàng đang bật/tắt y hệt ảnh
+- Mood: sang trọng, tĩnh, photorealistic
+- Cảnh ngoài cửa sổ (trời, cây) giữ nguyên
+
+====================================================
+ÂM THANH (nếu hỗ trợ)
+====================================================
+
+Ambient nhẹ: tĩnh, có thể có tiếng đồng hồ tích tắc, gió nhẹ qua cửa sổ. Không nhạc nền.
+
+====================================================
+ĐỘ DÀI & TỈ LỆ
+====================================================
+
+- 6–8 giây
+- 16:9 horizontal
+- Photorealistic
+
+====================================================
+OUTPUT CUỐI
+====================================================
+
+Video interior walkthrough chuyên nghiệp, dùng làm reference cho khách.

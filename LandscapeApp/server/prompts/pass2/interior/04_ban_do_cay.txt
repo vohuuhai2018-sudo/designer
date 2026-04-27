@@ -1,0 +1,37 @@
+NHIỆM VỤ: Tạo BẢN ĐỒ ĐỒ NỘI THẤT & VẬT LIỆU (furniture & material map) cho không gian trong ảnh tham chiếu.
+
+KHÔNG phải photorealistic. Đây là sơ đồ kỹ thuật giúp khách hàng nhận diện đồ đạc và vật liệu.
+
+====================================================
+YÊU CẦU OUTPUT
+====================================================
+
+- Bản vẽ phẳng / illustration top-down hoặc isometric
+- Mỗi nhóm vật liệu/đồ nội thất tô màu khác nhau với nhãn rõ ràng
+- Có chú thích (legend) ở góc dưới: tên vật liệu/đồ + màu + ghi chú công năng
+- Vector-style line art, sạch sẽ, không bóng đổ phức tạp
+
+====================================================
+CÁC NHÓM CẦN MAP (nếu xuất hiện trong ảnh)
+====================================================
+
+- Sàn (gỗ, gạch, đá, thảm) — phân vùng theo loại
+- Tường (sơn, ốp đá, ốp gỗ, giấy dán, panel) — phân theo bề mặt
+- Trần (phẳng, giật cấp, gỗ, thạch cao) — phân theo loại
+- Đồ rời: sofa, ghế, bàn, kệ, tủ, giường, tủ TV — đánh số hoặc tên
+- Đèn: chùm, downlight, đèn bàn, đèn sàn — chấm vị trí + chú thích
+- Decor: tranh, gương, bình, sách, cây cảnh — chấm vị trí
+
+====================================================
+KHÓA HÌNH HỌC
+====================================================
+
+- Giữ ĐÚNG kích thước phòng và tỉ lệ đồ
+- KHÔNG thêm/bớt đồ
+- KHÔNG thay phong cách
+
+====================================================
+OUTPUT CUỐI
+====================================================
+
+Bản vẽ furniture & material map, in được, dùng trao đổi với chủ đầu tư.

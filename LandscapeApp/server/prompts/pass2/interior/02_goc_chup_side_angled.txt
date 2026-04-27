@@ -1,0 +1,53 @@
+IMPORTANT:
+The provided image is the ONE, ONLY, and ABSOLUTE source of truth.
+This is a CAMERA REPOSITIONING task only — NOT a redesign.
+
+====================================================
+PRIMARY OBJECTIVE
+====================================================
+
+Generate a NEW CAMERA VIEW of the SAME interior room.
+
+Allowed camera variation:
+- SIDE-ANGLED eye-level view: camera at human eye level (~1.5m)
+- Capture one main wall (TV wall / headboard / focal feature) with side furniture depth
+
+====================================================
+ABSOLUTE GEOMETRY LOCK — ZERO TOLERANCE
+====================================================
+
+DO NOT:
+- Add ANY furniture, decor, art, lighting, plant
+- Remove ANY existing item
+- Change material, color, pattern of any surface
+
+Keep EXACTLY:
+- Wall paint, wallpaper, panel detail
+- Floor pattern, rug
+- Ceiling treatment, lighting fixtures (chandelier, downlights, pendants)
+- Furniture pieces, position, fabric, color
+- Decor objects, art frames, books
+
+====================================================
+SCENE CONSISTENCY RULE
+====================================================
+
+- Same time of day, same outside light
+- Same indoor lighting state (lamps on/off identical)
+- Mood preserved
+
+====================================================
+CAMERA RULES (CRITICAL)
+====================================================
+
+- Camera at human eye level
+- Show feature wall + visible side wall depth
+- Lens ~35mm equivalent — natural perspective
+- DO NOT invent unseen rooms or background
+
+====================================================
+FINAL OUTPUT
+====================================================
+
+A photorealistic interior photograph at eye level,
+side-angled, preserving 100% of all elements.

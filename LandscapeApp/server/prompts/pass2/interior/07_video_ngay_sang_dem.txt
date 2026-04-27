@@ -1,0 +1,49 @@
+NHIỆM VỤ: Tạo VIDEO TRANSITION NGÀY → ĐÊM cho không gian nội thất trong ảnh tham chiếu.
+
+Camera đứng yên hoặc rê rất chậm. Trọng tâm là chuyển đổi ánh sáng tự nhiên qua cửa sổ + đèn nội thất.
+
+====================================================
+CHUYỂN ĐỔI ÁNH SÁNG
+====================================================
+
+Bắt đầu: BAN NGÀY
+- Ánh sáng tự nhiên qua cửa sổ (sáng, trắng/vàng nhẹ)
+- Đèn trần & đèn bàn TẮT
+- Bóng đổ rõ từ ánh sáng cửa sổ
+
+Chuyển dần qua: HOÀNG HÔN
+- Ánh sáng cửa sổ chuyển cam/tím
+- Đèn bàn (lamp) sáng lên trước (warm tone)
+- Đèn chùm/downlight bắt đầu sáng dim
+
+Kết: ĐÊM
+- Cửa sổ tối, có thể thấy lights ngoài (street lamp) nếu logical
+- Toàn bộ đèn nội thất bật: chùm trần, downlight, đèn bàn, đèn sàn, đèn hắt tranh
+- Mood ấm cúng, cinematic interior
+
+====================================================
+GIỮ NGUYÊN
+====================================================
+
+- Tất cả đồ nội thất, decor, vật liệu
+- Vị trí camera (rê rất chậm hoặc đứng yên)
+- Tỉ lệ và phối cảnh
+
+KHÔNG:
+- Thêm người, thú cưng, đồ chuyển động
+- Đổi mùa hoặc thời tiết bên ngoài bất hợp lý
+- Stylize cinematic quá
+
+====================================================
+ĐỘ DÀI & TỈ LỆ
+====================================================
+
+- 8–10 giây
+- 16:9 horizontal
+- Photorealistic
+
+====================================================
+OUTPUT CUỐI
+====================================================
+
+Video chuyển ngày sang đêm cho không gian nội thất, dùng làm reference marketing.

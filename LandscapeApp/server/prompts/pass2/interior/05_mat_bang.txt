@@ -1,0 +1,37 @@
+NHIỆM VỤ: Tạo MẶT BẰNG NỘI THẤT (interior floor plan) từ phòng/căn hộ trong ảnh tham chiếu.
+
+Bản vẽ kỹ thuật 2D nhìn từ trên xuống, không phải photorealistic.
+
+====================================================
+THÔNG SỐ KÍCH THƯỚC PHÒNG (từ user)
+====================================================
+
+- Chiều rộng (Width):  {WIDTH} m
+- Chiều dài (Length): {LENGTH} m
+
+Tuân thủ tỉ lệ này. Vẽ thêm thước/khung kích thước nhẹ.
+
+====================================================
+YÊU CẦU
+====================================================
+
+- Floor plan dạng line art chuyên nghiệp (đen/trắng/xám + nhấn nhẹ màu pastel)
+- Hiển thị: tường (đậm), cửa (cung mở), cửa sổ, đồ nội thất (top-down icon)
+- Ghi chú tên đồ và khu vực: Sofa, Coffee Table, Bed, Wardrobe, TV Cabinet, Dining Table…
+- Mũi tên hướng cửa mở
+- Thước tỉ lệ ở góc dưới (1:50 hoặc 1:100)
+- Nếu có nhiều phòng (căn hộ): label rõ ràng "Phòng khách / Bếp / Ngủ chính / WC…"
+
+====================================================
+KHÓA HÌNH HỌC
+====================================================
+
+- Bố cục đồ phải khớp với ảnh tham chiếu
+- KHÔNG thêm đồ, không bỏ đồ
+- KHÔNG thay vị trí cửa, cửa sổ
+
+====================================================
+OUTPUT CUỐI
+====================================================
+
+Bản vẽ mặt bằng nội thất có ghi chú và thước, in được khổ A3 hoặc A4.

@@ -700,14 +700,31 @@ async function seedPass2TasksIfEmpty() {
       { id: 'video_static',       label: 'Video giữ cảnh',              order: 5, file: '06_video_giu_canh.txt',        flowConfig: { mode: 'video', variantCount: 1, aspectRatio: '16:9' } },
       { id: 'video_day_night',    label: 'Video ngày sang đêm',         order: 6, file: '07_video_ngay_sang_dem.txt',   flowConfig: { mode: 'video', variantCount: 1, aspectRatio: '16:9' } },
     ];
-    // Load prompt content 1 lần — dùng chung cho cả 3 branch
-    for (const s of baseSeeds) {
-      try { s.prompt = await fs.readFile(path.join(PROMPTS_DIR, s.file), 'utf-8'); }
-      catch (_) { s.prompt = ''; }
-      delete s.file;
+
+    // Branch-specific labels (kiến trúc/nội thất khái niệm khác landscape).
+    const branchLabelOverride = {
+      architecture: {
+        plant_map:  'Bản đồ vật liệu mặt ngoài',
+        floor_plan: 'Mặt bằng kiến trúc',
+      },
+      interior: {
+        plant_map:  'Bản đồ đồ nội thất & vật liệu',
+        floor_plan: 'Mặt bằng nội thất',
+      }
+    };
+
+    // Helper: load prompt cho 1 task của 1 branch — ưu tiên file branch riêng, fallback file landscape
+    async function loadBranchPrompt(branch, file) {
+      try {
+        if (branch !== 'landscape') {
+          return await fs.readFile(path.join(PROMPTS_DIR, branch, file), 'utf-8');
+        }
+      } catch (_) { /* fall through */ }
+      try { return await fs.readFile(path.join(PROMPTS_DIR, file), 'utf-8'); }
+      catch (_) { return ''; }
     }
 
-    // Migration: gắn branch='landscape' cho mọi record cũ không có field branch
+    // Migration legacy: gắn branch='landscape' cho mọi record cũ không có field branch
     const legacyMigrated = await Pass2Task.updateMany(
       { branch: { $exists: false } },
       { $set: { branch: 'landscape' } }
@@ -723,14 +740,43 @@ async function seedPass2TasksIfEmpty() {
     } catch (_) { /* index không tồn tại = OK */ }
     await Pass2Task.syncIndexes().catch(() => null);
 
-    // Seed cho mỗi branch nếu collection branch đó rỗng
+    // Cache landscape prompt để so sánh upgrade — record nào prompt = landscape thì là copy seed,
+    // chưa admin edit → cập nhật bằng prompt riêng cho branch.
+    const landscapePrompts = {};
+    for (const s of baseSeeds) {
+      landscapePrompts[s.id] = await loadBranchPrompt('landscape', s.file);
+    }
+
     for (const branch of ['landscape', 'architecture', 'interior']) {
       const branchCount = await Pass2Task.countDocuments({ branch });
-      if (branchCount > 0) continue;
-      console.log(`[SEED] Pass2Task branch=${branch} rỗng — đổ 7 task default...`);
-      const seeds = baseSeeds.map(s => ({ ...s, branch }));
-      await Pass2Task.insertMany(seeds);
-      console.log(`[SEED] Đã đổ ${seeds.length} pass2 task cho branch=${branch}.`);
+      if (branchCount === 0) {
+        // Branch rỗng → seed full
+        console.log(`[SEED] Pass2Task branch=${branch} rỗng — đổ 7 task default...`);
+        const seeds = [];
+        for (const s of baseSeeds) {
+          const prompt = await loadBranchPrompt(branch, s.file);
+          const label = branchLabelOverride[branch]?.[s.id] || s.label;
+          seeds.push({ ...s, branch, prompt, label, file: undefined });
+        }
+        seeds.forEach(s => delete s.file);
+        await Pass2Task.insertMany(seeds);
+        console.log(`[SEED] Đã đổ ${seeds.length} pass2 task cho branch=${branch}.`);
+      } else if (branch !== 'landscape') {
+        // Branch đã có data → upgrade các task có prompt vẫn = landscape (chưa admin edit)
+        let upgraded = 0;
+        for (const s of baseSeeds) {
+          const branchPrompt = await loadBranchPrompt(branch, s.file);
+          // Chỉ upgrade nếu (a) prompt branch tồn tại và khác landscape, (b) DB record vẫn = landscape prompt
+          if (!branchPrompt || branchPrompt === landscapePrompts[s.id]) continue;
+          const newLabel = branchLabelOverride[branch]?.[s.id] || s.label;
+          const r = await Pass2Task.updateOne(
+            { id: s.id, branch, prompt: landscapePrompts[s.id] },
+            { $set: { prompt: branchPrompt, label: newLabel } }
+          );
+          if (r.modifiedCount > 0) upgraded++;
+        }
+        if (upgraded > 0) console.log(`[SEED] Upgrade ${upgraded} task pass2 branch=${branch} sang prompt riêng.`);
+      }
     }
   } catch (e) {
     console.error('[SEED] Lỗi seed Pass2Task:', e.message);

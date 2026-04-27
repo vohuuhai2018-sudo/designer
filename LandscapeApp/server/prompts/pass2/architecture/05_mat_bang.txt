@@ -1,0 +1,36 @@
+NHIỆM VỤ: Tạo MẶT BẰNG TỔNG THỂ KIẾN TRÚC (architectural site plan) từ công trình trong ảnh tham chiếu.
+
+Đây là bản vẽ kỹ thuật 2D nhìn từ trên xuống, KHÔNG phải photo realistic.
+
+====================================================
+THÔNG SỐ KÍCH THƯỚC SITE (từ user)
+====================================================
+
+- Chiều rộng lô đất (Width):  {WIDTH} m
+- Chiều dài lô đất (Length): {LENGTH} m
+
+Mặt bằng phải tuân thủ tỉ lệ này. Vẽ thêm thước/khung kích thước nhẹ.
+
+====================================================
+YÊU CẦU
+====================================================
+
+- Vẽ floor plan / site plan dạng line art chuyên nghiệp
+- Hiển thị: ranh giới lô đất, khối nhà chính, sân, lối đi, garage, terrace, hồ bơi (nếu có), cây xanh, cổng
+- Ghi chú tên các khu vực (Sảnh, Phòng khách, Bếp, Ngủ 1, Ngủ 2, WC, Garage, Sân vườn, Lối đi…)
+- Mũi tên chỉ hướng Bắc nếu rõ
+- Thước tỉ lệ ở góc dưới (1:100 hoặc 1:200 tùy quy mô)
+
+====================================================
+KHÓA HÌNH HỌC
+====================================================
+
+- Footprint công trình phải khớp tỉ lệ với ảnh tham chiếu
+- KHÔNG thêm phòng/khối không có trong ảnh
+- KHÔNG bỏ sót yếu tố (sân, lối đi, mái che)
+
+====================================================
+OUTPUT CUỐI
+====================================================
+
+Bản vẽ mặt bằng kiến trúc đen-trắng-xám có ghi chú và thước tỉ lệ, in được khổ A3.

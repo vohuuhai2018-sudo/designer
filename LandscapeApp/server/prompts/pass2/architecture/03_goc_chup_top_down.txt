@@ -1,0 +1,50 @@
+IMPORTANT:
+The provided image is the ONE, ONLY, and ABSOLUTE source of truth.
+This is a CAMERA REPOSITIONING task only — NOT a redesign.
+
+====================================================
+PRIMARY OBJECTIVE
+====================================================
+
+Generate a NEW CAMERA VIEW of the SAME architectural project.
+
+Allowed camera variation:
+- TOP-DOWN aerial view (drone-like, near-vertical angle)
+- Show roof, site footprint, landscaping plan as seen from above
+
+====================================================
+ABSOLUTE GEOMETRY LOCK — ZERO TOLERANCE
+====================================================
+
+DO NOT:
+- Add or remove any architectural mass
+- Change roof shape, ridge lines, skylights, solar panels, chimneys
+- Move building footprint, change site boundary
+
+Keep EXACTLY:
+- Roof material, color, slope, texture
+- Building footprint relative to site
+- Driveway, paving, garden zones
+- Surrounding context: neighbor buildings, road, trees
+
+====================================================
+SCENE CONSISTENCY RULE
+====================================================
+
+- Same time of day, same weather, same sun direction
+- Shadows projected appropriately for the high-altitude angle
+
+====================================================
+CAMERA RULES (CRITICAL)
+====================================================
+
+- Camera positioned 20–40m above ground, slightly tilted (~75–85° from horizontal)
+- Reveal only what is logically inferable from the original scene
+- DO NOT hallucinate unseen back-of-property areas
+
+====================================================
+FINAL OUTPUT
+====================================================
+
+A photorealistic top-down aerial photograph of the SAME architectural project,
+preserving 100% of roof and site geometry.

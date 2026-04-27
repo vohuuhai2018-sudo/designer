@@ -1,0 +1,46 @@
+NHIỆM VỤ: Tạo VIDEO ARCHITECTURAL WALK-AROUND giữ nguyên cảnh.
+
+Camera chậm rãi di chuyển QUANH công trình kiến trúc trong ảnh tham chiếu, không thay đổi cảnh hay thời tiết.
+
+====================================================
+CHUYỂN ĐỘNG CAMERA CHO PHÉP
+====================================================
+
+- Slow lateral pan (đi ngang trước mặt đứng chính)
+- Gentle parallax orbit (di chuyển nhẹ quanh để lộ depth)
+- Slight push-in về cửa chính (tốc độ chậm, tinh tế)
+- Camera chiều cao mắt người (~1.6m) hoặc drone thấp (~3m)
+
+KHÔNG dùng:
+- Cuts đột ngột
+- Zoom số nhanh
+- Hiệu ứng cinematic glitch
+
+====================================================
+GIỮ NGUYÊN
+====================================================
+
+- Tất cả chi tiết kiến trúc (mặt tiền, cửa, mái, vật liệu, màu sắc)
+- Cảnh quan xung quanh
+- Thời gian trong ngày, hướng nắng, bầu trời
+- Mood: sang trọng, yên tĩnh, photorealistic
+
+====================================================
+ÂM THANH (nếu hỗ trợ)
+====================================================
+
+Ambient nhẹ: gió thoảng, lá cây, không nhạc nền lòe loẹt.
+
+====================================================
+ĐỘ DÀI & TỈ LỆ
+====================================================
+
+- 6–8 giây
+- 16:9 horizontal
+- Photorealistic, không stylized
+
+====================================================
+OUTPUT CUỐI
+====================================================
+
+Video architectural walk-around chuyên nghiệp dùng làm reference cho khách hàng.
