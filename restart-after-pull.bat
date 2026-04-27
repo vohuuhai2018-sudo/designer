@@ -13,10 +13,10 @@ taskkill /F /IM node.exe 2>nul
 taskkill /F /IM ngrok.exe 2>nul
 timeout /t 2 /nobreak >nul
 
-:: 2. Pull code moi nhat
+:: 2. Pull code moi nhat (file nay nam o root repo "designer")
 echo.
 echo [2/5] Git pull...
-cd /d "%~dp0\.."
+cd /d "%~dp0"
 git pull --rebase
 if errorlevel 1 (
     echo.
@@ -28,16 +28,15 @@ if errorlevel 1 (
 :: 3. npm install neu package.json doi
 echo.
 echo [3/5] Cap nhat dependencies (FE + BE)...
-cd /d "%~dp0"
+cd /d "%~dp0LandscapeApp"
 call npm install --silent --no-audit --no-fund
 cd server
 call npm install --silent --no-audit --no-fund
-cd ..
 
 :: 4. Start backend trong cua so moi
 echo.
 echo [4/5] Khoi dong Backend (port 5000)...
-start "Sonhai Backend" cmd /k "cd /d %~dp0server && node index.js"
+start "Sonhai Backend" cmd /k "cd /d %~dp0LandscapeApp\server && node index.js"
 timeout /t 3 /nobreak >nul
 
 :: 5. Start ngrok trong cua so moi
