@@ -277,54 +277,21 @@ async function countComposerAttachments(page) {
   });
 }
 
-// DIAG: Diagnostic helper to dump composer DOM structure for debugging paste failures
-async function dumpComposerDom(page, label) { // DIAG
-  try { // DIAG
-    const info = await page.evaluate(() => { // DIAG
-      const target = document.querySelector('div[role="textbox"][contenteditable="true"]'); // DIAG
-      if (!target) return { error: 'no_textbox' }; // DIAG
-      let composer = target; // DIAG
-      for (let i = 0; i < 10; i++) { // DIAG
-        if (!composer.parentElement) break; // DIAG
-        composer = composer.parentElement; // DIAG
-        if ((composer.textContent || '').includes('arrow_forward')) break; // DIAG
-      } // DIAG
-      const allImgs = Array.from(composer.querySelectorAll('img')).map((img) => { // DIAG
-        const r = img.getBoundingClientRect(); // DIAG
-        const src = img.currentSrc || img.src || ''; // DIAG
-        return { srcPattern: src.slice(0, 120), w: r.width, h: r.height, complete: img.complete, naturalW: img.naturalWidth, visible: r.width > 0 && r.height > 0 }; // DIAG
-      }); // DIAG
-      const html = composer.outerHTML || ''; // DIAG
-      return { outerHTML: html.slice(0, 3000), outerHTMLLen: html.length, imgCount: allImgs.length, imgs: allImgs }; // DIAG
-    }); // DIAG
-    console.log(`[Flow:diag][dump:${label}] outerHTMLLen=${info.outerHTMLLen ?? 'N/A'} imgCount=${info.imgCount ?? 0}`); // DIAG
-    console.log(`[Flow:diag][dump:${label}] imgs=`, JSON.stringify(info.imgs || []).slice(0, 1500)); // DIAG
-    console.log(`[Flow:diag][dump:${label}] outerHTML(3000)=`, info.outerHTML || info.error || ''); // DIAG
-  } catch (e) { // DIAG
-    console.log(`[Flow:diag][dump:${label}] error: ${e.message}`); // DIAG
-  } // DIAG
-} // DIAG
-
 // Paste 1 ảnh bằng phương thức THẬT: navigator.clipboard.write() + Meta+V / Ctrl+V
 // Lý do: Flow của Google bỏ qua synthetic ClipboardEvent dispatch; phải dùng paste real từ keyboard.
 // LƯU Ý: navigator.clipboard.write() yêu cầu page có FOCUS (Document is focused) — nếu Playwright
 // chạy trong cửa sổ background, nó sẽ throw "Document is not focused".
 async function pasteSingleImageReal(page, fileInfo) {
   // 1. Bring page to front để có focus thật
-  let bringOk = true; // DIAG
-  try { await page.bringToFront(); } catch (e) { bringOk = false; /* ignore */ } // DIAG: track bringToFront result
-  console.log(`[Flow:diag] bringToFront ok=${bringOk}`); // DIAG: log focus bring success/fail
+  let bringOk = true;
+  try { await page.bringToFront(); } catch (e) { bringOk = false; /* ignore */ }
 
   // 2. Click vào textbox composer trước để document có user activation + element focus
   const promptBox = await getPromptLocator(page);
   await promptBox.click();
-  const promptRect = await promptBox.boundingBox().catch(() => null); // DIAG: capture promptBox geometry
-  console.log(`[Flow:diag] promptBox.click done rect=${JSON.stringify(promptRect)}`); // DIAG
   await delay(150);
 
   // 3. Set clipboard với image; nếu Playwright window không focus, thử bringToFront + retry
-  const preFocus = await page.evaluate(() => document.hasFocus()).catch(() => null); // DIAG: doc focus before clipboard.write
-  console.log(`[Flow:diag] before clipboard.write docFocus=${preFocus} mimeType=${fileInfo.mimeType} b64Len=${(fileInfo.base64 || '').length}`); // DIAG
   const writeResult = await page.evaluate(async ({ b64, mimeType }) => {
     const target = document.querySelector('div[role="textbox"][contenteditable="true"]');
     if (!target) return { ok: false, error: 'no_textbox' };
@@ -371,7 +338,6 @@ async function pasteSingleImageReal(page, fileInfo) {
       return { ok: false, error: 'clipboard_write_failed:' + writeErr.message, blobSize: blob.size };
     }
   }, { b64: fileInfo.base64, mimeType: fileInfo.mimeType });
-  console.log(`[Flow:diag] clipboard.write result=${JSON.stringify(writeResult)}`); // DIAG: full writeResult
 
   if (!writeResult.ok) {
     // Fallback: dùng CDP để set clipboard ở OS level (không cần document focus)
@@ -435,13 +401,11 @@ async function pasteSingleImageReal(page, fileInfo) {
   await promptBox.click();
   await delay(150);
   const isMac = process.platform === 'darwin';
-  const keyCombo = isMac ? 'Meta+V' : 'Control+V'; // DIAG
-  const focusBeforePress = await page.evaluate(() => document.hasFocus()).catch(() => null); // DIAG: confirm focus right before paste
-  console.log(`[Flow:diag] keyboard.press combo=${keyCombo} docFocus=${focusBeforePress}`); // DIAG
+  const keyCombo = isMac ? 'Meta+V' : 'Control+V';
+  const focusBeforePress = await page.evaluate(() => document.hasFocus()).catch(() => null);
   await page.keyboard.press(keyCombo);
-  await delay(500); // DIAG: small wait so DOM can settle for the immediate count read
-  const immediateCount = await countComposerAttachments(page).catch(() => -1); // DIAG
-  console.log(`[Flow:diag] post-paste immediate composer attachment count=${immediateCount}`); // DIAG
+  await delay(500);
+  const immediateCount = await countComposerAttachments(page).catch(() => -1);
 }
 
 async function pasteAssetsIntoPrompt(page, clipboardFiles) {
@@ -449,7 +413,6 @@ async function pasteAssetsIntoPrompt(page, clipboardFiles) {
   const promptBox = await getPromptLocator(page);
   await promptBox.waitFor({ state: 'visible', timeout: 30000 });
   await promptBox.click();
-  await dumpComposerDom(page, 'after-nav-composer-ready'); // DIAG: snapshot composer before any paste
 
   for (let i = 0; i < clipboardFiles.length; i++) {
     const fileInfo = clipboardFiles[i];
@@ -458,7 +421,6 @@ async function pasteAssetsIntoPrompt(page, clipboardFiles) {
     let pastedOk = false;
     for (let attempt = 1; attempt <= 3 && !pastedOk; attempt++) {
       const before = await countComposerAttachments(page);
-      console.log(`[Flow:diag] attempt ${attempt} for image ${i}, before count=${before}, expected=${expectedAfter}`); // DIAG
       console.log(`[Flow] Paste anh ${i + 1}/${clipboardFiles.length} (lan ${attempt}): hien co ${before} attachment, can len ${expectedAfter}.`);
 
       try {
@@ -494,31 +456,9 @@ async function pasteAssetsIntoPrompt(page, clipboardFiles) {
           { timeout: 20000 }
         );
         pastedOk = true;
-        const afterOk = await countComposerAttachments(page).catch(() => -1); // DIAG
-        console.log(`[Flow:diag] waitForFunction OK: final count=${afterOk}, matched selector=media.getMediaUrlRedirect|labs.google/fx/api/trpc/media`); // DIAG
         console.log(`[Flow] ✓ Anh ${i + 1}/${clipboardFiles.length} da xuat hien thumbnail trong composer.`);
       } catch (waitErr) {
-        const after = await countComposerAttachments(page);
-        console.log(`[Flow:diag] waitForFunction TIMEOUT: final count=${after}, expected=${expectedAfter}`); // DIAG
-        // DIAG: when count is 0 dump all imgs in composer to inspect what's actually there
-        const composerImgInfo = await page.evaluate(() => { // DIAG
-          const target = document.querySelector('div[role="textbox"][contenteditable="true"]'); // DIAG
-          if (!target) return { error: 'no_textbox' }; // DIAG
-          let composer = target; // DIAG
-          for (let k = 0; k < 10; k++) { // DIAG
-            if (!composer.parentElement) break; // DIAG
-            composer = composer.parentElement; // DIAG
-            if ((composer.textContent || '').includes('arrow_forward')) break; // DIAG
-          } // DIAG
-          const imgs = Array.from(composer.querySelectorAll('img')); // DIAG
-          return { // DIAG
-            outerHTMLLen: (composer.outerHTML || '').length, // DIAG
-            allImgCount: imgs.length, // DIAG
-            srcPatterns: imgs.map((i) => (i.currentSrc || i.src || '').slice(0, 100)) // DIAG
-          }; // DIAG
-        }); // DIAG
-        console.log(`[Flow:diag] composer state on timeout=${JSON.stringify(composerImgInfo)}`); // DIAG
-        if (attempt === 1) await dumpComposerDom(page, `paste-fail-img${i}`); // DIAG: dump on first failure
+        const after = await countComposerAttachments(page).catch(() => -1);
         console.warn(`[Flow] Anh ${i + 1} chua thay thumbnail sau khi paste (sau=${after}, can=${expectedAfter}). Thu lai...`);
         await delay(1500);
       }
