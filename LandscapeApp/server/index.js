@@ -8,7 +8,7 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { runChatGptAutomation, runChatGptAutomationBatch } = require('./chatgptAutomation');
 const { runFlowAutomation, runFlowVideoAutomation } = require('./flowAutomation');
 const { generateLandscapePrompt } = require('./geminiPromptService');
-const { runPass2Tasks, runSinglePass2Task, initPass2State, PASS2_TASKS } = require('./pass2Automation');
+const { runPass2Tasks, runSinglePass2Task, initPass2State, getTaskById: getPass2TaskById } = require('./pass2Automation');
 
 // Helper để tìm Link ảnh mẫu nếu FrontEnd chỉ gửi ID (hoặc fix cho các ca cũ)
 function resolveThacUrl(selections) {
@@ -1251,7 +1251,7 @@ app.post('/api/projects/:id/pass2', async (req, res) => {
       return res.status(409).json({ error: 'Pass 2 đang chạy cho dự án này, vui lòng chờ.' });
     }
 
-    const initial = initPass2State(referenceImageUrl, dimensions);
+    const initial = await initPass2State(referenceImageUrl, dimensions);
     await Project.findOneAndUpdate(
       { id: req.params.id },
       { $set: { pass2Results: initial } },
@@ -1345,7 +1345,7 @@ app.post('/api/projects/:id/pass2/retry', async (req, res) => {
     if (!project) return res.status(404).json({ error: 'Project not found' });
     if (!project.pass2Results) return res.status(400).json({ error: 'Project chưa có pass2Results.' });
 
-    const taskDef = PASS2_TASKS.find(t => t.id === taskId);
+    const taskDef = await getPass2TaskById(taskId);
     if (!taskDef) return res.status(400).json({ error: `Không tìm thấy task ${taskId}.` });
 
     const existing = project.pass2Results.tasks.find(t => t.taskId === taskId);

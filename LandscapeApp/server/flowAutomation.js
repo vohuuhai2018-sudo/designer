@@ -899,11 +899,19 @@ async function fillPromptBox(promptBox, prompt) {
   console.log(`[FlowV2] Prompt da vao o chat (${currentValue.trim().length} ky tu).`);
 }
 
-async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady, variantCount = 4) {
+async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady, flowConfig = {}) {
   const outputPaths = [];
   let chatUrl = 'https://labs.google/fx/vi/tools/flow';
-  const targetCount = variantCount === 1 ? 1 : 4;
+  // Backwards-compat: support old caller passing `variantCount` (number) instead of flowConfig object
+  const config = (typeof flowConfig === 'number') ? { variantCount: flowConfig } : (flowConfig || {});
+  const mode = config.mode === 'video' ? 'video' : 'image';
+  const variantCount = [1, 2, 3, 4].includes(config.variantCount) ? config.variantCount : 4;
+  const aspectRatio = ['16:9', '4:3', '1:1', '3:4', '9:16'].includes(config.aspectRatio) ? config.aspectRatio : '16:9';
+  const targetCount = variantCount;
   const variantLabel = `x${targetCount}`;
+  const modeTabRegex = mode === 'video' ? /videocamVideo/ : /imageHình ảnh/;
+  // Aspect ratio button text trong Flow menu format kiểu: "crop_16_916:9", "crop_landscape4:3", "crop_square1:1", "crop_portrait3:4", "crop_9_169:16"
+  const aspectRegex = new RegExp(aspectRatio.replace(':', ':').replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(':', ':') + '$');
 
   try {
     console.log('[FlowV2] Truy cap trang chu Flow...');
@@ -930,36 +938,50 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
 
     chatUrl = page.url();
 
-    // === ĐẢM BẢO CHẾ ĐỘ HÌNH ẢNH + ${variantLabel} TRƯỚC KHI LÀM GÌ KHÁC ===
+    // === CẤU HÌNH MODE + ASPECT RATIO + VARIANT COUNT ===
     try {
-      console.log(`[FlowV2] Cau hinh che do Hinh anh + ${variantLabel}...`);
+      console.log(`[FlowV2] Cau hinh mode=${mode} aspect=${aspectRatio} variants=${variantLabel}...`);
       const configBtn = page.locator('button').filter({ hasText: /Video.*x|Hình ảnh.*x|Nano.*x|crop/ }).first();
       if (await configBtn.count() > 0) {
         await configBtn.click();
         await delay(1500);
 
-        // Click tab Hình ảnh
-        const imageTabBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: /imageHình ảnh/ }).first();
-        if (await imageTabBtn.count() > 0) {
-          const isSelected = await imageTabBtn.getAttribute('aria-selected');
+        // 1. Tab mode (Hình ảnh / Video)
+        const modeTabBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: modeTabRegex }).first();
+        if (await modeTabBtn.count() > 0) {
+          const isSelected = await modeTabBtn.getAttribute('aria-selected');
           if (isSelected !== 'true') {
-            await imageTabBtn.click();
+            await modeTabBtn.click();
             await delay(1000);
-            console.log('[FlowV2] Da chuyen sang tab Hinh anh.');
+            console.log(`[FlowV2] Da chuyen sang tab ${mode}.`);
           } else {
-            console.log('[FlowV2] Da dang o tab Hinh anh.');
+            console.log(`[FlowV2] Da dang o tab ${mode}.`);
           }
         }
 
-        // Chọn variant count (x1 hoặc x4)
-        const variantBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: new RegExp(`^${variantLabel}$`) }).first();
-        if (await variantBtn.count() > 0) {
-          await variantBtn.click();
-          await delay(500);
-          console.log(`[FlowV2] Da chon ${variantLabel}.`);
+        // 2. Aspect ratio (16:9 / 4:3 / 1:1 / 3:4 / 9:16) — match suffix of button text
+        const aspectBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: aspectRegex }).first();
+        if (await aspectBtn.count() > 0) {
+          const isSelected = await aspectBtn.getAttribute('aria-selected');
+          if (isSelected !== 'true') {
+            await aspectBtn.click();
+            await delay(500);
+            console.log(`[FlowV2] Da chon aspect ${aspectRatio}.`);
+          }
         }
 
-        // Đóng config panel bằng click lại config button (toggle)
+        // 3. Variant count (x1 / x2 / x3 / x4)
+        const variantBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: new RegExp(`^${variantLabel}$`) }).first();
+        if (await variantBtn.count() > 0) {
+          const isSelected = await variantBtn.getAttribute('aria-selected');
+          if (isSelected !== 'true') {
+            await variantBtn.click();
+            await delay(500);
+            console.log(`[FlowV2] Da chon ${variantLabel}.`);
+          }
+        }
+
+        // 4. Đóng config panel bằng click lại config button (toggle)
         await configBtn.click();
         await delay(800);
         console.log('[FlowV2] Da dong config panel.');
@@ -1130,9 +1152,15 @@ function scheduleIdleClose() {
   }, IDLE_CLOSE_MS);
 }
 
-async function runFlowAutomation({ prompt, assets, onImageReady, variantCount = 4 }) {
+async function runFlowAutomation({ prompt, assets, onImageReady, variantCount, flowConfig }) {
   const tempDir = path.join(os.tmpdir(), `landscape-flow-${Date.now()}`);
   await ensureDirectory(tempDir);
+
+  // Nếu caller truyền flowConfig (mới) — dùng object đó. Nếu truyền variantCount (cũ) — wrap thành object.
+  const config = flowConfig && typeof flowConfig === 'object'
+    ? flowConfig
+    : { variantCount: typeof variantCount === 'number' ? variantCount : 4 };
+  const expectCount = [1, 2, 3, 4].includes(config.variantCount) ? config.variantCount : 4;
 
   const inputFiles = [];
 
@@ -1151,8 +1179,8 @@ async function runFlowAutomation({ prompt, assets, onImageReady, variantCount = 
 
     const stopWatcher = startDialogWatcher(page, 'image');
     try {
-      const { outputPaths, chatUrl } = await runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady, variantCount);
-      console.log(`[AUTO-FLOW] Hoàn tất. Lấy được ${outputPaths.length}/${variantCount} ảnh.`);
+      const { outputPaths, chatUrl } = await runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady, config);
+      console.log(`[AUTO-FLOW] Hoàn tất. Lấy được ${outputPaths.length}/${expectCount} ảnh.`);
       return { outputPaths, chatUrl };
     } finally {
       stopWatcher();
@@ -1167,9 +1195,11 @@ async function runFlowAutomation({ prompt, assets, onImageReady, variantCount = 
 }
 
 // ===== VIDEO AUTOMATION =====
-async function runFlowVideoAutomation({ prompt, imageUrl, onVideoReady }) {
+async function runFlowVideoAutomation({ prompt, imageUrl, onVideoReady, flowConfig }) {
   const tempDir = path.join(os.tmpdir(), `landscape-flow-video-${Date.now()}`);
   await ensureDirectory(tempDir);
+
+  const config = flowConfig && typeof flowConfig === 'object' ? flowConfig : {};
 
   const inputFiles = [];
 
@@ -1189,7 +1219,7 @@ async function runFlowVideoAutomation({ prompt, imageUrl, onVideoReady }) {
 
     const stopWatcher = startDialogWatcher(page, 'video');
     try {
-      const result = await runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideoReady);
+      const result = await runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideoReady, config);
       console.log(`[AUTO-VIDEO] Hoàn tất. Video: ${result.videoPath ? 'OK' : 'KHÔNG CÓ'}`);
       return result;
     } finally {
@@ -1203,9 +1233,13 @@ async function runFlowVideoAutomation({ prompt, imageUrl, onVideoReady }) {
   }
 }
 
-async function runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideoReady) {
+async function runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideoReady, flowConfig = {}) {
   let videoPath = null;
   let chatUrl = 'https://labs.google/fx/vi/tools/flow';
+  const variantCount = [1, 2, 3, 4].includes(flowConfig.variantCount) ? flowConfig.variantCount : 1;
+  const aspectRatio = ['16:9', '4:3', '1:1', '3:4', '9:16'].includes(flowConfig.aspectRatio) ? flowConfig.aspectRatio : '16:9';
+  const variantLabel = `x${variantCount}`;
+  const aspectRegex = new RegExp(aspectRatio.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$');
 
   try {
     console.log('[FlowVideo] Truy cập trang chủ Flow...');
@@ -1232,8 +1266,8 @@ async function runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideo
 
     chatUrl = page.url();
 
-    // === CẤU HÌNH: Video + 16:9 + x1 ===
-    console.log('[FlowVideo] Cấu hình chế độ Video + 16:9 + x1...');
+    // === CẤU HÌNH: Video + aspectRatio + variantLabel ===
+    console.log(`[FlowVideo] Cấu hình chế độ Video + ${aspectRatio} + ${variantLabel}...`);
     try {
       const configBtn = page.locator('button').filter({ hasText: /Video.*x|Hình ảnh.*x|Nano.*x|crop/ }).first();
       if (await configBtn.count() > 0) {
@@ -1266,20 +1300,23 @@ async function runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideo
           }
         }
 
-        // Chọn 16:9
-        const ratio169 = page.locator('button.flow_tab_slider_trigger').filter({ hasText: /16:9/ }).first();
-        if (await ratio169.count() > 0) {
-          await ratio169.click();
-          await delay(500);
-          console.log('[FlowVideo] Đã chọn 16:9.');
+        // Chọn aspect ratio (16:9 / 4:3 / 1:1 / 3:4 / 9:16)
+        const aspectBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: aspectRegex }).first();
+        if (await aspectBtn.count() > 0) {
+          const isSelected = await aspectBtn.getAttribute('aria-selected');
+          if (isSelected !== 'true') {
+            await aspectBtn.click();
+            await delay(500);
+            console.log(`[FlowVideo] Đã chọn ${aspectRatio}.`);
+          }
         }
 
-        // Chọn x1
-        const x1Btn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: /^x1$/ }).first();
+        // Chọn variant count (x1/x2/x3/x4)
+        const x1Btn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: new RegExp(`^${variantLabel}$`) }).first();
         if (await x1Btn.count() > 0) {
           await x1Btn.click();
           await delay(500);
-          console.log('[FlowVideo] Đã chọn x1.');
+          console.log(`[FlowVideo] Đã chọn ${variantLabel}.`);
         }
 
         // Đóng config panel bằng click lại config button (toggle)

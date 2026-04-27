@@ -1,28 +1,55 @@
 const fs = require('fs/promises');
 const path = require('path');
+const mongoose = require('mongoose');
 const { runFlowAutomation, runFlowVideoAutomation } = require('./flowAutomation');
 
 const PROMPTS_DIR = path.join(__dirname, 'prompts', 'pass2');
+// Fallback file lookup nếu DB task có prompt rỗng (tránh chạy với prompt trống).
+const FALLBACK_PROMPT_FILE = {
+  angle_high_oblique: '01_goc_chup_high_oblique.txt',
+  angle_side: '02_goc_chup_side_angled.txt',
+  angle_top_down: '03_goc_chup_top_down.txt',
+  plant_map: '04_ban_do_cay.txt',
+  floor_plan: '05_mat_bang.txt',
+  video_static: '06_video_giu_canh.txt',
+  video_day_night: '07_video_ngay_sang_dem.txt'
+};
 
-const PASS2_TASKS = [
-  { id: 'angle_high_oblique', type: 'image', promptFile: '01_goc_chup_high_oblique.txt', label: 'Góc cao chéo (high oblique)' },
-  { id: 'angle_side',         type: 'image', promptFile: '02_goc_chup_side_angled.txt',  label: 'Góc ngang (side-angled)' },
-  { id: 'angle_top_down',     type: 'image', promptFile: '03_goc_chup_top_down.txt',     label: 'Góc từ trên xuống (top-down)' },
-  { id: 'plant_map',          type: 'image', promptFile: '04_ban_do_cay.txt',            label: 'Bản đồ cây' },
-  { id: 'floor_plan',         type: 'image', promptFile: '05_mat_bang.txt',              label: 'Mặt bằng' },
-  { id: 'video_static',       type: 'video', promptFile: '06_video_giu_canh.txt',        label: 'Video giữ cảnh' },
-  { id: 'video_day_night',    type: 'video', promptFile: '07_video_ngay_sang_dem.txt',   label: 'Video ngày sang đêm' }
-];
-
-async function loadPrompt(file, replacements = {}) {
-  let text = await fs.readFile(path.join(PROMPTS_DIR, file), 'utf-8');
+function applyReplacements(text, replacements = {}) {
   for (const [key, value] of Object.entries(replacements)) {
     text = text.split(`{${key}}`).join(String(value));
   }
   return text;
 }
 
-function initPass2State(referenceImageUrl, dimensions) {
+async function getActiveTasks() {
+  const Pass2Task = mongoose.model('Pass2Task');
+  return await Pass2Task.find({ hidden: { $ne: true } }).sort({ order: 1 }).lean();
+}
+
+async function getTaskById(id) {
+  const Pass2Task = mongoose.model('Pass2Task');
+  return await Pass2Task.findOne({ id }).lean();
+}
+
+function deriveType(task) {
+  return task?.flowConfig?.mode === 'video' ? 'video' : 'image';
+}
+
+async function resolveTaskPrompt(task, replacements) {
+  let text = task?.prompt;
+  if (!text || !text.trim()) {
+    const file = FALLBACK_PROMPT_FILE[task?.id];
+    if (file) {
+      try { text = await fs.readFile(path.join(PROMPTS_DIR, file), 'utf-8'); }
+      catch (_) { text = ''; }
+    }
+  }
+  return applyReplacements(text || '', replacements);
+}
+
+async function initPass2State(referenceImageUrl, dimensions) {
+  const tasks = await getActiveTasks();
   return {
     referenceImageUrl,
     dimensions: {
@@ -32,9 +59,9 @@ function initPass2State(referenceImageUrl, dimensions) {
     status: 'running',
     startedAt: new Date(),
     completedAt: null,
-    tasks: PASS2_TASKS.map(t => ({
+    tasks: tasks.map(t => ({
       taskId: t.id,
-      type: t.type,
+      type: deriveType(t),
       label: t.label,
       status: 'pending',
       url: null,
@@ -46,13 +73,15 @@ function initPass2State(referenceImageUrl, dimensions) {
 
 async function _runAttempt(task, prompt, referenceImageUrl, onImageReady, onVideoReady) {
   const refAsset = { url: referenceImageUrl, label: 'pass2_reference' };
+  const flowConfig = task.flowConfig || {};
+  const taskType = deriveType(task);
 
-  if (task.type === 'image') {
+  if (taskType === 'image') {
     let uploadedCount = 0;
     const result = await runFlowAutomation({
       prompt,
       assets: [refAsset],
-      variantCount: 1,
+      flowConfig,
       onImageReady: async (localPath) => {
         try {
           await onImageReady?.(task, localPath);
@@ -75,6 +104,7 @@ async function _runAttempt(task, prompt, referenceImageUrl, onImageReady, onVide
     const result = await runFlowVideoAutomation({
       prompt,
       imageUrl: referenceImageUrl,
+      flowConfig,
       onVideoReady: async (localPath) => {
         videoLocalPath = localPath;
         try {
@@ -95,20 +125,24 @@ async function _runAttempt(task, prompt, referenceImageUrl, onImageReady, onVide
 }
 
 async function runSinglePass2Task({
-  task,
+  task,         // task object đã có flowConfig + prompt (legacy + ưu tiên)
+  taskId,       // hoặc chỉ taskId — sẽ tự load từ DB
   referenceImageUrl,
   dimensions,
   onImageReady,
   onVideoReady,
   onTaskEvent,
-  maxAttempts = 2  // 1 lần chính + 1 retry tự động
+  maxAttempts = 2
 }) {
+  if (!task && taskId) task = await getTaskById(taskId);
+  if (!task) throw new Error('Pass2 task not found');
+
   const width = dimensions?.width || 4;
   const length = dimensions?.length || 4;
 
   try {
     await onTaskEvent?.({ taskId: task.id, status: 'running', error: null });
-    const prompt = await loadPrompt(task.promptFile, { WIDTH: width, LENGTH: length });
+    const prompt = await resolveTaskPrompt(task, { WIDTH: width, LENGTH: length });
 
     let lastError = null;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -137,9 +171,10 @@ async function runSinglePass2Task({
     });
     return { taskId: task.id, status: 'failed', error: lastError };
   } catch (err) {
-    console.error(`[Pass2][${task.id}] FAILED:`, err?.message || err);
-    await onTaskEvent?.({ taskId: task.id, status: 'failed', error: err?.message || String(err) });
-    return { taskId: task.id, status: 'failed', error: err?.message || String(err) };
+    const tid = task?.id || taskId;
+    console.error(`[Pass2][${tid}] FAILED:`, err?.message || err);
+    await onTaskEvent?.({ taskId: tid, status: 'failed', error: err?.message || String(err) });
+    return { taskId: tid, status: 'failed', error: err?.message || String(err) };
   }
 }
 
@@ -154,7 +189,12 @@ async function runPass2Tasks({
     throw new Error('Thiếu referenceImageUrl cho Pass 2.');
   }
 
-  const promises = PASS2_TASKS.map(task => runSinglePass2Task({
+  const tasks = await getActiveTasks();
+  if (tasks.length === 0) {
+    console.warn('[Pass2] Không có task nào active trong DB. Skip.');
+    return [];
+  }
+  const promises = tasks.map(task => runSinglePass2Task({
     task, referenceImageUrl, dimensions, onImageReady, onVideoReady, onTaskEvent
   }));
   const results = await Promise.allSettled(promises);
@@ -162,8 +202,9 @@ async function runPass2Tasks({
 }
 
 module.exports = {
-  PASS2_TASKS,
   initPass2State,
   runPass2Tasks,
-  runSinglePass2Task
+  runSinglePass2Task,
+  getActiveTasks,
+  getTaskById
 };
