@@ -364,6 +364,11 @@ mongoose.connect(process.env.MONGO_URI, {
     // Khôi phục các project bị bỏ dở sau khi restart server
     // setTimeout(resumePendingProjects, 5000); // ⛔ Tạm dừng khôi phục ChatGPT cũ theo yêu cầu khách hàng
     setTimeout(sweepStuckPass2, 3000);
+    // Seed Tab + Pass2Task collections nếu rỗng (1 lần đầu sau khi triển khai)
+    setTimeout(async () => {
+      await seedTabsIfEmpty();
+      await seedPass2TasksIfEmpty();
+    }, 4000);
   })
   .catch(err => console.error('MongoDB connection error:', err));
 
@@ -534,6 +539,39 @@ const SystemContentSchema = new mongoose.Schema({
 }, { timestamps: true });
 const SystemContent = mongoose.model('SystemContent', SystemContentSchema);
 
+// ============================================================
+// TAB SCHEMA — Mỗi nhánh (landscape/architecture/interior) có nhiều tab.
+// Admin CRUD-able từ Prompt Editor.
+// soft delete: hidden=true thì khách không thấy nhưng project cũ vẫn ref được.
+// ============================================================
+const FlowConfigSubSchema = new mongoose.Schema({
+  mode: { type: String, enum: ['image', 'video'], default: 'image' },
+  variantCount: { type: Number, enum: [1, 2, 3, 4], default: 4 },
+  aspectRatio: { type: String, enum: ['16:9', '4:3', '1:1', '3:4', '9:16'], default: '16:9' }
+}, { _id: false });
+
+const TabSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true, index: true },   // slug
+  branch: { type: String, enum: ['landscape', 'architecture', 'interior'], required: true, index: true },
+  label: { type: String, required: true },
+  color: { type: String, default: '#d4a373' },
+  order: { type: Number, default: 0 },
+  prompt: { type: String, default: '' },
+  flowConfig: { type: FlowConfigSubSchema, default: () => ({}) },
+  hidden: { type: Boolean, default: false }
+}, { timestamps: true });
+const Tab = mongoose.model('Tab', TabSchema);
+
+const Pass2TaskSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true, index: true },
+  label: { type: String, required: true },
+  order: { type: Number, default: 0 },
+  prompt: { type: String, default: '' },
+  flowConfig: { type: FlowConfigSubSchema, default: () => ({ mode: 'image', variantCount: 1, aspectRatio: '16:9' }) },
+  hidden: { type: Boolean, default: false }
+}, { timestamps: true });
+const Pass2Task = mongoose.model('Pass2Task', Pass2TaskSchema);
+
 global._projectModelReady = true; // Cho phép resumePendingProjects chạy
 
 // Startup sweep: mark task pass2 bị stuck 'running' (do server restart giữa chừng) → failed
@@ -584,6 +622,188 @@ const uploadToCloudinary = async (fileStr) => {
   console.error(`Cloudinary: bỏ cuộc sau 3 lần với file ${fileStr}`);
   return fileStr;
 };
+
+// ============================================================
+// SEED: 1 lần đổ data tab + pass2 task mặc định nếu collection rỗng.
+// Idempotent — chạy nhiều lần không sao.
+// ============================================================
+async function seedTabsIfEmpty() {
+  try {
+    const count = await Tab.countDocuments();
+    if (count > 0) return;
+    console.log('[SEED] Tab collection rỗng — đổ data mặc định từ SystemContent...');
+    const sys = (await SystemContent.findOne({ key: 'main' }).lean()) || {};
+    const seeds = [
+      // landscape
+      { id: 'ho_co_dien',     branch: 'landscape',    label: 'Hồ Koi Cổ Điển',     color: '#d4a373', order: 0, prompt: sys.promptBasic        || '', flowConfig: { mode: 'image', variantCount: 4, aspectRatio: '16:9' } },
+      { id: 'ho_hien_dai',    branch: 'landscape',    label: 'Hồ Koi Hiện Đại',    color: '#3b82f6', order: 1, prompt: sys.promptHoHienDai    || '', flowConfig: { mode: 'image', variantCount: 4, aspectRatio: '16:9' } },
+      { id: 'tuong_da',       branch: 'landscape',    label: 'Tường Đá Nhân Tạo',  color: '#22c55e', order: 2, prompt: sys.promptTuongDa      || '', flowConfig: { mode: 'image', variantCount: 4, aspectRatio: '16:9' } },
+      { id: 'cafe_san_vuon',  branch: 'landscape',    label: 'Cà Phê Sân Vườn',    color: '#f59e0b', order: 3, prompt: sys.promptCafeSanVuon  || '', flowConfig: { mode: 'image', variantCount: 4, aspectRatio: '16:9' } },
+      { id: 'advanced',       branch: 'landscape',    label: 'Nâng cao / Premium', color: '#6366f1', order: 4, prompt: sys.promptAdvanced     || '', flowConfig: { mode: 'image', variantCount: 4, aspectRatio: '16:9' } },
+      { id: 'video',          branch: 'landscape',    label: 'Video AI',           color: '#ec4899', order: 5, prompt: sys.promptVideo        || '', flowConfig: { mode: 'video', variantCount: 1, aspectRatio: '16:9' } },
+      // architecture
+      { id: 'nha_pho',        branch: 'architecture', label: 'Nhà Phố',            color: '#3b82f6', order: 0, prompt: sys.promptNhaPho       || '', flowConfig: { mode: 'image', variantCount: 4, aspectRatio: '16:9' } },
+      { id: 'biet_thu',       branch: 'architecture', label: 'Biệt Thự',           color: '#6366f1', order: 1, prompt: sys.promptBietThu      || '', flowConfig: { mode: 'image', variantCount: 4, aspectRatio: '16:9' } },
+      { id: 'nha_cap_4',      branch: 'architecture', label: 'Nhà Cấp 4',          color: '#10b981', order: 2, prompt: sys.promptNhaCap4      || '', flowConfig: { mode: 'image', variantCount: 4, aspectRatio: '16:9' } },
+      { id: 'nha_vuon',       branch: 'architecture', label: 'Nhà Vườn',           color: '#f59e0b', order: 3, prompt: sys.promptNhaVuon      || '', flowConfig: { mode: 'image', variantCount: 4, aspectRatio: '16:9' } },
+      { id: 'nha_tien_che',   branch: 'architecture', label: 'Nhà Tiền Chế',       color: '#ec4899', order: 4, prompt: sys.promptNhaTienChe   || '', flowConfig: { mode: 'image', variantCount: 4, aspectRatio: '16:9' } },
+      // interior
+      { id: 'hien_dai',       branch: 'interior',     label: 'Hiện Đại',           color: '#3b82f6', order: 0, prompt: sys.promptHienDai      || '', flowConfig: { mode: 'image', variantCount: 4, aspectRatio: '16:9' } },
+      { id: 'tan_co_dien',    branch: 'interior',     label: 'Tân Cổ Điển',        color: '#6366f1', order: 1, prompt: sys.promptTanCoDien    || '', flowConfig: { mode: 'image', variantCount: 4, aspectRatio: '16:9' } },
+      { id: 'indochine',      branch: 'interior',     label: 'Indochine',          color: '#10b981', order: 2, prompt: sys.promptIndochine    || '', flowConfig: { mode: 'image', variantCount: 4, aspectRatio: '16:9' } },
+      { id: 'wabi_sabi',      branch: 'interior',     label: 'Wabi Sabi',          color: '#f59e0b', order: 3, prompt: sys.promptWabiSabi     || '', flowConfig: { mode: 'image', variantCount: 4, aspectRatio: '16:9' } },
+      { id: 'tan_co_dien_go', branch: 'interior',     label: 'Tân Cổ Điển Gỗ',     color: '#ec4899', order: 4, prompt: sys.promptTanCoDienGo  || '', flowConfig: { mode: 'image', variantCount: 4, aspectRatio: '16:9' } },
+    ];
+    await Tab.insertMany(seeds);
+    console.log(`[SEED] Đã đổ ${seeds.length} tab.`);
+  } catch (e) {
+    console.error('[SEED] Lỗi seed Tab:', e.message);
+  }
+}
+
+async function seedPass2TasksIfEmpty() {
+  try {
+    const count = await Pass2Task.countDocuments();
+    if (count > 0) return;
+    console.log('[SEED] Pass2Task collection rỗng — đổ 7 task mặc định + load prompt từ file...');
+    const PROMPTS_DIR = path.join(__dirname, 'prompts', 'pass2');
+    const seeds = [
+      { id: 'angle_high_oblique', label: 'Góc cao chéo (high oblique)', order: 0, file: '01_goc_chup_high_oblique.txt', flowConfig: { mode: 'image', variantCount: 1, aspectRatio: '16:9' } },
+      { id: 'angle_side',         label: 'Góc ngang (side-angled)',     order: 1, file: '02_goc_chup_side_angled.txt',  flowConfig: { mode: 'image', variantCount: 1, aspectRatio: '16:9' } },
+      { id: 'angle_top_down',     label: 'Góc từ trên xuống',           order: 2, file: '03_goc_chup_top_down.txt',     flowConfig: { mode: 'image', variantCount: 1, aspectRatio: '16:9' } },
+      { id: 'plant_map',          label: 'Bản đồ cây',                  order: 3, file: '04_ban_do_cay.txt',            flowConfig: { mode: 'image', variantCount: 1, aspectRatio: '16:9' } },
+      { id: 'floor_plan',         label: 'Mặt bằng',                    order: 4, file: '05_mat_bang.txt',              flowConfig: { mode: 'image', variantCount: 1, aspectRatio: '16:9' } },
+      { id: 'video_static',       label: 'Video giữ cảnh',              order: 5, file: '06_video_giu_canh.txt',        flowConfig: { mode: 'video', variantCount: 1, aspectRatio: '16:9' } },
+      { id: 'video_day_night',    label: 'Video ngày sang đêm',         order: 6, file: '07_video_ngay_sang_dem.txt',   flowConfig: { mode: 'video', variantCount: 1, aspectRatio: '16:9' } },
+    ];
+    for (const s of seeds) {
+      try { s.prompt = await fs.readFile(path.join(PROMPTS_DIR, s.file), 'utf-8'); }
+      catch (_) { s.prompt = ''; }
+      delete s.file;
+    }
+    await Pass2Task.insertMany(seeds);
+    console.log(`[SEED] Đã đổ ${seeds.length} pass2 task.`);
+  } catch (e) {
+    console.error('[SEED] Lỗi seed Pass2Task:', e.message);
+  }
+}
+
+// ============================================================
+// CRUD Tab + Pass2Task — admin endpoints
+// ============================================================
+app.get('/api/tabs', async (req, res) => {
+  try {
+    const branch = req.query.branch;
+    const includeHidden = req.query.includeHidden === 'true';
+    const filter = {};
+    if (branch) filter.branch = branch;
+    if (!includeHidden) filter.hidden = { $ne: true };
+    const tabs = await Tab.find(filter).sort({ branch: 1, order: 1 }).lean();
+    res.json(tabs);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/tabs', async (req, res) => {
+  try {
+    const { id, branch, label, color, prompt, flowConfig } = req.body;
+    if (!id || !branch || !label) return res.status(400).json({ error: 'id, branch, label bắt buộc' });
+    if (!/^[a-z0-9_]+$/.test(id)) return res.status(400).json({ error: 'id chỉ chứa a-z 0-9 _' });
+    const exists = await Tab.findOne({ id });
+    if (exists) return res.status(409).json({ error: 'id đã tồn tại' });
+    const maxOrder = await Tab.find({ branch }).sort({ order: -1 }).limit(1).lean();
+    const order = (maxOrder[0]?.order ?? -1) + 1;
+    const tab = await Tab.create({ id, branch, label, color: color || '#d4a373', order, prompt: prompt || '', flowConfig: flowConfig || {} });
+    res.json(tab);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/tabs/:id', async (req, res) => {
+  try {
+    const { label, color, prompt, flowConfig, hidden } = req.body;
+    const update = {};
+    if (label !== undefined) update.label = label;
+    if (color !== undefined) update.color = color;
+    if (prompt !== undefined) update.prompt = prompt;
+    if (flowConfig !== undefined) update.flowConfig = flowConfig;
+    if (hidden !== undefined) update.hidden = hidden;
+    const tab = await Tab.findOneAndUpdate({ id: req.params.id }, update, { new: true });
+    if (!tab) return res.status(404).json({ error: 'Không tìm thấy tab' });
+    res.json(tab);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/tabs/:id', async (req, res) => {
+  // Soft delete: chỉ set hidden=true
+  try {
+    const tab = await Tab.findOneAndUpdate({ id: req.params.id }, { hidden: true }, { new: true });
+    if (!tab) return res.status(404).json({ error: 'Không tìm thấy tab' });
+    res.json({ ok: true, hidden: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/tabs/reorder', async (req, res) => {
+  // body: { branch, order: [tabId1, tabId2, ...] }
+  try {
+    const { branch, order } = req.body;
+    if (!branch || !Array.isArray(order)) return res.status(400).json({ error: 'branch + order[] bắt buộc' });
+    await Promise.all(order.map((id, idx) => Tab.updateOne({ id, branch }, { order: idx })));
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/pass2-tasks', async (req, res) => {
+  try {
+    const includeHidden = req.query.includeHidden === 'true';
+    const filter = includeHidden ? {} : { hidden: { $ne: true } };
+    const tasks = await Pass2Task.find(filter).sort({ order: 1 }).lean();
+    res.json(tasks);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/pass2-tasks', async (req, res) => {
+  try {
+    const { id, label, prompt, flowConfig } = req.body;
+    if (!id || !label) return res.status(400).json({ error: 'id, label bắt buộc' });
+    if (!/^[a-z0-9_]+$/.test(id)) return res.status(400).json({ error: 'id chỉ chứa a-z 0-9 _' });
+    const exists = await Pass2Task.findOne({ id });
+    if (exists) return res.status(409).json({ error: 'id đã tồn tại' });
+    const maxOrder = await Pass2Task.find().sort({ order: -1 }).limit(1).lean();
+    const order = (maxOrder[0]?.order ?? -1) + 1;
+    const task = await Pass2Task.create({ id, label, order, prompt: prompt || '', flowConfig: flowConfig || { mode: 'image', variantCount: 1, aspectRatio: '16:9' } });
+    res.json(task);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/pass2-tasks/:id', async (req, res) => {
+  try {
+    const { label, prompt, flowConfig, hidden } = req.body;
+    const update = {};
+    if (label !== undefined) update.label = label;
+    if (prompt !== undefined) update.prompt = prompt;
+    if (flowConfig !== undefined) update.flowConfig = flowConfig;
+    if (hidden !== undefined) update.hidden = hidden;
+    const task = await Pass2Task.findOneAndUpdate({ id: req.params.id }, update, { new: true });
+    if (!task) return res.status(404).json({ error: 'Không tìm thấy task' });
+    res.json(task);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/pass2-tasks/:id', async (req, res) => {
+  try {
+    const task = await Pass2Task.findOneAndUpdate({ id: req.params.id }, { hidden: true }, { new: true });
+    if (!task) return res.status(404).json({ error: 'Không tìm thấy task' });
+    res.json({ ok: true, hidden: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/pass2-tasks/reorder', async (req, res) => {
+  try {
+    const { order } = req.body;
+    if (!Array.isArray(order)) return res.status(400).json({ error: 'order[] bắt buộc' });
+    await Promise.all(order.map((id, idx) => Pass2Task.updateOne({ id }, { order: idx })));
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 // API Routes
 app.get('/api/projects', async (req, res) => {
