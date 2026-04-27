@@ -624,6 +624,29 @@ const uploadToCloudinary = async (fileStr) => {
 };
 
 // ============================================================
+// HELPER: lookup tab cho project (theo mainBranch — first active tab)
+// Customer chưa có UI chọn tab cụ thể, mặc định lấy tab đầu tiên active của branch.
+// ============================================================
+async function resolveTabForProject(project) {
+  try {
+    const branch = project?.mainBranch || 'landscape';
+    const tab = await Tab.findOne({ branch, hidden: { $ne: true } }).sort({ order: 1 }).lean();
+    return tab || null;
+  } catch (e) {
+    console.warn('[resolveTabForProject] Lỗi:', e.message);
+    return null;
+  }
+}
+
+function buildPromptWithTabOverride(adminPrompt, fallbackPrompt) {
+  if (typeof adminPrompt === 'string' && adminPrompt.trim()) {
+    // Admin có viết prompt riêng → thay thế phần đầu (giữ nguyên cách cuối có project data)
+    return adminPrompt.trim() + '\n\n' + fallbackPrompt;
+  }
+  return fallbackPrompt;
+}
+
+// ============================================================
 // SEED: 1 lần đổ data tab + pass2 task mặc định nếu collection rỗng.
 // Idempotent — chạy nhiều lần không sao.
 // ============================================================
@@ -1000,7 +1023,9 @@ app.post('/api/projects', async (req, res) => {
                 console.error('[AUTO] Lỗi ChatGPT song song:', err.message);
             });
           } else {
-            await runFlowAutomation({ prompt: resolvedPrompt, assets, onImageReady }).catch(err => {
+            const tab = await resolveTabForProject(newProject);
+            const finalPrompt = buildPromptWithTabOverride(tab?.prompt, resolvedPrompt);
+            await runFlowAutomation({ prompt: finalPrompt, assets, onImageReady, flowConfig: tab?.flowConfig }).catch(err => {
                 console.error('[AUTO] Lỗi Google Flow:', err.message);
             });
           }
@@ -1163,7 +1188,9 @@ app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
       }
     };
 
-    const automationResult = await runFlowAutomation({ prompt: resolvedPrompt, assets, onImageReady });
+    const tab = await resolveTabForProject(project);
+    const finalPrompt = buildPromptWithTabOverride(tab?.prompt, resolvedPrompt);
+    const automationResult = await runFlowAutomation({ prompt: finalPrompt, assets, onImageReady, flowConfig: tab?.flowConfig });
 
     const updated = await Project.findOneAndUpdate(
       { id: req.params.id },
@@ -1219,10 +1246,21 @@ app.post('/api/projects/:id/generate-video', async (req, res) => {
       }
     };
 
+    // Tìm tab "video" (id = 'video') của branch tương ứng để lấy prompt + flowConfig admin custom.
+    let videoTab = null;
+    try {
+      videoTab = await Tab.findOne({ id: 'video', branch: project?.mainBranch || 'landscape', hidden: { $ne: true } }).lean();
+    } catch (_) { /* ignore */ }
+    const fallbackVideoPrompt = 'Smooth cinematic camera movement through this landscape garden design. Gentle water flowing, leaves swaying in breeze. Photorealistic, golden hour lighting.';
+    const finalVideoPrompt = (typeof prompt === 'string' && prompt.trim())
+      ? prompt
+      : (videoTab?.prompt?.trim() || fallbackVideoPrompt);
+
     const automationResult = await runFlowVideoAutomation({
-      prompt: prompt || 'Smooth cinematic camera movement through this landscape garden design. Gentle water flowing, leaves swaying in breeze. Photorealistic, golden hour lighting.',
+      prompt: finalVideoPrompt,
       imageUrl,
-      onVideoReady
+      onVideoReady,
+      flowConfig: videoTab?.flowConfig
     });
 
     res.json({
