@@ -22,14 +22,18 @@ function applyReplacements(text, replacements = {}) {
   return text;
 }
 
-async function getActiveTasks() {
+async function getActiveTasks(branch) {
   const Pass2Task = mongoose.model('Pass2Task');
-  return await Pass2Task.find({ hidden: { $ne: true } }).sort({ order: 1 }).lean();
+  const filter = { hidden: { $ne: true } };
+  if (branch) filter.branch = branch;
+  return await Pass2Task.find(filter).sort({ order: 1 }).lean();
 }
 
-async function getTaskById(id) {
+async function getTaskById(id, branch) {
   const Pass2Task = mongoose.model('Pass2Task');
-  return await Pass2Task.findOne({ id }).lean();
+  const filter = { id };
+  if (branch) filter.branch = branch;
+  return await Pass2Task.findOne(filter).lean();
 }
 
 function deriveType(task) {
@@ -48,8 +52,8 @@ async function resolveTaskPrompt(task, replacements) {
   return applyReplacements(text || '', replacements);
 }
 
-async function initPass2State(referenceImageUrl, dimensions) {
-  const tasks = await getActiveTasks();
+async function initPass2State(referenceImageUrl, dimensions, branch) {
+  const tasks = await getActiveTasks(branch);
   return {
     referenceImageUrl,
     dimensions: {
@@ -181,6 +185,7 @@ async function runSinglePass2Task({
 async function runPass2Tasks({
   referenceImageUrl,
   dimensions,
+  branch,
   onImageReady,
   onVideoReady,
   onTaskEvent
@@ -189,9 +194,9 @@ async function runPass2Tasks({
     throw new Error('Thiếu referenceImageUrl cho Pass 2.');
   }
 
-  const tasks = await getActiveTasks();
+  const tasks = await getActiveTasks(branch);
   if (tasks.length === 0) {
-    console.warn('[Pass2] Không có task nào active trong DB. Skip.');
+    console.warn(`[Pass2] Không có task nào active${branch ? ` cho branch=${branch}` : ''} trong DB. Skip.`);
     return [];
   }
   const promises = tasks.map(task => runSinglePass2Task({

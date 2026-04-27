@@ -563,13 +563,17 @@ const TabSchema = new mongoose.Schema({
 const Tab = mongoose.model('Tab', TabSchema);
 
 const Pass2TaskSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true, index: true },
+  // id KHÔNG còn unique đơn lẻ — compound (id + branch) mới unique để cùng id "angle_side"
+  // có thể xuất hiện ở 3 branch landscape/architecture/interior với prompt riêng.
+  id: { type: String, required: true, index: true },
+  branch: { type: String, enum: ['landscape', 'architecture', 'interior'], required: true, default: 'landscape', index: true },
   label: { type: String, required: true },
   order: { type: Number, default: 0 },
   prompt: { type: String, default: '' },
   flowConfig: { type: FlowConfigSubSchema, default: () => ({ mode: 'image', variantCount: 1, aspectRatio: '16:9' }) },
   hidden: { type: Boolean, default: false }
 }, { timestamps: true });
+Pass2TaskSchema.index({ id: 1, branch: 1 }, { unique: true });
 const Pass2Task = mongoose.model('Pass2Task', Pass2TaskSchema);
 
 global._projectModelReady = true; // Cho phép resumePendingProjects chạy
@@ -686,11 +690,8 @@ async function seedTabsIfEmpty() {
 
 async function seedPass2TasksIfEmpty() {
   try {
-    const count = await Pass2Task.countDocuments();
-    if (count > 0) return;
-    console.log('[SEED] Pass2Task collection rỗng — đổ 7 task mặc định + load prompt từ file...');
     const PROMPTS_DIR = path.join(__dirname, 'prompts', 'pass2');
-    const seeds = [
+    const baseSeeds = [
       { id: 'angle_high_oblique', label: 'Góc cao chéo (high oblique)', order: 0, file: '01_goc_chup_high_oblique.txt', flowConfig: { mode: 'image', variantCount: 1, aspectRatio: '16:9' } },
       { id: 'angle_side',         label: 'Góc ngang (side-angled)',     order: 1, file: '02_goc_chup_side_angled.txt',  flowConfig: { mode: 'image', variantCount: 1, aspectRatio: '16:9' } },
       { id: 'angle_top_down',     label: 'Góc từ trên xuống',           order: 2, file: '03_goc_chup_top_down.txt',     flowConfig: { mode: 'image', variantCount: 1, aspectRatio: '16:9' } },
@@ -699,13 +700,38 @@ async function seedPass2TasksIfEmpty() {
       { id: 'video_static',       label: 'Video giữ cảnh',              order: 5, file: '06_video_giu_canh.txt',        flowConfig: { mode: 'video', variantCount: 1, aspectRatio: '16:9' } },
       { id: 'video_day_night',    label: 'Video ngày sang đêm',         order: 6, file: '07_video_ngay_sang_dem.txt',   flowConfig: { mode: 'video', variantCount: 1, aspectRatio: '16:9' } },
     ];
-    for (const s of seeds) {
+    // Load prompt content 1 lần — dùng chung cho cả 3 branch
+    for (const s of baseSeeds) {
       try { s.prompt = await fs.readFile(path.join(PROMPTS_DIR, s.file), 'utf-8'); }
       catch (_) { s.prompt = ''; }
       delete s.file;
     }
-    await Pass2Task.insertMany(seeds);
-    console.log(`[SEED] Đã đổ ${seeds.length} pass2 task.`);
+
+    // Migration: gắn branch='landscape' cho mọi record cũ không có field branch
+    const legacyMigrated = await Pass2Task.updateMany(
+      { branch: { $exists: false } },
+      { $set: { branch: 'landscape' } }
+    );
+    if (legacyMigrated.modifiedCount > 0) {
+      console.log(`[SEED] Migrate ${legacyMigrated.modifiedCount} pass2 task cũ → branch='landscape'.`);
+    }
+
+    // Drop unique index cũ id_1 (đã đổi sang compound id+branch). Lỗi nếu không tồn tại — bỏ qua.
+    try {
+      await Pass2Task.collection.dropIndex('id_1');
+      console.log('[SEED] Đã drop index cũ Pass2Task.id_1');
+    } catch (_) { /* index không tồn tại = OK */ }
+    await Pass2Task.syncIndexes().catch(() => null);
+
+    // Seed cho mỗi branch nếu collection branch đó rỗng
+    for (const branch of ['landscape', 'architecture', 'interior']) {
+      const branchCount = await Pass2Task.countDocuments({ branch });
+      if (branchCount > 0) continue;
+      console.log(`[SEED] Pass2Task branch=${branch} rỗng — đổ 7 task default...`);
+      const seeds = baseSeeds.map(s => ({ ...s, branch }));
+      await Pass2Task.insertMany(seeds);
+      console.log(`[SEED] Đã đổ ${seeds.length} pass2 task cho branch=${branch}.`);
+    }
   } catch (e) {
     console.error('[SEED] Lỗi seed Pass2Task:', e.message);
   }
@@ -776,36 +802,43 @@ app.post('/api/tabs/reorder', async (req, res) => {
 
 app.get('/api/pass2-tasks', async (req, res) => {
   try {
+    const branch = req.query.branch;
     const includeHidden = req.query.includeHidden === 'true';
-    const filter = includeHidden ? {} : { hidden: { $ne: true } };
-    const tasks = await Pass2Task.find(filter).sort({ order: 1 }).lean();
+    const filter = {};
+    if (branch) filter.branch = branch;
+    if (!includeHidden) filter.hidden = { $ne: true };
+    const tasks = await Pass2Task.find(filter).sort({ branch: 1, order: 1 }).lean();
     res.json(tasks);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/pass2-tasks', async (req, res) => {
   try {
-    const { id, label, prompt, flowConfig } = req.body;
-    if (!id || !label) return res.status(400).json({ error: 'id, label bắt buộc' });
+    const { id, branch, label, prompt, flowConfig } = req.body;
+    if (!id || !branch || !label) return res.status(400).json({ error: 'id, branch, label bắt buộc' });
+    if (!['landscape', 'architecture', 'interior'].includes(branch)) return res.status(400).json({ error: 'branch không hợp lệ' });
     if (!/^[a-z0-9_]+$/.test(id)) return res.status(400).json({ error: 'id chỉ chứa a-z 0-9 _' });
-    const exists = await Pass2Task.findOne({ id });
-    if (exists) return res.status(409).json({ error: 'id đã tồn tại' });
-    const maxOrder = await Pass2Task.find().sort({ order: -1 }).limit(1).lean();
+    const exists = await Pass2Task.findOne({ id, branch });
+    if (exists) return res.status(409).json({ error: 'id đã tồn tại trong branch này' });
+    const maxOrder = await Pass2Task.find({ branch }).sort({ order: -1 }).limit(1).lean();
     const order = (maxOrder[0]?.order ?? -1) + 1;
-    const task = await Pass2Task.create({ id, label, order, prompt: prompt || '', flowConfig: flowConfig || { mode: 'image', variantCount: 1, aspectRatio: '16:9' } });
+    const task = await Pass2Task.create({ id, branch, label, order, prompt: prompt || '', flowConfig: flowConfig || { mode: 'image', variantCount: 1, aspectRatio: '16:9' } });
     res.json(task);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Tham chiếu compound: ?branch=... bắt buộc trên PUT/DELETE để khỏi nhầm task cùng id ở 3 branch.
 app.put('/api/pass2-tasks/:id', async (req, res) => {
   try {
+    const branch = req.query.branch || req.body.branch;
+    if (!branch) return res.status(400).json({ error: 'branch query/body bắt buộc' });
     const { label, prompt, flowConfig, hidden } = req.body;
     const update = {};
     if (label !== undefined) update.label = label;
     if (prompt !== undefined) update.prompt = prompt;
     if (flowConfig !== undefined) update.flowConfig = flowConfig;
     if (hidden !== undefined) update.hidden = hidden;
-    const task = await Pass2Task.findOneAndUpdate({ id: req.params.id }, update, { new: true });
+    const task = await Pass2Task.findOneAndUpdate({ id: req.params.id, branch }, update, { new: true });
     if (!task) return res.status(404).json({ error: 'Không tìm thấy task' });
     res.json(task);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -813,7 +846,9 @@ app.put('/api/pass2-tasks/:id', async (req, res) => {
 
 app.delete('/api/pass2-tasks/:id', async (req, res) => {
   try {
-    const task = await Pass2Task.findOneAndUpdate({ id: req.params.id }, { hidden: true }, { new: true });
+    const branch = req.query.branch;
+    if (!branch) return res.status(400).json({ error: 'branch query bắt buộc' });
+    const task = await Pass2Task.findOneAndUpdate({ id: req.params.id, branch }, { hidden: true }, { new: true });
     if (!task) return res.status(404).json({ error: 'Không tìm thấy task' });
     res.json({ ok: true, hidden: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -821,9 +856,10 @@ app.delete('/api/pass2-tasks/:id', async (req, res) => {
 
 app.post('/api/pass2-tasks/reorder', async (req, res) => {
   try {
-    const { order } = req.body;
+    const { branch, order } = req.body;
+    if (!branch) return res.status(400).json({ error: 'branch bắt buộc' });
     if (!Array.isArray(order)) return res.status(400).json({ error: 'order[] bắt buộc' });
-    await Promise.all(order.map((id, idx) => Pass2Task.updateOne({ id }, { order: idx })));
+    await Promise.all(order.map((id, idx) => Pass2Task.updateOne({ id, branch }, { order: idx })));
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1289,7 +1325,8 @@ app.post('/api/projects/:id/pass2', async (req, res) => {
       return res.status(409).json({ error: 'Pass 2 đang chạy cho dự án này, vui lòng chờ.' });
     }
 
-    const initial = await initPass2State(referenceImageUrl, dimensions);
+    const projectBranch = project?.mainBranch || 'landscape';
+    const initial = await initPass2State(referenceImageUrl, dimensions, projectBranch);
     await Project.findOneAndUpdate(
       { id: req.params.id },
       { $set: { pass2Results: initial } },
@@ -1333,6 +1370,7 @@ app.post('/api/projects/:id/pass2', async (req, res) => {
         await runPass2Tasks({
           referenceImageUrl,
           dimensions,
+          branch: projectBranch,
           onImageReady: handleImageUpload,
           onVideoReady: handleVideoUpload,
           onTaskEvent: handleTaskEvent
@@ -1383,8 +1421,9 @@ app.post('/api/projects/:id/pass2/retry', async (req, res) => {
     if (!project) return res.status(404).json({ error: 'Project not found' });
     if (!project.pass2Results) return res.status(400).json({ error: 'Project chưa có pass2Results.' });
 
-    const taskDef = await getPass2TaskById(taskId);
-    if (!taskDef) return res.status(400).json({ error: `Không tìm thấy task ${taskId}.` });
+    const projectBranch = project?.mainBranch || 'landscape';
+    const taskDef = await getPass2TaskById(taskId, projectBranch);
+    if (!taskDef) return res.status(400).json({ error: `Không tìm thấy task ${taskId} cho branch ${projectBranch}.` });
 
     const existing = project.pass2Results.tasks.find(t => t.taskId === taskId);
     if (existing?.status === 'running') {

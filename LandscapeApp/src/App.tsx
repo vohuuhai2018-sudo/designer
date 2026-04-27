@@ -4072,12 +4072,13 @@ const tmLabelStyle: React.CSSProperties = { display: 'block', fontSize: '0.8rem'
 const tmInputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: '10px', background: 'rgba(0,0,0,0.4)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.9rem', boxSizing: 'border-box' };
 const tmSelectStyle: React.CSSProperties = { ...tmInputStyle, padding: '10px' };
 
-function PromptEditorView({ onFeedback, adminBranch }: {
+function PromptEditorView({ onFeedback, adminBranch, onBranchChange }: {
   systemContent?: any;
   onSystemContentUpdate?: (c: any) => void;
   onSync?: () => Promise<boolean>;
   onFeedback: (msg: string) => void;
   adminBranch: MainBranch;
+  onBranchChange?: (b: MainBranch) => void;
 }) {
   const [tabs, setTabs] = useState<TabModel[]>([]);
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
@@ -4193,6 +4194,24 @@ function PromptEditorView({ onFeedback, adminBranch }: {
 
   return (
     <div style={{ padding: '20px 0' }}>
+      {onBranchChange && (
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+          {(['landscape','architecture','interior'] as const).map(b => (
+            <button
+              key={b}
+              onClick={() => onBranchChange(b)}
+              style={{
+                padding: '8px 16px', borderRadius: '10px',
+                background: adminBranch === b ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
+                color: adminBranch === b ? '#000' : '#fff',
+                fontWeight: 700, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer'
+              }}
+            >
+              {b === 'landscape' ? '🌳 Cảnh quan' : b === 'architecture' ? '🏛 Kiến trúc' : '🛋 Nội thất'}
+            </button>
+          ))}
+        </div>
+      )}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
         <button onClick={() => setShowCreateModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', borderRadius: '12px', background: 'var(--accent)', color: '#000', fontWeight: 800, border: 'none', cursor: 'pointer' }}>
           <Plus size={18} /> Thêm tab mới
@@ -4371,9 +4390,10 @@ function CreateTabModal({ onCreate, onCancel }: { onCreate: (data: { id: string;
   );
 }
 
-// --- PASS 2 MANAGER VIEW (CRUD 7 task pass2 + flowConfig + drag-drop) ---
+// --- PASS 2 MANAGER VIEW (CRUD pass2 task per branch + flowConfig + drag-drop) ---
 interface Pass2TaskModel {
   id: string;
+  branch: 'landscape' | 'architecture' | 'interior';
   label: string;
   order: number;
   prompt: string;
@@ -4385,7 +4405,7 @@ interface Pass2TaskModel {
   hidden?: boolean;
 }
 
-function Pass2ManagerView({ onFeedback }: { onFeedback: (msg: string) => void }) {
+function Pass2ManagerView({ onFeedback, adminBranch, onBranchChange }: { onFeedback: (msg: string) => void; adminBranch: MainBranch; onBranchChange?: (b: MainBranch) => void }) {
   const [tasks, setTasks] = useState<Pass2TaskModel[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
@@ -4397,7 +4417,7 @@ function Pass2ManagerView({ onFeedback }: { onFeedback: (msg: string) => void })
   const fetchTasks = async () => {
     setIsLoading(true);
     try {
-      const res = await apiFetch(`/api/pass2-tasks?includeHidden=${showHidden}`);
+      const res = await apiFetch(`/api/pass2-tasks?branch=${adminBranch}&includeHidden=${showHidden}`);
       const data = await res.json();
       setTasks(data);
       if (data.length > 0 && !data.find((t: Pass2TaskModel) => t.id === editingId)) {
@@ -4410,14 +4430,14 @@ function Pass2ManagerView({ onFeedback }: { onFeedback: (msg: string) => void })
     }
   };
 
-  useEffect(() => { fetchTasks(); }, [showHidden]);
+  useEffect(() => { fetchTasks(); }, [adminBranch, showHidden]);
 
   const editing = tasks.find(t => t.id === editingId);
 
   const updateTask = async (id: string, patch: Partial<Pass2TaskModel>) => {
     setIsSaving(true);
     try {
-      const res = await apiFetch(`/api/pass2-tasks/${id}`, {
+      const res = await apiFetch(`/api/pass2-tasks/${id}?branch=${adminBranch}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(patch)
@@ -4438,7 +4458,7 @@ function Pass2ManagerView({ onFeedback }: { onFeedback: (msg: string) => void })
       const res = await apiFetch('/api/pass2-tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, prompt: '', flowConfig: { mode: 'image', variantCount: 1, aspectRatio: '16:9' } })
+        body: JSON.stringify({ ...data, branch: adminBranch, prompt: '', flowConfig: { mode: 'image', variantCount: 1, aspectRatio: '16:9' } })
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -4457,7 +4477,7 @@ function Pass2ManagerView({ onFeedback }: { onFeedback: (msg: string) => void })
   const deleteTask = async (id: string) => {
     if (!window.confirm('Ẩn task này? Bot sẽ không chạy task này nữa. Bật "Hiện task ẩn" để khôi phục.')) return;
     try {
-      const res = await apiFetch(`/api/pass2-tasks/${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/pass2-tasks/${id}?branch=${adminBranch}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(await res.text());
       onFeedback('✅ Đã ẩn task.');
       fetchTasks();
@@ -4486,7 +4506,7 @@ function Pass2ManagerView({ onFeedback }: { onFeedback: (msg: string) => void })
       const res = await apiFetch('/api/pass2-tasks/reorder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order: reordered.map(t => t.id) })
+        body: JSON.stringify({ branch: adminBranch, order: reordered.map(t => t.id) })
       });
       if (!res.ok) throw new Error('reorder fail');
       onFeedback('✅ Đã đổi thứ tự.');
@@ -4498,9 +4518,29 @@ function Pass2ManagerView({ onFeedback }: { onFeedback: (msg: string) => void })
 
   return (
     <div style={{ padding: '20px 0' }}>
+      {onBranchChange && (
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+          {(['landscape','architecture','interior'] as const).map(b => (
+            <button
+              key={b}
+              onClick={() => onBranchChange(b)}
+              style={{
+                padding: '8px 16px', borderRadius: '10px',
+                background: adminBranch === b ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
+                color: adminBranch === b ? '#000' : '#fff',
+                fontWeight: 700, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer'
+              }}
+            >
+              {b === 'landscape' ? '🌳 Cảnh quan' : b === 'architecture' ? '🏛 Kiến trúc' : '🛋 Nội thất'}
+            </button>
+          ))}
+        </div>
+      )}
       <div style={{ marginBottom: '16px' }}>
-        <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '4px' }}>Pass 2 — 7 task bổ sung từ ảnh đã chọn</h2>
-        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>Sau khi khách chốt 1 trong 4 phương án Pass 1, hệ thống chạy các task này để sinh thêm góc nhìn / mặt bằng / video. Hỗ trợ template <code>{'{WIDTH}'}</code> <code>{'{LENGTH}'}</code> trong prompt.</p>
+        <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '4px' }}>
+          Pass 2 — task bổ sung · <span style={{ color: 'var(--accent)' }}>{adminBranch === 'landscape' ? 'Cảnh quan' : adminBranch === 'architecture' ? 'Kiến trúc' : 'Nội thất'}</span>
+        </h2>
+        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>Sau khi khách chốt 1 phương án Pass 1, hệ thống chạy các task này để sinh thêm góc nhìn / mặt bằng / video. Hỗ trợ template <code>{'{WIDTH}'}</code> <code>{'{LENGTH}'}</code> trong prompt.</p>
       </div>
       <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
         <button onClick={() => setShowCreateModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', borderRadius: '12px', background: 'var(--accent)', color: '#000', fontWeight: 800, border: 'none', cursor: 'pointer' }}>
@@ -7044,11 +7084,12 @@ function AdminView({
             onSync={onSync}
             onFeedback={setActionFeedback}
             adminBranch={adminBranch}
+            onBranchChange={setAdminBranch}
           />
         )}
 
         {activeTab === 'pass2' && (
-          <Pass2ManagerView onFeedback={setActionFeedback} />
+          <Pass2ManagerView onFeedback={setActionFeedback} adminBranch={adminBranch} onBranchChange={setAdminBranch} />
         )}
 
         {activeTab === 'config' && (
