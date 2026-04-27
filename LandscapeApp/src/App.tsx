@@ -1612,14 +1612,35 @@ function UploadView({
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Vui lòng chọn file ảnh (JPG, PNG, WEBP).');
+      e.target.value = '';
+      return;
+    }
+    const MAX = 25 * 1024 * 1024;
+    if (file.size > MAX) {
+      alert(`Ảnh quá lớn (${(file.size / 1024 / 1024).toFixed(1)}MB). Vui lòng chọn ảnh dưới 25MB.`);
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = ev => {
-      const result = ev.target?.result as string;
+      const result = ev.target?.result;
+      if (typeof result !== 'string' || !result.startsWith('data:image/')) {
+        alert('Đọc file ảnh thất bại. Vui lòng thử ảnh khác.');
+        return;
+      }
       setPreview(result);
       onUpload(result);
     };
+    reader.onerror = () => {
+      alert('Không thể đọc file. Vui lòng thử lại.');
+    };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
+
+  const isValidPreview = (p: string) => !!p && (p.startsWith('data:image/') || /^https?:\/\//.test(p) || p.startsWith('blob:') || p.startsWith('/'));
 
   const handleInteriorFile = (e: React.ChangeEvent<HTMLInputElement>, idx: number) => {
     const file = e.target.files?.[0];
@@ -1697,21 +1718,40 @@ function UploadView({
         </div>
       ) : (
         <>
-          <div className="upload-area" onClick={() => fileRef.current?.click()}>
-            {preview ? (
-              <>
-                <img decoding="async" loading="lazy" src={preview} alt="Preview" />
+          <div className={`upload-area ${isValidPreview(preview) ? 'has-preview' : ''}`} onClick={() => fileRef.current?.click()}>
+            {isValidPreview(preview) ? (
+              <div className="preview-wrap">
+                <img
+                  decoding="async"
+                  src={preview}
+                  alt="Preview"
+                  onLoad={(e) => {
+                    const img = e.currentTarget;
+                    console.log('[upload] preview loaded:', { w: img.naturalWidth, h: img.naturalHeight });
+                    if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+                      console.warn('[upload] preview has 0×0 dimensions — resetting');
+                      setPreview('');
+                    }
+                  }}
+                  onError={() => {
+                    console.error('[upload] preview <img> failed to load');
+                    setPreview('');
+                  }}
+                />
                 <div className="change-image-overlay">
                   <div className="change-image-btn">
                     <RefreshCw size={20} />
                     <span>Thay đổi ảnh</span>
                   </div>
                 </div>
-              </>
+              </div>
             ) : (
               <>
                 <div className="upload-circle"><Camera size={60} /></div>
                 <span className="upload-prompt">NHẤN ĐỂ CHỌN ẢNH CHÍNH</span>
+                <span style={{ fontSize: '0.85rem', color: '#9b6e2e', fontWeight: 500 }}>
+                  JPG / PNG / WEBP — tối đa 25MB
+                </span>
               </>
             )}
           </div>
@@ -3104,10 +3144,16 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
 
          {isDone && (
            <div style={{ marginTop: '1.5rem', width: '100%', textAlign: 'center' }}>
-             <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px', marginBottom: '1rem', border: '1px solid rgba(255,255,255,0.1)' }}>
-               <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginBottom: '6px' }}>Link xem kết quả:</p>
+             {/* SHARE LINK BLOCK */}
+             <div style={{
+               background: '#ffffff',
+               borderRadius: '14px', padding: '14px', marginBottom: '1rem',
+               border: '1.5px solid rgba(212,163,115,0.25)',
+               boxShadow: '0 4px 14px rgba(28,20,12,0.05)'
+             }}>
+               <p style={{ fontSize: '0.78rem', color: '#7c5c2e', marginBottom: '8px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Link xem kết quả</p>
                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
-                 <code style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 10px', borderRadius: '8px', fontSize: '0.7rem', wordBreak: 'break-all', color: 'var(--accent)' }}>
+                 <code style={{ background: 'rgba(212,163,115,0.12)', padding: '8px 12px', borderRadius: '8px', fontSize: '0.78rem', wordBreak: 'break-all', color: '#1a1a1a', fontWeight: 600, border: '1px solid rgba(212,163,115,0.25)' }}>
                    {window.location.origin}/result/{projectId}
                  </code>
                  <button
@@ -3115,20 +3161,28 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                      navigator.clipboard.writeText(`${window.location.origin}/result/${projectId}`);
                      alert('Đã sao chép link!');
                    }}
-                   style={{ padding: '6px 10px', borderRadius: '8px', background: 'var(--accent)', color: '#000', fontWeight: 700, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '0.8rem' }}
+                   style={{ padding: '8px 14px', borderRadius: '8px', background: 'linear-gradient(135deg, #d4a373, #b88857)', color: '#fff', fontWeight: 800, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '0.82rem', boxShadow: '0 4px 12px rgba(212,163,115,0.3)' }}
                  >
                    Sao chép
                  </button>
                </div>
              </div>
              {/* PAYMENT BLOCK */}
-             <div style={{ marginBottom: '12px', padding: '14px', borderRadius: '14px', background: isPaid ? 'rgba(34,197,94,0.08)' : 'rgba(165,0,100,0.08)', border: isPaid ? '2px solid rgba(34,197,94,0.4)' : '2px solid rgba(165,0,100,0.45)', textAlign: 'left' }}>
+             <div style={{
+               marginBottom: '12px', padding: '18px', borderRadius: '16px',
+               background: isPaid
+                 ? 'linear-gradient(135deg, rgba(34,197,94,0.08), #ffffff 80%)'
+                 : 'linear-gradient(135deg, rgba(165,0,100,0.06), #ffffff 80%)',
+               border: isPaid ? '1.5px solid rgba(34,197,94,0.4)' : '1.5px solid rgba(165,0,100,0.3)',
+               boxShadow: isPaid ? '0 4px 14px rgba(34,197,94,0.1)' : '0 4px 14px rgba(165,0,100,0.08)',
+               textAlign: 'left'
+             }}>
                {isPaid ? (
                  <>
-                   <p style={{ fontSize: '0.9rem', fontWeight: 800, color: '#22c55e', marginBottom: '10px', textAlign: 'center' }}>
+                   <p style={{ fontSize: '0.95rem', fontWeight: 800, color: '#15803d', marginBottom: '12px', textAlign: 'center' }}>
                      ✅ Đã thanh toán — Tải về toàn bộ tài liệu
                    </p>
-                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
+                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
                      {[
                        ...(project?.aiResults || []),
                        ...((project as any)?.pass2Results?.tasks || []).filter((t: any) => t.url).map((t: any) => t.url)
@@ -3136,7 +3190,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                        const isVid = url.endsWith('.mp4') || url.includes('/video/');
                        return (
                          <a key={`${url}-${i}`} href={url} download
-                           style={{ padding: '8px 10px', borderRadius: '10px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.35)', color: '#22c55e', fontWeight: 700, fontSize: '0.78rem', textAlign: 'center', textDecoration: 'none' }}
+                           style={{ padding: '10px 12px', borderRadius: '10px', background: 'rgba(34,197,94,0.1)', border: '1.5px solid rgba(34,197,94,0.4)', color: '#15803d', fontWeight: 800, fontSize: '0.82rem', textAlign: 'center', textDecoration: 'none' }}
                          >
                            ⬇ {isVid ? `Video ${i + 1}` : `Ảnh ${i + 1}`}
                          </a>
@@ -3146,11 +3200,11 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                  </>
                ) : (
                  <>
-                   <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', marginBottom: '6px', textAlign: 'center' }}>
+                   <p style={{ fontSize: '0.95rem', fontWeight: 800, color: '#1a1a1a', marginBottom: '4px', textAlign: 'center' }}>
                      Tải bản vẽ chất lượng cao
                    </p>
-                   <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', marginBottom: '10px', textAlign: 'center' }}>
-                     Thanh toán qua MoMo để tải ảnh và video độ phân giải cao về máy.
+                   <p style={{ fontSize: '0.82rem', color: '#7c5c2e', marginBottom: '14px', textAlign: 'center' }}>
+                     Thanh toán để tải ảnh và video độ phân giải cao về máy.
                    </p>
                    <button
                      onClick={() => setPaymentOpen(true)}
@@ -3158,7 +3212,8 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                        width: '100%', padding: '14px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 800,
                        border: 'none', cursor: 'pointer',
                        background: 'linear-gradient(135deg, #a50064, #d6336c)', color: '#fff',
-                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                       boxShadow: '0 8px 22px rgba(165,0,100,0.3)'
                      }}
                    >
                      💳 Thanh toán để tải bản vẽ
@@ -3175,10 +3230,10 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                    width: '100%',
                    padding: '14px',
                    marginBottom: '10px',
-                   background: isRetrying ? 'rgba(226,177,112,0.15)' : 'rgba(255,255,255,0.06)',
+                   background: isRetrying ? 'rgba(212,163,115,0.15)' : '#ffffff',
                    border: '2px solid var(--accent)',
                    borderRadius: '14px',
-                   color: 'var(--accent)',
+                   color: '#7c5c2e',
                    fontSize: '0.95rem',
                    fontWeight: 800,
                    cursor: isRetrying ? 'wait' : 'pointer',
@@ -3186,6 +3241,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                    alignItems: 'center',
                    justifyContent: 'center',
                    gap: '10px',
+                   boxShadow: '0 4px 14px rgba(212,163,115,0.15)'
                  }}
                >
                  {isRetrying ? (
@@ -3198,15 +3254,21 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
 
              {/* PASS 2 CTA — chỉ hiện khi chưa chạy */}
              {!project?.pass2Results && allImages.length > 0 && (
-               <div style={{ marginBottom: '10px', padding: '14px', borderRadius: '14px', background: 'rgba(250,204,21,0.08)', border: '2px solid rgba(250,204,21,0.4)', textAlign: 'left' }}>
-                 <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#facc15', marginBottom: '8px', textAlign: 'center' }}>
-                   Tiếp tục tạo bổ sung (7 bản)
+               <div style={{
+                 marginBottom: '10px', padding: '18px', borderRadius: '16px',
+                 background: 'linear-gradient(135deg, rgba(250,204,21,0.10), #ffffff 80%)',
+                 border: '1.5px solid rgba(202,138,4,0.35)',
+                 boxShadow: '0 4px 14px rgba(202,138,4,0.08)',
+                 textAlign: 'left'
+               }}>
+                 <p style={{ fontSize: '0.95rem', fontWeight: 800, color: '#854d0e', marginBottom: '4px', textAlign: 'center' }}>
+                   ⭐ Tiếp tục tạo bổ sung (7 bản)
                  </p>
-                 <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', marginBottom: '10px', textAlign: 'center' }}>
+                 <p style={{ fontSize: '0.8rem', color: '#7c5c2e', marginBottom: '14px', textAlign: 'center', lineHeight: 1.5 }}>
                    Chọn 1 phương án ưng ý nhất, hệ thống sẽ tạo thêm:<br />
-                   3 góc chụp · 2 bản vẽ · 2 video
+                   <strong style={{ color: '#854d0e' }}>3 góc chụp · 2 bản vẽ · 2 video</strong>
                  </p>
-                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginBottom: '10px' }}>
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '12px' }}>
                    {allImages.slice(0, 8).map((url, i) => {
                      const isOldImg = retryCount > 0 && i < previousImages.length;
                      const label = retryCount > 0
@@ -3214,22 +3276,23 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                        : `PA${i + 1}`;
                      return (
                        <div key={i} onClick={() => setPass2Picked(url)} style={{
-                         position: 'relative', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer',
-                         border: pass2Picked === url ? '3px solid #facc15' : '2px solid rgba(255,255,255,0.15)',
-                         opacity: pass2Picked === url ? 1 : 0.55, transition: 'all 0.15s', aspectRatio: '1'
+                         position: 'relative', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer',
+                         border: pass2Picked === url ? '3px solid #ca8a04' : '2px solid rgba(212,163,115,0.3)',
+                         opacity: pass2Picked === url ? 1 : 0.7, transition: 'all 0.15s', aspectRatio: '1',
+                         boxShadow: pass2Picked === url ? '0 6px 20px rgba(202,138,4,0.4)' : 'none'
                        }}>
                          <img decoding="async" loading="lazy" src={url} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '0.55rem', padding: '2px', textAlign: 'center', fontWeight: 700 }}>{label}</div>
+                         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '0.6rem', padding: '3px', textAlign: 'center', fontWeight: 700 }}>{label}</div>
                        </div>
                      );
                    })}
                  </div>
-                 <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+                 <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'center' }}>
                    <input type="number" min="1" step="0.5" value={pass2W} onChange={e => setPass2W(e.target.value)} placeholder="Ngang (m)"
-                     style={{ flex: 1, padding: '8px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', fontSize: '0.8rem', textAlign: 'center' }} />
-                   <span style={{ color: 'rgba(255,255,255,0.4)', alignSelf: 'center' }}>×</span>
+                     style={{ flex: 1, padding: '10px', borderRadius: '8px', background: '#ffffff', color: '#1a1a1a', border: '1.5px solid rgba(202,138,4,0.3)', fontSize: '0.85rem', textAlign: 'center', fontWeight: 600 }} />
+                   <span style={{ color: '#854d0e', fontWeight: 700 }}>×</span>
                    <input type="number" min="1" step="0.5" value={pass2L} onChange={e => setPass2L(e.target.value)} placeholder="Dài (m)"
-                     style={{ flex: 1, padding: '8px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', fontSize: '0.8rem', textAlign: 'center' }} />
+                     style={{ flex: 1, padding: '10px', borderRadius: '8px', background: '#ffffff', color: '#1a1a1a', border: '1.5px solid rgba(202,138,4,0.3)', fontSize: '0.85rem', textAlign: 'center', fontWeight: 600 }} />
                  </div>
                  <button
                    disabled={!pass2Picked || pass2Starting}
@@ -3249,40 +3312,48 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                      finally { setPass2Starting(false); }
                    }}
                    style={{
-                     width: '100%', padding: '12px', borderRadius: '12px', fontSize: '0.9rem', fontWeight: 800,
+                     width: '100%', padding: '14px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 800,
                      border: 'none', cursor: !pass2Picked || pass2Starting ? 'not-allowed' : 'pointer',
-                     background: pass2Picked ? '#facc15' : 'rgba(255,255,255,0.1)',
-                     color: pass2Picked ? '#000' : 'rgba(255,255,255,0.5)'
+                     background: pass2Picked ? 'linear-gradient(135deg, #ca8a04 0%, #a16207 100%)' : 'rgba(202,138,4,0.15)',
+                     color: pass2Picked ? '#fff' : '#a16207',
+                     boxShadow: pass2Picked ? '0 8px 22px rgba(202,138,4,0.35)' : 'none',
+                     transition: 'all .2s'
                    }}
                  >
                    {pass2Starting ? 'Đang khởi động...' : '✨ Tiếp tục tạo bổ sung'}
                  </button>
-                 {pass2Msg && <p style={{ fontSize: '0.75rem', color: pass2Msg.startsWith('Lỗi') ? '#ef4444' : '#22c55e', marginTop: '8px', textAlign: 'center' }}>{pass2Msg}</p>}
+                 {pass2Msg && <p style={{ fontSize: '0.78rem', fontWeight: 600, color: pass2Msg.startsWith('Lỗi') ? '#b91c1c' : '#15803d', marginTop: '10px', textAlign: 'center' }}>{pass2Msg}</p>}
                </div>
              )}
 
              {/* PASS 2 PROGRESS + RESULTS */}
              {project?.pass2Results && (
-               <div style={{ marginBottom: '10px', padding: '14px', borderRadius: '14px', background: 'rgba(250,204,21,0.06)', border: '1px solid rgba(250,204,21,0.25)', textAlign: 'left' }}>
-                 <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#facc15', marginBottom: '8px', textAlign: 'center' }}>
+               <div style={{
+                 marginBottom: '10px', padding: '16px', borderRadius: '16px',
+                 background: 'linear-gradient(135deg, rgba(250,204,21,0.06), #ffffff 80%)',
+                 border: '1.5px solid rgba(202,138,4,0.25)',
+                 boxShadow: '0 4px 14px rgba(202,138,4,0.05)',
+                 textAlign: 'left'
+               }}>
+                 <p style={{ fontSize: '0.95rem', fontWeight: 800, color: '#854d0e', marginBottom: '12px', textAlign: 'center' }}>
                    Kết quả bổ sung — {project.pass2Results.tasks?.filter(t => t.status === 'done').length || 0}/7 xong
                    {project.pass2Results.status === 'running' && ' · đang xử lý...'}
                    {project.pass2Results.status === 'done' && ' · ✅ Hoàn tất'}
                    {project.pass2Results.status === 'failed' && ' · ❌ Lỗi'}
                  </p>
-                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
                    {project.pass2Results.tasks?.map(task => (
-                     <div key={task.taskId} style={{ borderRadius: '8px', overflow: 'hidden', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                     <div key={task.taskId} style={{ borderRadius: '10px', overflow: 'hidden', background: '#ffffff', border: '1.5px solid rgba(212,163,115,0.2)', boxShadow: '0 2px 8px rgba(28,20,12,0.04)' }}>
                        {task.url ? (
                          task.type === 'video'
                            ? <video src={task.url} controls style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block', background: '#000' }} />
                            : <img decoding="async" loading="lazy" src={task.url} alt={task.label} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }} />
                        ) : (
-                         <div style={{ aspectRatio: '16/10', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>
+                         <div style={{ aspectRatio: '16/10', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7c5c2e', fontSize: '0.75rem', background: 'rgba(212,163,115,0.08)', fontWeight: 600 }}>
                            {task.status === 'failed' ? '❌' : task.status === 'running' ? '⏳ Đang tạo...' : '... chờ'}
                          </div>
                        )}
-                       <div style={{ padding: '6px 8px', fontSize: '0.65rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600, textAlign: 'center' }}>{task.label}</div>
+                       <div style={{ padding: '8px', fontSize: '0.72rem', color: '#1a1a1a', fontWeight: 700, textAlign: 'center', background: 'rgba(212,163,115,0.06)' }}>{task.label}</div>
                        {(task.status === 'failed' || (task.status === 'done' && !task.url)) && (
                          <button
                            onClick={async () => {
@@ -3294,7 +3365,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                                if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Retry failed'); }
                              } catch (e: any) { alert(`Lỗi: ${e.message}`); }
                            }}
-                           style={{ width: '100%', padding: '6px', border: 'none', background: '#facc15', color: '#000', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer' }}
+                           style={{ width: '100%', padding: '8px', border: 'none', background: '#ca8a04', color: '#fff', fontWeight: 800, fontSize: '0.74rem', cursor: 'pointer' }}
                          >
                            🔄 Thử lại
                          </button>

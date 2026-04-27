@@ -1,0 +1,44 @@
+- generic [ref=e2]:
+  - generic [ref=e53]:
+    - button "Quay lại" [ref=e54] [cursor=pointer]:
+      - img [ref=e55]
+      - text: Quay lại
+    - button "Tiếp theo" [ref=e57] [cursor=pointer]:
+      - text: Tiếp theo
+      - img [ref=e58]
+  - generic [ref=e176]:
+    - heading "Tải ảnh hiện trạng công trình" [level=2] [ref=e177]
+    - generic [ref=e178] [cursor=pointer]:
+      - img [ref=e180]
+      - generic [ref=e183]: NHẤN ĐỂ CHỌN ẢNH CHÍNH
+      - generic [ref=e184]: JPG / PNG / WEBP — tối đa 25MB
+    - generic [ref=e185]:
+      - generic [ref=e186]:
+        - generic [ref=e187]:
+          - img [ref=e188]
+          - generic [ref=e190]: MẸO CHỤP ẢNH
+        - list [ref=e191]:
+          - listitem [ref=e192]: ✦ Vị trí giống mẫu chọn
+          - listitem [ref=e193]: ✦ Bao quát không gian
+          - listitem [ref=e194]: ✦ Góc rộng chính diện
+      - generic [ref=e196]:
+        - generic [ref=e197]: ẢNH MẪU ĐÃ CHỌN
+        - img "Selected Template" [ref=e198]
+    - generic [ref=e199]:
+      - generic [ref=e201]:
+        - img [ref=e202]
+        - generic [ref=e205]: Mô tả ý tưởng chi tiết
+      - 'textbox "Ví dụ: • Kích thước khu vườn khoảng 50m2 (10x5m) • Góc trái bố trí hồ cá koi 12m2, thác nước cao 1.2m đổ từ hòn non bộ • Chính giữa là lối đi lát đá tự nhiên trên thảm cỏ nhung Nhật • Phía sau hồ đặt tiểu cảnh và cây tùng la hán trang trí" [ref=e206]':
+        - /placeholder: "Ví dụ:\n• Kích thước khu vườn khoảng 50m2 (10x5m)\n• Góc trái bố trí hồ cá koi 12m2, thác nước cao 1.2m đổ từ hòn non bộ\n• Chính giữa là lối đi lát đá tự nhiên trên thảm cỏ nhung Nhật\n• Phía sau hồ đặt tiểu cảnh và cây tùng la hán trang trí"
+    - generic [ref=e207]:
+      - generic [ref=e208]:
+        - generic [ref=e209]:
+          - img [ref=e210]
+          - heading "Hình ảnh, video và tài liệu liên quan" [level=3] [ref=e214]
+        - paragraph [ref=e215]: Gửi thêm ảnh, video, hoặc bản phác thảo để KTS hiểu rõ không gian và yêu cầu của bạn (áp dụng cho gói thiết kế chuyên nghiệp).
+      - generic [ref=e217] [cursor=pointer]:
+        - generic [ref=e218]:
+          - img [ref=e219]
+          - img [ref=e223]
+          - img [ref=e225]
+        - generic [ref=e227]: NHẤN ĐỂ CHỌN NHIỀU TÀI LIỆU CÙNG LÚC

@@ -1,0 +1,35 @@
+- generic [ref=e2]:
+  - generic [ref=e53]:
+    - button "Quay lại" [ref=e54] [cursor=pointer]:
+      - img [ref=e55]
+      - text: Quay lại
+    - button "Tiếp theo" [active] [ref=e57] [cursor=pointer]:
+      - text: Tiếp theo
+      - img [ref=e58]
+  - generic [ref=e148]:
+    - img [ref=e149]
+    - paragraph [ref=e151]: Anh/Chị vui lòng hãy chọn một mẫu thiết kế mà mình ưng ý nhất nhé!
+    - button "Đã hiểu" [ref=e152] [cursor=pointer]
+  - generic [ref=e61]:
+    - heading "Nhấn chọn mẫu phù hợp" [level=2] [ref=e108]
+    - generic [ref=e110]:
+      - generic [ref=e111] [cursor=pointer]:
+        - generic "Mẫu hồ số 01" [ref=e113]
+        - generic [ref=e115]:
+          - img [ref=e116]
+          - generic [ref=e119]: Mẫu hồ số 01
+      - generic [ref=e120] [cursor=pointer]:
+        - generic "Biến thể mới 2" [ref=e122]
+        - generic [ref=e124]:
+          - img [ref=e125]
+          - generic [ref=e128]: Biến thể mới 2
+      - generic [ref=e129] [cursor=pointer]:
+        - generic "Biến thể mới 3" [ref=e131]
+        - generic [ref=e133]:
+          - img [ref=e134]
+          - generic [ref=e137]: Biến thể mới 3
+      - generic [ref=e138] [cursor=pointer]:
+        - generic "Biến thể mới 4" [ref=e140]
+        - generic [ref=e142]:
+          - img [ref=e143]
+          - generic [ref=e146]: Biến thể mới 4

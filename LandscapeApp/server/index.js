@@ -496,12 +496,21 @@ const ProjectSchema = new mongoose.Schema({
       area: Number,
       amount: Number,
       status: { type: String, default: 'pending' },
+      method: { type: String, default: 'momo' },
       orderId: String,
       requestId: String,
       transId: String,
       payUrl: String,
       qrCodeUrl: String,
       deeplink: String,
+      bankInfo: {
+        bin: String,
+        accountNo: String,
+        accountName: String,
+        bankName: String,
+        transferContent: String,
+        qrImageUrl: String
+      },
       message: String,
       resultCode: Number,
       createdAt: Date,
@@ -1297,6 +1306,75 @@ app.post('/api/projects/:id/payment/create', async (req, res) => {
   }
 });
 
+// Bank transfer (manual confirm) — tạo đơn pending, khách quét VietQR và chuyển khoản,
+// admin xác nhận thủ công qua /payment/mark-paid khi tiền về.
+app.post('/api/projects/:id/payment/create-bank-transfer', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { packageId, area } = req.body || {};
+    if (!packageId) return res.status(400).json({ error: 'packageId is required' });
+
+    const project = await Project.findOne({ id });
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    if (project.payment?.status === 'paid') {
+      return res.json({ alreadyPaid: true, payment: project.payment });
+    }
+
+    const priceInfo = momo.resolvePrice(packageId, area);
+
+    const BANK_BIN = process.env.BANK_BIN || '';
+    const BANK_ACCOUNT_NO = process.env.BANK_ACCOUNT_NO || '';
+    const BANK_ACCOUNT_NAME = process.env.BANK_ACCOUNT_NAME || '';
+    const BANK_NAME = process.env.BANK_NAME || '';
+    if (!BANK_BIN || !BANK_ACCOUNT_NO || !BANK_ACCOUNT_NAME) {
+      return res.status(500).json({
+        error: 'Chưa cấu hình thông tin ngân hàng (BANK_BIN, BANK_ACCOUNT_NO, BANK_ACCOUNT_NAME) trong .env'
+      });
+    }
+
+    const orderId = `BT-${id}-${Date.now()}`;
+    const transferContent = `TT ${id}`.substring(0, 25);
+
+    const qrImageUrl = `https://img.vietqr.io/image/${encodeURIComponent(BANK_BIN)}-${encodeURIComponent(BANK_ACCOUNT_NO)}-compact2.png`
+      + `?amount=${priceInfo.price}`
+      + `&addInfo=${encodeURIComponent(transferContent)}`
+      + `&accountName=${encodeURIComponent(BANK_ACCOUNT_NAME)}`;
+
+    project.payment = {
+      packageId,
+      packageLabel: priceInfo.label,
+      area: priceInfo.area || null,
+      amount: priceInfo.price,
+      status: 'pending',
+      method: 'bank_transfer',
+      orderId,
+      requestId: orderId,
+      bankInfo: {
+        bin: BANK_BIN,
+        accountNo: BANK_ACCOUNT_NO,
+        accountName: BANK_ACCOUNT_NAME,
+        bankName: BANK_NAME,
+        transferContent,
+        qrImageUrl
+      },
+      createdAt: new Date()
+    };
+    await project.save();
+
+    res.json({
+      orderId,
+      amount: priceInfo.price,
+      packageLabel: priceInfo.label,
+      method: 'bank_transfer',
+      bankInfo: project.payment.bankInfo
+    });
+  } catch (err) {
+    console.error('[Payment][bank-transfer] error:', err.message);
+    res.status(500).json({ error: err.message || 'Không thể tạo đơn chuyển khoản.' });
+  }
+});
+
 app.post('/api/payment/momo/ipn', async (req, res) => {
   try {
     const payload = req.body || {};
@@ -1337,7 +1415,7 @@ app.get('/api/projects/:id/payment/status', async (req, res) => {
     if (!project) return res.status(404).json({ error: 'Project not found' });
     if (!project.payment) return res.json({ status: 'none' });
 
-    if (project.payment.status === 'pending' && project.payment.orderId) {
+    if (project.payment.status === 'pending' && project.payment.orderId && project.payment.method !== 'bank_transfer') {
       try {
         const q = await momo.queryPayment({ orderId: project.payment.orderId, requestId: project.payment.requestId });
         if (q && Number(q.resultCode) === 0) {
@@ -1426,6 +1504,9 @@ app.post('/api/projects/:id/payment/recheck', async (req, res) => {
     if (!project) return res.status(404).json({ error: 'Project not found' });
     if (!project.payment || !project.payment.orderId || !project.payment.requestId) {
       return res.status(400).json({ error: 'Payment orderId/requestId not found' });
+    }
+    if (project.payment.method === 'bank_transfer') {
+      return res.status(400).json({ error: 'Đơn chuyển khoản cần admin xác nhận thủ công, không thể recheck qua MoMo.' });
     }
 
     const q = await momo.queryPayment({

@@ -121,8 +121,8 @@ async function resolveVisiblePromptSelector(page) {
       return style.display !== 'none'
         && style.visibility !== 'hidden'
         && style.opacity !== '0'
-        && rect.width > 20
-        && rect.height > 20;
+        && rect.width > 100
+        && rect.height >= 16;
     };
 
     const candidates = selectors.flatMap((selector) =>
@@ -161,8 +161,8 @@ async function waitForPromptInputReady(page) {
       return style.display !== 'none'
         && style.visibility !== 'hidden'
         && style.opacity !== '0'
-        && rect.width > 20
-        && rect.height > 20;
+        && rect.width > 100
+        && rect.height >= 16;
     };
 
     return candidates.some((element) => {
@@ -185,8 +185,8 @@ async function readPromptText(page) {
       return style.display !== 'none'
         && style.visibility !== 'hidden'
         && style.opacity !== '0'
-        && rect.width > 20
-        && rect.height > 20;
+        && rect.width > 100
+        && rect.height >= 16;
     };
 
     const target = candidates
@@ -212,8 +212,8 @@ async function setPromptTextViaDom(page, prompt) {
       return style.display !== 'none'
         && style.visibility !== 'hidden'
         && style.opacity !== '0'
-        && rect.width > 20
-        && rect.height > 20;
+        && rect.width > 100
+        && rect.height >= 16;
     };
 
     const target = candidates
@@ -254,100 +254,336 @@ async function setPromptTextViaDom(page, prompt) {
   }, prompt);
 }
 
+// Đếm số attachment thumbnail đang có trong composer area (vùng quanh textbox prompt + nút send)
+async function countComposerAttachments(page) {
+  return await page.evaluate(() => {
+    const target = document.querySelector('div[role="textbox"][contenteditable="true"]');
+    if (!target) return 0;
+    let composer = target;
+    for (let i = 0; i < 10; i++) {
+      if (!composer.parentElement) break;
+      composer = composer.parentElement;
+      if ((composer.textContent || '').includes('arrow_forward')) break;
+    }
+    const imgs = Array.from(composer.querySelectorAll('img')).filter((img) => {
+      const src = img.currentSrc || img.src || '';
+      // Thumbnail upload có pattern này, không phải avatar/icon
+      if (!/media\.getMediaUrlRedirect|labs\.google\/fx\/api\/trpc\/media/i.test(src)) return false;
+      if (!img.complete || img.naturalWidth === 0) return false;
+      const r = img.getBoundingClientRect();
+      return r.width >= 20 && r.height >= 20;
+    });
+    return imgs.length;
+  });
+}
+
+// DIAG: Diagnostic helper to dump composer DOM structure for debugging paste failures
+async function dumpComposerDom(page, label) { // DIAG
+  try { // DIAG
+    const info = await page.evaluate(() => { // DIAG
+      const target = document.querySelector('div[role="textbox"][contenteditable="true"]'); // DIAG
+      if (!target) return { error: 'no_textbox' }; // DIAG
+      let composer = target; // DIAG
+      for (let i = 0; i < 10; i++) { // DIAG
+        if (!composer.parentElement) break; // DIAG
+        composer = composer.parentElement; // DIAG
+        if ((composer.textContent || '').includes('arrow_forward')) break; // DIAG
+      } // DIAG
+      const allImgs = Array.from(composer.querySelectorAll('img')).map((img) => { // DIAG
+        const r = img.getBoundingClientRect(); // DIAG
+        const src = img.currentSrc || img.src || ''; // DIAG
+        return { srcPattern: src.slice(0, 120), w: r.width, h: r.height, complete: img.complete, naturalW: img.naturalWidth, visible: r.width > 0 && r.height > 0 }; // DIAG
+      }); // DIAG
+      const html = composer.outerHTML || ''; // DIAG
+      return { outerHTML: html.slice(0, 3000), outerHTMLLen: html.length, imgCount: allImgs.length, imgs: allImgs }; // DIAG
+    }); // DIAG
+    console.log(`[Flow:diag][dump:${label}] outerHTMLLen=${info.outerHTMLLen ?? 'N/A'} imgCount=${info.imgCount ?? 0}`); // DIAG
+    console.log(`[Flow:diag][dump:${label}] imgs=`, JSON.stringify(info.imgs || []).slice(0, 1500)); // DIAG
+    console.log(`[Flow:diag][dump:${label}] outerHTML(3000)=`, info.outerHTML || info.error || ''); // DIAG
+  } catch (e) { // DIAG
+    console.log(`[Flow:diag][dump:${label}] error: ${e.message}`); // DIAG
+  } // DIAG
+} // DIAG
+
+// Paste 1 ảnh bằng phương thức THẬT: navigator.clipboard.write() + Meta+V / Ctrl+V
+// Lý do: Flow của Google bỏ qua synthetic ClipboardEvent dispatch; phải dùng paste real từ keyboard.
+// LƯU Ý: navigator.clipboard.write() yêu cầu page có FOCUS (Document is focused) — nếu Playwright
+// chạy trong cửa sổ background, nó sẽ throw "Document is not focused".
+async function pasteSingleImageReal(page, fileInfo) {
+  // 1. Bring page to front để có focus thật
+  let bringOk = true; // DIAG
+  try { await page.bringToFront(); } catch (e) { bringOk = false; /* ignore */ } // DIAG: track bringToFront result
+  console.log(`[Flow:diag] bringToFront ok=${bringOk}`); // DIAG: log focus bring success/fail
+
+  // 2. Click vào textbox composer trước để document có user activation + element focus
+  const promptBox = await getPromptLocator(page);
+  await promptBox.click();
+  const promptRect = await promptBox.boundingBox().catch(() => null); // DIAG: capture promptBox geometry
+  console.log(`[Flow:diag] promptBox.click done rect=${JSON.stringify(promptRect)}`); // DIAG
+  await delay(150);
+
+  // 3. Set clipboard với image; nếu Playwright window không focus, thử bringToFront + retry
+  const preFocus = await page.evaluate(() => document.hasFocus()).catch(() => null); // DIAG: doc focus before clipboard.write
+  console.log(`[Flow:diag] before clipboard.write docFocus=${preFocus} mimeType=${fileInfo.mimeType} b64Len=${(fileInfo.base64 || '').length}`); // DIAG
+  const writeResult = await page.evaluate(async ({ b64, mimeType }) => {
+    const target = document.querySelector('div[role="textbox"][contenteditable="true"]');
+    if (!target) return { ok: false, error: 'no_textbox' };
+    target.focus();
+
+    let blob;
+    try {
+      const resp = await fetch(`data:${mimeType};base64,${b64}`);
+      blob = await resp.blob();
+    } catch (fetchErr) {
+      return { ok: false, error: 'fetch_failed:' + fetchErr.message };
+    }
+
+    // navigator.clipboard.write chỉ chấp nhận image/png — convert JPEG/WebP/etc về PNG qua canvas
+    if (mimeType !== 'image/png') {
+      try {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = () => reject(new Error('image_load_failed'));
+          img.src = url;
+        });
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+        URL.revokeObjectURL(url);
+        mimeType = 'image/png';
+      } catch (convErr) {
+        return { ok: false, error: 'png_convert_failed:' + convErr.message };
+      }
+    }
+
+    if (!document.hasFocus()) {
+      return { ok: false, error: 'document_not_focused', blobSize: blob.size };
+    }
+
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ [mimeType]: blob })]);
+      return { ok: true, blobSize: blob.size, finalMime: mimeType };
+    } catch (writeErr) {
+      return { ok: false, error: 'clipboard_write_failed:' + writeErr.message, blobSize: blob.size };
+    }
+  }, { b64: fileInfo.base64, mimeType: fileInfo.mimeType });
+  console.log(`[Flow:diag] clipboard.write result=${JSON.stringify(writeResult)}`); // DIAG: full writeResult
+
+  if (!writeResult.ok) {
+    // Fallback: dùng CDP để set clipboard ở OS level (không cần document focus)
+    console.log(`[Flow] navigator.clipboard.write that bai (${writeResult.error}); thu CDP Input.dispatchKeyEvent + clipboard fallback...`);
+    const cdp = await page.context().newCDPSession(page);
+    try {
+      // CDP có Browser.grantPermissions để force-grant clipboard
+      await cdp.send('Browser.grantPermissions', {
+        origin: new URL(page.url()).origin,
+        permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite']
+      }).catch(() => {});
+
+      // Bring page to front lại lần nữa
+      await page.bringToFront().catch(() => {});
+      await delay(300);
+
+      // Click textbox lần nữa để có user activation tươi
+      await promptBox.click();
+      await delay(150);
+
+      // Retry clipboard.write 1 lần (cũng convert JPEG/WebP -> PNG nếu cần)
+      const retry = await page.evaluate(async ({ b64, mimeType }) => {
+        try {
+          const target = document.querySelector('div[role="textbox"][contenteditable="true"]');
+          target?.focus();
+          const resp = await fetch(`data:${mimeType};base64,${b64}`);
+          let blob = await resp.blob();
+          if (mimeType !== 'image/png') {
+            const url = URL.createObjectURL(blob);
+            const img = new Image();
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = () => reject(new Error('image_load_failed'));
+              img.src = url;
+            });
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+            URL.revokeObjectURL(url);
+            mimeType = 'image/png';
+          }
+          if (!document.hasFocus()) return { ok: false, error: 'still_not_focused' };
+          await navigator.clipboard.write([new ClipboardItem({ [mimeType]: blob })]);
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: 'retry_failed:' + e.message };
+        }
+      }, { b64: fileInfo.base64, mimeType: fileInfo.mimeType });
+
+      if (!retry.ok) {
+        throw new Error(`Khong set duoc clipboard: ${retry.error || writeResult.error}`);
+      }
+    } finally {
+      await cdp.detach().catch(() => {});
+    }
+  }
+
+  // 4. Click textbox lần cuối để đảm bảo focus, rồi nhấn Cmd+V / Ctrl+V
+  await promptBox.click();
+  await delay(150);
+  const isMac = process.platform === 'darwin';
+  const keyCombo = isMac ? 'Meta+V' : 'Control+V'; // DIAG
+  const focusBeforePress = await page.evaluate(() => document.hasFocus()).catch(() => null); // DIAG: confirm focus right before paste
+  console.log(`[Flow:diag] keyboard.press combo=${keyCombo} docFocus=${focusBeforePress}`); // DIAG
+  await page.keyboard.press(keyCombo);
+  await delay(500); // DIAG: small wait so DOM can settle for the immediate count read
+  const immediateCount = await countComposerAttachments(page).catch(() => -1); // DIAG
+  console.log(`[Flow:diag] post-paste immediate composer attachment count=${immediateCount}`); // DIAG
+}
+
 async function pasteAssetsIntoPrompt(page, clipboardFiles) {
   await waitForPromptInputReady(page);
   const promptBox = await getPromptLocator(page);
   await promptBox.waitFor({ state: 'visible', timeout: 30000 });
   await promptBox.click();
+  await dumpComposerDom(page, 'after-nav-composer-ready'); // DIAG: snapshot composer before any paste
 
-  await page.evaluate(async ({ files }) => {
-    const candidates = Array.from(document.querySelectorAll('textarea, [contenteditable="true"], div[role="textbox"]'));
-    const isVisible = (element) => {
-      if (!(element instanceof HTMLElement)) return false;
-      const style = window.getComputedStyle(element);
-      const rect = element.getBoundingClientRect();
-      return style.display !== 'none'
-        && style.visibility !== 'hidden'
-        && style.opacity !== '0'
-        && rect.width > 20
-        && rect.height > 20
-        && !element.closest('[aria-hidden="true"]');
-    };
+  for (let i = 0; i < clipboardFiles.length; i++) {
+    const fileInfo = clipboardFiles[i];
+    const expectedAfter = i + 1;
 
-    const target = candidates
-      .filter((element) => isVisible(element))
-      .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0];
-    if (!target) {
-      throw new Error('Khong tim thay o nhap prompt de dan anh.');
+    let pastedOk = false;
+    for (let attempt = 1; attempt <= 3 && !pastedOk; attempt++) {
+      const before = await countComposerAttachments(page);
+      console.log(`[Flow:diag] attempt ${attempt} for image ${i}, before count=${before}, expected=${expectedAfter}`); // DIAG
+      console.log(`[Flow] Paste anh ${i + 1}/${clipboardFiles.length} (lan ${attempt}): hien co ${before} attachment, can len ${expectedAfter}.`);
+
+      try {
+        await pasteSingleImageReal(page, fileInfo);
+      } catch (e) {
+        console.warn(`[Flow] Paste lan ${attempt} loi: ${e.message}`);
+        await delay(1500);
+        continue;
+      }
+
+      // Đợi thumbnail mới xuất hiện trong composer (tối đa 20s/ảnh)
+      try {
+        await page.waitForFunction(
+          (n) => {
+            const target = document.querySelector('div[role="textbox"][contenteditable="true"]');
+            if (!target) return false;
+            let composer = target;
+            for (let k = 0; k < 10; k++) {
+              if (!composer.parentElement) break;
+              composer = composer.parentElement;
+              if ((composer.textContent || '').includes('arrow_forward')) break;
+            }
+            const imgs = Array.from(composer.querySelectorAll('img')).filter((img) => {
+              const src = img.currentSrc || img.src || '';
+              if (!/media\.getMediaUrlRedirect|labs\.google\/fx\/api\/trpc\/media/i.test(src)) return false;
+              if (!img.complete || img.naturalWidth === 0) return false;
+              const r = img.getBoundingClientRect();
+              return r.width >= 20 && r.height >= 20;
+            });
+            return imgs.length >= n;
+          },
+          expectedAfter,
+          { timeout: 20000 }
+        );
+        pastedOk = true;
+        const afterOk = await countComposerAttachments(page).catch(() => -1); // DIAG
+        console.log(`[Flow:diag] waitForFunction OK: final count=${afterOk}, matched selector=media.getMediaUrlRedirect|labs.google/fx/api/trpc/media`); // DIAG
+        console.log(`[Flow] ✓ Anh ${i + 1}/${clipboardFiles.length} da xuat hien thumbnail trong composer.`);
+      } catch (waitErr) {
+        const after = await countComposerAttachments(page);
+        console.log(`[Flow:diag] waitForFunction TIMEOUT: final count=${after}, expected=${expectedAfter}`); // DIAG
+        // DIAG: when count is 0 dump all imgs in composer to inspect what's actually there
+        const composerImgInfo = await page.evaluate(() => { // DIAG
+          const target = document.querySelector('div[role="textbox"][contenteditable="true"]'); // DIAG
+          if (!target) return { error: 'no_textbox' }; // DIAG
+          let composer = target; // DIAG
+          for (let k = 0; k < 10; k++) { // DIAG
+            if (!composer.parentElement) break; // DIAG
+            composer = composer.parentElement; // DIAG
+            if ((composer.textContent || '').includes('arrow_forward')) break; // DIAG
+          } // DIAG
+          const imgs = Array.from(composer.querySelectorAll('img')); // DIAG
+          return { // DIAG
+            outerHTMLLen: (composer.outerHTML || '').length, // DIAG
+            allImgCount: imgs.length, // DIAG
+            srcPatterns: imgs.map((i) => (i.currentSrc || i.src || '').slice(0, 100)) // DIAG
+          }; // DIAG
+        }); // DIAG
+        console.log(`[Flow:diag] composer state on timeout=${JSON.stringify(composerImgInfo)}`); // DIAG
+        if (attempt === 1) await dumpComposerDom(page, `paste-fail-img${i}`); // DIAG: dump on first failure
+        console.warn(`[Flow] Anh ${i + 1} chua thay thumbnail sau khi paste (sau=${after}, can=${expectedAfter}). Thu lai...`);
+        await delay(1500);
+      }
     }
 
-    const dataTransfer = new DataTransfer();
-    for (const fileInfo of files) {
-      const response = await fetch(`data:${fileInfo.mimeType};base64,${fileInfo.base64}`);
-      const blob = await response.blob();
-      dataTransfer.items.add(new File([blob], fileInfo.name, { type: fileInfo.mimeType }));
+    if (!pastedOk) {
+      throw new Error(`Khong upload duoc anh ${i + 1}/${clipboardFiles.length} sau 3 lan thu (composer khong nhan thumbnail).`);
     }
 
-    target.dispatchEvent(new ClipboardEvent('paste', {
-      clipboardData: dataTransfer,
-      bubbles: true,
-      cancelable: true
-    }));
-  }, { files: clipboardFiles });
+    await delay(800); // Cho UI ổn định trước khi paste ảnh tiếp theo
+  }
 
   return promptBox;
 }
 
 async function waitForPromptAssetsReady(page, expectedCount) {
-  console.log(`[Flow] Dang cho Flow upload xong ${expectedCount} anh input...`);
+  console.log(`[Flow] Dang cho ${expectedCount} thumbnail attachment san sang trong composer...`);
 
+  // Đếm img upload thumbnail BÊN TRONG composer area (vùng quanh textbox + nút send)
+  // chứ không scan toàn page (tránh đếm nhầm ảnh ở grid/sidebar).
   await page.waitForFunction((count) => {
-    var allImgs = Array.from(document.querySelectorAll('img'));
-    var assets = allImgs.filter(function(img) {
-      if (!(img instanceof HTMLImageElement)) return false;
-      var s = window.getComputedStyle(img);
-      var r = img.getBoundingClientRect();
-      if (s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0') return false;
-      if (r.width < 30 || r.height < 30) return false;
-      if (!img.complete && img.naturalWidth === 0) return false;
-      var src = img.currentSrc || img.src || '';
-      if (!src) return false;
-      if (/avatar|profile|googleusercontent|placeholder|logo|icon|discord|instagram|x-logo|favicon/i.test(src)) return false;
-      if (src.endsWith('.svg')) return false;
-      return true;
-    });
-    if (assets.length < count) return false;
-    var hasPending = !!document.querySelector('[role="progressbar"], progress, [aria-busy="true"]');
-    return !hasPending;
+    const target = document.querySelector('div[role="textbox"][contenteditable="true"]');
+    if (!target) return false;
+    let composer = target;
+    for (let k = 0; k < 10; k++) {
+      if (!composer.parentElement) break;
+      composer = composer.parentElement;
+      if ((composer.textContent || '').includes('arrow_forward')) break;
+    }
+    const ready = Array.from(composer.querySelectorAll('img')).filter((img) => {
+      const src = img.currentSrc || img.src || '';
+      if (!/media\.getMediaUrlRedirect|labs\.google\/fx\/api\/trpc\/media/i.test(src)) return false;
+      if (!img.complete || img.naturalWidth === 0) return false;
+      const r = img.getBoundingClientRect();
+      return r.width >= 20 && r.height >= 20;
+    }).length;
+    if (ready < count) return false;
+    // Đợi không còn progress bar bên trong composer
+    const pending = composer.querySelector('[role="progressbar"], progress, [aria-busy="true"]');
+    return !pending;
   }, expectedCount, { timeout: 120000 });
 
   const attachmentDebug = await page.evaluate(() => {
-    var allImgs = Array.from(document.querySelectorAll('img'));
-    var readyCount = allImgs.filter(function(img) {
-      if (!(img instanceof HTMLImageElement)) return false;
-      var s = window.getComputedStyle(img);
-      var r = img.getBoundingClientRect();
-      if (s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0') return false;
-      if (r.width < 30 || r.height < 30) return false;
-      if (!img.complete && img.naturalWidth === 0) return false;
-      var src = img.currentSrc || img.src || '';
-      if (!src) return false;
-      if (/avatar|profile|googleusercontent|placeholder|logo|icon|discord|instagram|x-logo|favicon/i.test(src)) return false;
-      if (src.endsWith('.svg')) return false;
-      return true;
-    }).length;
-    var sendButton = Array.from(document.querySelectorAll('button')).find(function(btn) {
-      var text = (btn.textContent || '').trim();
-      return /arrow_forward/i.test(text);
-    });
+    const target = document.querySelector('div[role="textbox"][contenteditable="true"]');
+    let composer = target;
+    if (composer) {
+      for (let k = 0; k < 10; k++) {
+        if (!composer.parentElement) break;
+        composer = composer.parentElement;
+        if ((composer.textContent || '').includes('arrow_forward')) break;
+      }
+    }
+    const readyCount = composer ? Array.from(composer.querySelectorAll('img')).filter((img) => {
+      const src = img.currentSrc || img.src || '';
+      return /media\.getMediaUrlRedirect|labs\.google\/fx\/api\/trpc\/media/i.test(src) && img.complete && img.naturalWidth > 0;
+    }).length : 0;
+    const sendButton = Array.from(document.querySelectorAll('button')).find((btn) => /arrow_forward/i.test(btn.textContent || ''));
     return {
-      readyCount: readyCount,
+      readyCount,
       sendEnabled: !!sendButton && !sendButton.hasAttribute('disabled') && sendButton.getAttribute('aria-disabled') !== 'true'
     };
   });
 
-  console.log(`[Flow] Upload input hoan tat: ${attachmentDebug.readyCount} attachment san sang, sendEnabled=${attachmentDebug.sendEnabled}.`);
-  await delay(2000);
+  console.log(`[Flow] ✓ Composer co ${attachmentDebug.readyCount} thumbnail san sang, sendEnabled=${attachmentDebug.sendEnabled}.`);
+  await delay(1500);
 }
 
 async function waitForComposerReadyToSubmit(page, expectedCount, prompt) {
@@ -458,38 +694,20 @@ async function runFlowVariant(page, prompt, inputFiles, tempDir, onImageReady) {
         console.log(`[Flow] Không tìm thấy nút tạo dự án, thử tiếp tục...`);
     }
  
-    // 2. Nạp ảnh bằng phương thức Paste (Dán) để hiển thị như Hình 2
-    console.log(`[Flow] Bắt đầu nạp ${filePaths.length} ảnh bằng phương thức Paste...`);
-    const promptBox = page.locator('textarea, [contenteditable="true"], div[role="textbox"]').first();
-    await promptBox.click();
-
+    // 2. Nạp ảnh bằng phương thức Paste THẬT (navigator.clipboard.write + Cmd/Ctrl+V)
+    //    Lưu ý: dispatchEvent(ClipboardEvent) bị Flow của Google bỏ qua — phải dùng paste thật.
+    console.log(`[Flow] Bắt đầu nạp ${filePaths.length} ảnh bằng phương thức Paste thật...`);
+    const clipboardFiles = [];
     for (let i = 0; i < filePaths.length; i++) {
-        console.log(`[Flow] Đang dán ảnh ${i + 1}/${filePaths.length}...`);
-        const imageBuffer = await require('fs/promises').readFile(filePaths[i]);
-        const base64Image = imageBuffer.toString('base64');
-        
-        await page.evaluate(async ({ base64, index }) => {
-            const resp = await fetch(`data:image/png;base64,${base64}`);
-            const blob = await resp.blob();
-            const file = new File([blob], `image_${index}.png`, { type: 'image/png' });
-            
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(file);
-            
-            const target = document.querySelector('textarea, [contenteditable="true"], div[role="textbox"]');
-            const pasteEvent = new ClipboardEvent('paste', {
-                clipboardData: dataTransfer,
-                bubbles: true,
-                cancelable: true
-            });
-            target.dispatchEvent(pasteEvent);
-        }, { base64: base64Image, index: i });
-        
-        await delay(3000); // Đợi Google nhận diện từng ảnh sau khi dán
+      const buf = await require('fs/promises').readFile(filePaths[i]);
+      clipboardFiles.push({
+        name: `image_${i}.png`,
+        mimeType: 'image/png',
+        base64: buf.toString('base64')
+      });
     }
-
-    console.log(`[Flow] Chờ Google xử lý đồng bộ ảnh (10 giây)...`);
-    await delay(10000);
+    const promptBox = await pasteAssetsIntoPrompt(page, clipboardFiles);
+    console.log(`[Flow] ✓ Đã paste & xác nhận ${clipboardFiles.length} thumbnail trong composer.`);
 
     // --- BƯỚC 1: Click dấu + và chọn hình tham khảo nếu cần (Double Check) ---
     // Ghi chú: Kỹ thuật Paste thường đã tự gắn ảnh vào Prompt rồi, 

@@ -14,6 +14,15 @@
 /* ===== Performance baseline ===== */
 img {
   content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
+}
+/* Opt out for user-uploaded preview images — data URLs in contained
+   ancestors render as grey placeholder when content-visibility is auto. */
+.upload-area img,
+.upload-area-mini img,
+.media-preview-item img,
+.image-frame img {
+  content-visibility: visible !important;
 }
 .view {
   contain: layout paint style;
@@ -1542,10 +1551,40 @@ canvas {
   transform: translateY(-2px);
 }
 
+/* Empty state — keep generous min-height for the dashed dropzone */
+.upload-area {
+  /* min-height already 280px from base rule */
+}
+
+/* When preview present: keep flex centering, just remove forced min-height */
+.upload-area.has-preview {
+  min-height: 0 !important;
+  flex-shrink: 0 !important;
+  flex-basis: auto !important;
+  height: auto !important;
+  padding: 12px !important;
+  background: #f5f1ea !important;
+  border-style: solid !important;
+  border-color: rgba(226, 177, 112, 0.35) !important;
+}
+
+/* Internal wrapper around the preview image — shrinks to img natural size */
+.preview-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  max-height: 80vh;
+  line-height: 0;
+}
+
 .upload-area img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 16px;
 }
 
 .upload-area-mini {
@@ -1584,7 +1623,8 @@ canvas {
   z-index: 10;
 }
 
-.upload-area:hover .change-image-overlay {
+.upload-area:hover .change-image-overlay,
+.preview-wrap:hover .change-image-overlay {
   opacity: 1;
 }
 
@@ -5477,9 +5517,25 @@ canvas {
     max-width: min(1500px, 92vw);
     margin: 0 auto !important;
     display: grid !important;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 28px !important;
     padding: 12px 0 !important;
+    align-items: stretch !important;
+  }
+
+  /* Plan view: lift the 600px cap on desktop so 3 cards have room */
+  .container.wider {
+    max-width: min(1280px, 92vw) !important;
+  }
+  .global-nav-premium.wider {
+    max-width: min(1280px, 92vw);
+  }
+  .plan-view {
+    padding-top: 110px !important;
+  }
+  .plan-view .service-card-premium img {
+    max-height: 520px !important;
+    object-fit: contain !important;
   }
 
   /* ---------- General containers ---------- */
@@ -5509,12 +5565,24 @@ canvas {
     grid-template-columns: repeat(3, 1fr);
     gap: 32px !important;
   }
+  .container.wider {
+    max-width: min(1440px, 90vw) !important;
+  }
+  .global-nav-premium.wider {
+    max-width: min(1440px, 90vw);
+  }
 }
 
 @media (min-width: 1920px) {
   .service-list-premium {
     max-width: 1760px;
     gap: 40px !important;
+  }
+  .container.wider {
+    max-width: 1600px !important;
+  }
+  .global-nav-premium.wider {
+    max-width: 1600px;
   }
 }
 
