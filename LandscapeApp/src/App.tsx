@@ -4371,6 +4371,295 @@ function CreateTabModal({ onCreate, onCancel }: { onCreate: (data: { id: string;
   );
 }
 
+// --- PASS 2 MANAGER VIEW (CRUD 7 task pass2 + flowConfig + drag-drop) ---
+interface Pass2TaskModel {
+  id: string;
+  label: string;
+  order: number;
+  prompt: string;
+  flowConfig: {
+    mode: 'image' | 'video';
+    variantCount: 1 | 2 | 3 | 4;
+    aspectRatio: '16:9' | '4:3' | '1:1' | '3:4' | '9:16';
+  };
+  hidden?: boolean;
+}
+
+function Pass2ManagerView({ onFeedback }: { onFeedback: (msg: string) => void }) {
+  const [tasks, setTasks] = useState<Pass2TaskModel[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const fetchTasks = async () => {
+    setIsLoading(true);
+    try {
+      const res = await apiFetch(`/api/pass2-tasks?includeHidden=${showHidden}`);
+      const data = await res.json();
+      setTasks(data);
+      if (data.length > 0 && !data.find((t: Pass2TaskModel) => t.id === editingId)) {
+        setEditingId(data[0].id);
+      }
+    } catch {
+      onFeedback('❌ Lỗi tải pass 2 tasks.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchTasks(); }, [showHidden]);
+
+  const editing = tasks.find(t => t.id === editingId);
+
+  const updateTask = async (id: string, patch: Partial<Pass2TaskModel>) => {
+    setIsSaving(true);
+    try {
+      const res = await apiFetch(`/api/pass2-tasks/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch)
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const updated = await res.json();
+      setTasks(prev => prev.map(t => t.id === id ? updated : t));
+      onFeedback('✅ Đã lưu.');
+    } catch (e: any) {
+      onFeedback(`❌ Lỗi lưu: ${e.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const createTask = async (data: { id: string; label: string }) => {
+    try {
+      const res = await apiFetch('/api/pass2-tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, prompt: '', flowConfig: { mode: 'image', variantCount: 1, aspectRatio: '16:9' } })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Tạo task thất bại');
+      }
+      const created = await res.json();
+      setTasks(prev => [...prev, created]);
+      setEditingId(created.id);
+      setShowCreateModal(false);
+      onFeedback('✅ Đã tạo task pass 2.');
+    } catch (e: any) {
+      onFeedback(`❌ ${e.message}`);
+    }
+  };
+
+  const deleteTask = async (id: string) => {
+    if (!window.confirm('Ẩn task này? Bot sẽ không chạy task này nữa. Bật "Hiện task ẩn" để khôi phục.')) return;
+    try {
+      const res = await apiFetch(`/api/pass2-tasks/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(await res.text());
+      onFeedback('✅ Đã ẩn task.');
+      fetchTasks();
+    } catch (e: any) {
+      onFeedback(`❌ ${e.message}`);
+    }
+  };
+
+  const restoreTask = async (id: string) => {
+    await updateTask(id, { hidden: false } as any);
+    fetchTasks();
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedId || draggedId === targetId) return;
+    const oldIdx = tasks.findIndex(t => t.id === draggedId);
+    const newIdx = tasks.findIndex(t => t.id === targetId);
+    if (oldIdx < 0 || newIdx < 0) return;
+    const reordered = [...tasks];
+    const [moved] = reordered.splice(oldIdx, 1);
+    reordered.splice(newIdx, 0, moved);
+    setTasks(reordered);
+    setDraggedId(null);
+    try {
+      const res = await apiFetch('/api/pass2-tasks/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: reordered.map(t => t.id) })
+      });
+      if (!res.ok) throw new Error('reorder fail');
+      onFeedback('✅ Đã đổi thứ tự.');
+    } catch {
+      onFeedback('❌ Lỗi lưu thứ tự.');
+      fetchTasks();
+    }
+  };
+
+  return (
+    <div style={{ padding: '20px 0' }}>
+      <div style={{ marginBottom: '16px' }}>
+        <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '4px' }}>Pass 2 — 7 task bổ sung từ ảnh đã chọn</h2>
+        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>Sau khi khách chốt 1 trong 4 phương án Pass 1, hệ thống chạy các task này để sinh thêm góc nhìn / mặt bằng / video. Hỗ trợ template <code>{'{WIDTH}'}</code> <code>{'{LENGTH}'}</code> trong prompt.</p>
+      </div>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <button onClick={() => setShowCreateModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', borderRadius: '12px', background: 'var(--accent)', color: '#000', fontWeight: 800, border: 'none', cursor: 'pointer' }}>
+          <Plus size={18} /> Thêm task mới
+        </button>
+        <button onClick={() => setShowHidden(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px', background: showHidden ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.06)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', fontWeight: 700, cursor: 'pointer' }}>
+          {showHidden ? <Eye size={16} /> : <EyeOff size={16} />}
+          {showHidden ? 'Đang hiện task ẩn' : 'Hiện task ẩn'}
+        </button>
+        {isSaving && <span style={{ color: 'var(--accent)', fontSize: '0.85rem' }}>Đang lưu...</span>}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) 3fr', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {isLoading && <div style={{ color: 'rgba(255,255,255,0.5)' }}>Đang tải...</div>}
+          {tasks.map(task => {
+            const isHidden = task.hidden;
+            const isSelected = task.id === editingId;
+            const accent = task.flowConfig?.mode === 'video' ? '#ec4899' : '#3b82f6';
+            return (
+              <div
+                key={task.id}
+                draggable={!isHidden}
+                onDragStart={() => setDraggedId(task.id)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => handleDrop(e, task.id)}
+                onClick={() => setEditingId(task.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
+                  borderRadius: '12px',
+                  background: isSelected ? `${accent}33` : (isHidden ? 'rgba(80,80,80,0.15)' : 'rgba(255,255,255,0.04)'),
+                  border: isSelected ? `2px solid ${accent}` : '1px solid rgba(255,255,255,0.08)',
+                  cursor: 'pointer', opacity: isHidden ? 0.5 : 1
+                }}
+              >
+                <GripVertical size={16} style={{ color: 'rgba(255,255,255,0.4)' }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{task.label}</div>
+                  <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>{task.id} · {task.flowConfig?.mode === 'video' ? 'Video' : 'Ảnh'} · x{task.flowConfig?.variantCount} · {task.flowConfig?.aspectRatio}</div>
+                </div>
+                {isHidden ? (
+                  <button onClick={(e) => { e.stopPropagation(); restoreTask(task.id); }} title="Hiện lại" style={{ background: 'transparent', border: 'none', color: '#22c55e', cursor: 'pointer', padding: 4 }}><Eye size={16} /></button>
+                ) : (
+                  <button onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }} title="Ẩn" style={{ background: 'transparent', border: 'none', color: '#ff6666', cursor: 'pointer', padding: 4 }}><Trash2 size={14} /></button>
+                )}
+              </div>
+            );
+          })}
+          {!isLoading && tasks.length === 0 && (
+            <div style={{ color: 'rgba(255,255,255,0.5)', padding: '20px', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.2)', borderRadius: '12px' }}>Chưa có task pass 2.</div>
+          )}
+        </div>
+
+        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', padding: '20px' }}>
+          {editing ? (
+            <Pass2TaskEditor key={editing.id} task={editing} onSave={(patch) => updateTask(editing.id, patch)} disabled={isSaving} />
+          ) : (
+            <div style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '40px' }}>Chọn task bên trái để chỉnh sửa</div>
+          )}
+        </div>
+      </div>
+
+      {showCreateModal && (
+        <CreatePass2TaskModal onCreate={createTask} onCancel={() => setShowCreateModal(false)} />
+      )}
+    </div>
+  );
+}
+
+function Pass2TaskEditor({ task, onSave, disabled }: { task: Pass2TaskModel; onSave: (patch: Partial<Pass2TaskModel>) => void; disabled?: boolean }) {
+  const [draft, setDraft] = useState<Pass2TaskModel>(task);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(task);
+  useEffect(() => { setDraft(task); }, [task.id]);
+  const setFlow = (k: keyof Pass2TaskModel['flowConfig'], v: any) => setDraft(d => ({ ...d, flowConfig: { ...d.flowConfig, [k]: v } }));
+  const accent = draft.flowConfig.mode === 'video' ? '#ec4899' : '#3b82f6';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: accent, margin: 0 }}>Chỉnh task — {task.id}</h3>
+        <button
+          onClick={() => onSave({ label: draft.label, prompt: draft.prompt, flowConfig: draft.flowConfig })}
+          disabled={disabled || !dirty}
+          style={{ padding: '8px 18px', borderRadius: '10px', background: dirty ? 'var(--accent)' : 'rgba(255,255,255,0.1)', color: dirty ? '#000' : 'rgba(255,255,255,0.5)', fontWeight: 800, fontSize: '0.85rem', border: 'none', cursor: dirty ? 'pointer' : 'default' }}
+        >
+          {disabled ? 'Đang lưu...' : (dirty ? 'LƯU' : 'Đã lưu')}
+        </button>
+      </div>
+
+      <div>
+        <label style={tmLabelStyle}>Tên task</label>
+        <input value={draft.label} onChange={e => setDraft(d => ({ ...d, label: e.target.value }))} style={tmInputStyle} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+        <div>
+          <label style={tmLabelStyle}>Chế độ</label>
+          <select value={draft.flowConfig.mode} onChange={e => setFlow('mode', e.target.value)} style={tmSelectStyle}>
+            <option value="image">Hình ảnh</option>
+            <option value="video">Video</option>
+          </select>
+        </div>
+        <div>
+          <label style={tmLabelStyle}>Số phương án</label>
+          <select value={draft.flowConfig.variantCount} onChange={e => setFlow('variantCount', Number(e.target.value))} style={tmSelectStyle}>
+            {VARIANT_COUNTS.map(v => <option key={v} value={v}>x{v}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={tmLabelStyle}>Tỉ lệ khung</label>
+          <select value={draft.flowConfig.aspectRatio} onChange={e => setFlow('aspectRatio', e.target.value)} style={tmSelectStyle}>
+            {ASPECT_RATIOS.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <label style={tmLabelStyle}>Prompt (hỗ trợ <code>{'{WIDTH}'}</code> <code>{'{LENGTH}'}</code>)</label>
+          <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>{(draft.prompt || '').length} ký tự</span>
+        </div>
+        <textarea
+          value={draft.prompt}
+          onChange={e => setDraft(d => ({ ...d, prompt: e.target.value }))}
+          style={{ ...tmInputStyle, minHeight: '400px', fontFamily: 'monospace', resize: 'vertical' }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function CreatePass2TaskModal({ onCreate, onCancel }: { onCreate: (data: { id: string; label: string }) => void; onCancel: () => void }) {
+  const [id, setId] = useState('');
+  const [label, setLabel] = useState('');
+  const idValid = /^[a-z0-9_]+$/.test(id) && id.length > 0;
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onCancel}>
+      <div style={{ background: '#1a1a1a', borderRadius: '16px', padding: '24px', maxWidth: '440px', width: '90%', border: '1px solid rgba(255,255,255,0.15)' }} onClick={e => e.stopPropagation()}>
+        <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '16px' }}>Thêm task pass 2</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={tmLabelStyle}>ID (slug, a-z 0-9 _) *</label>
+            <input value={id} onChange={e => setId(e.target.value.toLowerCase())} placeholder="vd: angle_drone_45deg" style={tmInputStyle} autoFocus />
+            {id && !idValid && <span style={{ color: '#ff6666', fontSize: '0.75rem' }}>Chỉ a-z 0-9 _</span>}
+          </div>
+          <div>
+            <label style={tmLabelStyle}>Tên hiển thị *</label>
+            <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Góc drone 45 độ" style={tmInputStyle} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'flex-end' }}>
+          <button onClick={onCancel} style={{ padding: '10px 18px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', cursor: 'pointer' }}>Hủy</button>
+          <button onClick={() => onCreate({ id, label })} disabled={!idValid || !label.trim()} style={{ padding: '10px 18px', borderRadius: '10px', background: (idValid && label.trim()) ? 'var(--accent)' : 'rgba(255,255,255,0.1)', color: (idValid && label.trim()) ? '#000' : 'rgba(255,255,255,0.5)', fontWeight: 800, border: 'none', cursor: (idValid && label.trim()) ? 'pointer' : 'default' }}>Tạo</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- REVENUE DASHBOARD ---
 interface RevenueData {
   totalAmount: number;
@@ -5334,7 +5623,7 @@ function AdminView({
   onGenerateAiImage: (id: string, payload: any) => Promise<Project>;
   onRefreshConfig: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<'projects' | 'resources' | 'prompt' | 'config' | 'revenue'>('projects');
+  const [activeTab, setActiveTab] = useState<'projects' | 'resources' | 'prompt' | 'pass2' | 'config' | 'revenue'>('projects');
   const [adminBranch, setAdminBranch] = useState<MainBranch>('landscape');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [actionFeedback, setActionFeedback] = useState('');
@@ -6724,6 +7013,7 @@ function AdminView({
             <button className={activeTab === 'projects' ? 'active' : ''} onClick={() => setActiveTab('projects')}><Folder size={13} /> Dự án</button>
             <button className={activeTab === 'resources' ? 'active' : ''} onClick={() => setActiveTab('resources')}><Layers size={13} /> Tài nguyên</button>
             <button className={activeTab === 'prompt' ? 'active' : ''} onClick={() => setActiveTab('prompt')}><Bot size={13} /> Prompt AI</button>
+            <button className={activeTab === 'pass2' ? 'active' : ''} onClick={() => setActiveTab('pass2')}><Layers size={13} /> Pass 2</button>
             <button className={activeTab === 'revenue' ? 'active' : ''} onClick={() => setActiveTab('revenue')}><CircleDollarSign size={13} /> Doanh thu</button>
             <button className={activeTab === 'config' ? 'active' : ''} onClick={() => setActiveTab('config')}><Settings size={13} /> Cấu hình</button>
           </nav>
@@ -6755,6 +7045,10 @@ function AdminView({
             onFeedback={setActionFeedback}
             adminBranch={adminBranch}
           />
+        )}
+
+        {activeTab === 'pass2' && (
+          <Pass2ManagerView onFeedback={setActionFeedback} />
         )}
 
         {activeTab === 'config' && (
