@@ -10,3 +10,8 @@ tooltaoanh/flow_profile/
 tooltaoanh/Tai nguyen/.cache/
 **/__pycache__/
 *.pyc
+
+# Local screenshots / scratch images at repo root
+/admin-library.png
+/user-categories.png
+*.local.png
