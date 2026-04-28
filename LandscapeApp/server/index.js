@@ -368,6 +368,7 @@ mongoose.connect(process.env.MONGO_URI, {
     setTimeout(async () => {
       await seedTabsIfEmpty();
       await seedPass2TasksIfEmpty();
+      await seedInteriorPass1TasksIfEmpty();
     }, 4000);
   })
   .catch(err => console.error('MongoDB connection error:', err));
@@ -550,6 +551,15 @@ const FlowConfigSubSchema = new mongoose.Schema({
   aspectRatio: { type: String, enum: ['16:9', '4:3', '1:1', '3:4', '9:16'], default: '16:9' }
 }, { _id: false });
 
+// Sub-task cho Pass 1 split mode (interior dùng 4 task song song thay vì 1 task x4)
+const Pass1TaskSubSchema = new mongoose.Schema({
+  id: { type: String, required: true },     // slug ngắn, unique trong tab
+  label: { type: String, required: true },  // hiển thị admin
+  prompt: { type: String, default: '' },
+  flowConfig: { type: FlowConfigSubSchema, default: () => ({ mode: 'image', variantCount: 1, aspectRatio: '16:9' }) },
+  order: { type: Number, default: 0 }
+}, { _id: false });
+
 const TabSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true, index: true },   // slug
   branch: { type: String, enum: ['landscape', 'architecture', 'interior'], required: true, index: true },
@@ -558,6 +568,9 @@ const TabSchema = new mongoose.Schema({
   order: { type: Number, default: 0 },
   prompt: { type: String, default: '' },
   flowConfig: { type: FlowConfigSubSchema, default: () => ({}) },
+  // Pass 1 split: nếu pass1Tasks.length > 0 → bot chạy N task song song (mỗi task 1 Flow tab, variantCount=1).
+  // Empty → fallback dùng tab.flowConfig đơn (1 task, variantCount theo flowConfig).
+  pass1Tasks: { type: [Pass1TaskSubSchema], default: [] },
   hidden: { type: Boolean, default: false }
 }, { timestamps: true });
 const Tab = mongoose.model('Tab', TabSchema);
@@ -650,6 +663,48 @@ function buildPromptWithTabOverride(adminPrompt, fallbackPrompt) {
   return fallbackPrompt;
 }
 
+// Pass 1 split runner — nếu tab.pass1Tasks không rỗng thì chạy N task song song (mỗi task 1 Flow tab,
+// variantCount=1) thay vì 1 task variantCount>1. Output gộp vào 1 promise.
+// fallbackPrompt: prompt build từ project data (selections/note/assets) — append sau prompt task riêng.
+async function runFlowSplitOrSingle({ tab, fallbackPrompt, assets, onImageReady }) {
+  const tasks = Array.isArray(tab?.pass1Tasks) ? tab.pass1Tasks : [];
+  if (tasks.length === 0) {
+    // Single mode (cũ)
+    const finalPrompt = buildPromptWithTabOverride(tab?.prompt, fallbackPrompt);
+    return await runFlowAutomation({ prompt: finalPrompt, assets, onImageReady, flowConfig: tab?.flowConfig });
+  }
+  // Split mode: 4 (hoặc N) task song song — mỗi task 1 Flow tab
+  console.log(`[FlowSplit] Tab=${tab.id} chạy ${tasks.length} task song song.`);
+  const sortedTasks = [...tasks].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const results = await Promise.allSettled(sortedTasks.map(async (task) => {
+    const taskPrompt = buildPromptWithTabOverride(task.prompt, fallbackPrompt);
+    const cfg = task.flowConfig || { mode: 'image', variantCount: 1, aspectRatio: '16:9' };
+    return await runFlowAutomation({
+      prompt: taskPrompt,
+      assets,
+      onImageReady: async (localPath) => {
+        try { await onImageReady?.(localPath, task); }
+        catch (e) { console.error(`[FlowSplit][${task.id}] upload error:`, e.message); }
+      },
+      flowConfig: cfg
+    });
+  }));
+  const outputPaths = [];
+  let chatUrl = null;
+  results.forEach((r, idx) => {
+    const taskId = sortedTasks[idx]?.id;
+    if (r.status === 'fulfilled') {
+      const r2 = r.value;
+      (r2?.outputPaths || []).forEach(p => outputPaths.push(p));
+      if (!chatUrl && r2?.chatUrl) chatUrl = r2.chatUrl;
+      console.log(`[FlowSplit] task ${taskId} OK: ${r2?.outputPaths?.length || 0} ảnh`);
+    } else {
+      console.warn(`[FlowSplit] task ${taskId} FAIL: ${r.reason?.message || r.reason}`);
+    }
+  });
+  return { outputPaths, chatUrl };
+}
+
 // ============================================================
 // SEED: 1 lần đổ data tab + pass2 task mặc định nếu collection rỗng.
 // Idempotent — chạy nhiều lần không sao.
@@ -685,6 +740,27 @@ async function seedTabsIfEmpty() {
     console.log(`[SEED] Đã đổ ${seeds.length} tab.`);
   } catch (e) {
     console.error('[SEED] Lỗi seed Tab:', e.message);
+  }
+}
+
+// Seed pass1Tasks default cho các tab interior chưa có (4 task song song = 4 ảnh trên 4 Flow tab).
+// Idempotent: chỉ seed khi pass1Tasks rỗng.
+async function seedInteriorPass1TasksIfEmpty() {
+  try {
+    const interiorTabs = await Tab.find({ branch: 'interior', $or: [{ pass1Tasks: { $exists: false } }, { pass1Tasks: { $size: 0 } }] }).lean();
+    if (interiorTabs.length === 0) return;
+    const defaultTasks = [
+      { id: 'task_1', label: 'Phương án 1', prompt: '', flowConfig: { mode: 'image', variantCount: 1, aspectRatio: '16:9' }, order: 0 },
+      { id: 'task_2', label: 'Phương án 2', prompt: '', flowConfig: { mode: 'image', variantCount: 1, aspectRatio: '16:9' }, order: 1 },
+      { id: 'task_3', label: 'Phương án 3', prompt: '', flowConfig: { mode: 'image', variantCount: 1, aspectRatio: '16:9' }, order: 2 },
+      { id: 'task_4', label: 'Phương án 4', prompt: '', flowConfig: { mode: 'image', variantCount: 1, aspectRatio: '16:9' }, order: 3 }
+    ];
+    for (const tab of interiorTabs) {
+      await Tab.updateOne({ id: tab.id }, { $set: { pass1Tasks: defaultTasks } });
+    }
+    console.log(`[SEED] Đã đổ 4 pass1Task default cho ${interiorTabs.length} tab interior.`);
+  } catch (e) {
+    console.error('[SEED] Lỗi seed pass1Tasks interior:', e.message);
   }
 }
 
@@ -814,13 +890,27 @@ app.post('/api/tabs', async (req, res) => {
 
 app.put('/api/tabs/:id', async (req, res) => {
   try {
-    const { label, color, prompt, flowConfig, hidden } = req.body;
+    const { label, color, prompt, flowConfig, hidden, pass1Tasks } = req.body;
     const update = {};
     if (label !== undefined) update.label = label;
     if (color !== undefined) update.color = color;
     if (prompt !== undefined) update.prompt = prompt;
     if (flowConfig !== undefined) update.flowConfig = flowConfig;
     if (hidden !== undefined) update.hidden = hidden;
+    if (pass1Tasks !== undefined) {
+      // Validate: id slug unique trong tab
+      if (!Array.isArray(pass1Tasks)) return res.status(400).json({ error: 'pass1Tasks phải là array' });
+      const ids = pass1Tasks.map(t => t.id);
+      if (ids.some((id, i) => ids.indexOf(id) !== i)) return res.status(400).json({ error: 'pass1Tasks có id trùng' });
+      if (ids.some(id => !/^[a-z0-9_]+$/.test(id))) return res.status(400).json({ error: 'pass1Tasks id chỉ a-z 0-9 _' });
+      update.pass1Tasks = pass1Tasks.map((t, idx) => ({
+        id: t.id,
+        label: t.label || t.id,
+        prompt: t.prompt || '',
+        flowConfig: t.flowConfig || { mode: 'image', variantCount: 1, aspectRatio: '16:9' },
+        order: typeof t.order === 'number' ? t.order : idx
+      }));
+    }
     const tab = await Tab.findOneAndUpdate({ id: req.params.id }, update, { new: true });
     if (!tab) return res.status(404).json({ error: 'Không tìm thấy tab' });
     res.json(tab);
@@ -1106,8 +1196,7 @@ app.post('/api/projects', async (req, res) => {
             });
           } else {
             const tab = await resolveTabForProject(newProject);
-            const finalPrompt = buildPromptWithTabOverride(tab?.prompt, resolvedPrompt);
-            await runFlowAutomation({ prompt: finalPrompt, assets, onImageReady, flowConfig: tab?.flowConfig }).catch(err => {
+            await runFlowSplitOrSingle({ tab, fallbackPrompt: resolvedPrompt, assets, onImageReady }).catch(err => {
                 console.error('[AUTO] Lỗi Google Flow:', err.message);
             });
           }
@@ -1271,8 +1360,7 @@ app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
     };
 
     const tab = await resolveTabForProject(project);
-    const finalPrompt = buildPromptWithTabOverride(tab?.prompt, resolvedPrompt);
-    const automationResult = await runFlowAutomation({ prompt: finalPrompt, assets, onImageReady, flowConfig: tab?.flowConfig });
+    const automationResult = await runFlowSplitOrSingle({ tab, fallbackPrompt: resolvedPrompt, assets, onImageReady });
 
     const updated = await Project.findOneAndUpdate(
       { id: req.params.id },

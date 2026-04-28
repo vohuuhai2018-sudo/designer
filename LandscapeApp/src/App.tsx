@@ -4053,6 +4053,20 @@ const TAB_COLORS = [
 const ASPECT_RATIOS = ['16:9', '4:3', '1:1', '3:4', '9:16'] as const;
 const VARIANT_COUNTS = [1, 2, 3, 4] as const;
 
+interface FlowConfigModel {
+  mode: 'image' | 'video';
+  variantCount: 1 | 2 | 3 | 4;
+  aspectRatio: '16:9' | '4:3' | '1:1' | '3:4' | '9:16';
+}
+
+interface Pass1TaskModel {
+  id: string;
+  label: string;
+  prompt: string;
+  flowConfig: FlowConfigModel;
+  order: number;
+}
+
 interface TabModel {
   id: string;
   branch: 'landscape' | 'architecture' | 'interior';
@@ -4060,11 +4074,8 @@ interface TabModel {
   color: string;
   order: number;
   prompt: string;
-  flowConfig: {
-    mode: 'image' | 'video';
-    variantCount: 1 | 2 | 3 | 4;
-    aspectRatio: '16:9' | '4:3' | '1:1' | '3:4' | '9:16';
-  };
+  flowConfig: FlowConfigModel;
+  pass1Tasks?: Pass1TaskModel[];
   hidden?: boolean;
 }
 
@@ -4282,16 +4293,48 @@ function PromptEditorView({ onFeedback, adminBranch, onBranchChange }: {
 
 function TabEditor({ tab, onSave, disabled }: { tab: TabModel; onSave: (patch: Partial<TabModel>) => void; disabled?: boolean }) {
   const [draft, setDraft] = useState<TabModel>(tab);
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [draggedPass1Id, setDraggedPass1Id] = useState<string | null>(null);
   const dirty = JSON.stringify(draft) !== JSON.stringify(tab);
   useEffect(() => { setDraft(tab); }, [tab.id]);
-  const setFlow = (k: keyof TabModel['flowConfig'], v: any) => setDraft(d => ({ ...d, flowConfig: { ...d.flowConfig, [k]: v } }));
+  const setFlow = (k: keyof FlowConfigModel, v: any) => setDraft(d => ({ ...d, flowConfig: { ...d.flowConfig, [k]: v } }));
+
+  const pass1Tasks = draft.pass1Tasks || [];
+  const setPass1 = (newTasks: Pass1TaskModel[]) => setDraft(d => ({ ...d, pass1Tasks: newTasks }));
+  const updatePass1Task = (id: string, patch: Partial<Pass1TaskModel>) => {
+    setPass1(pass1Tasks.map(t => t.id === id ? { ...t, ...patch } : t));
+  };
+  const addPass1Task = () => {
+    let i = pass1Tasks.length + 1;
+    let nextId = `task_${i}`;
+    while (pass1Tasks.some(t => t.id === nextId)) { i++; nextId = `task_${i}`; }
+    const newTask: Pass1TaskModel = { id: nextId, label: `Phương án ${i}`, prompt: '', flowConfig: { mode: 'image', variantCount: 1, aspectRatio: '16:9' }, order: pass1Tasks.length };
+    setPass1([...pass1Tasks, newTask]);
+    setExpandedTaskId(nextId);
+  };
+  const deletePass1Task = (id: string) => {
+    if (!window.confirm(`Xoá task ${id}?`)) return;
+    setPass1(pass1Tasks.filter(t => t.id !== id));
+  };
+  const handlePass1Drop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedPass1Id || draggedPass1Id === targetId) return;
+    const arr = [...pass1Tasks];
+    const oldIdx = arr.findIndex(t => t.id === draggedPass1Id);
+    const newIdx = arr.findIndex(t => t.id === targetId);
+    if (oldIdx < 0 || newIdx < 0) return;
+    const [moved] = arr.splice(oldIdx, 1);
+    arr.splice(newIdx, 0, moved);
+    setPass1(arr.map((t, i) => ({ ...t, order: i })));
+    setDraggedPass1Id(null);
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'space-between' }}>
         <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: draft.color, margin: 0 }}>Chỉnh tab — {tab.id}</h3>
         <button
-          onClick={() => onSave({ label: draft.label, color: draft.color, prompt: draft.prompt, flowConfig: draft.flowConfig })}
+          onClick={() => onSave({ label: draft.label, color: draft.color, prompt: draft.prompt, flowConfig: draft.flowConfig, pass1Tasks: draft.pass1Tasks })}
           disabled={disabled || !dirty}
           style={{ padding: '8px 18px', borderRadius: '10px', background: dirty ? 'var(--accent)' : 'rgba(255,255,255,0.1)', color: dirty ? '#000' : 'rgba(255,255,255,0.5)', fontWeight: 800, fontSize: '0.85rem', border: 'none', cursor: dirty ? 'pointer' : 'default' }}
         >
@@ -4335,9 +4378,75 @@ function TabEditor({ tab, onSave, disabled }: { tab: TabModel; onSave: (patch: P
         </div>
       </div>
 
+      {draft.branch === 'interior' && (
+        <div style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 12, padding: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div>
+              <label style={{ ...tmLabelStyle, color: '#a5b4fc', marginBottom: 2 }}>Pass 1 — Task song song</label>
+              <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', margin: 0 }}>Mỗi task = 1 Flow tab độc lập, chạy SONG SONG → mỗi task trả 1 ảnh. Nội thất dùng mode này thay vì 1 task variantCount=4.</p>
+            </div>
+            <button onClick={addPass1Task} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: 'rgba(99,102,241,0.3)', border: '1px solid rgba(99,102,241,0.5)', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+              <Plus size={14} /> Thêm task
+            </button>
+          </div>
+          {pass1Tasks.length === 0 && (
+            <div style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: 14, fontStyle: 'italic', fontSize: '0.85rem' }}>Chưa có task. Bấm "+ Thêm task" để tạo (đề xuất 4 task).</div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {[...pass1Tasks].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map(task => {
+              const expanded = expandedTaskId === task.id;
+              return (
+                <div key={task.id} draggable onDragStart={() => setDraggedPass1Id(task.id)} onDragOver={e => e.preventDefault()} onDrop={e => handlePass1Drop(e, task.id)} style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 10, border: expanded ? '1px solid rgba(99,102,241,0.6)' : '1px solid rgba(255,255,255,0.08)' }}>
+                  <div onClick={() => setExpandedTaskId(expanded ? null : task.id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 10, cursor: 'pointer' }}>
+                    <GripVertical size={14} style={{ color: 'rgba(255,255,255,0.4)', cursor: 'grab' }} />
+                    <input value={task.label} onClick={e => e.stopPropagation()} onChange={e => updatePass1Task(task.id, { label: e.target.value })} style={{ flex: 1, padding: '4px 8px', borderRadius: 6, background: 'transparent', color: '#fff', border: '1px solid transparent', fontWeight: 700, fontSize: '0.9rem' }} />
+                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap' }}>
+                      {task.flowConfig.mode === 'video' ? '🎬' : '🖼'} x{task.flowConfig.variantCount} · {task.flowConfig.aspectRatio} · {(task.prompt || '').length} ký tự
+                    </span>
+                    <button onClick={e => { e.stopPropagation(); deletePass1Task(task.id); }} style={{ background: 'transparent', border: 'none', color: '#ff6666', cursor: 'pointer', padding: 4 }}><Trash2 size={12} /></button>
+                  </div>
+                  {expanded && (
+                    <div style={{ padding: '4px 10px 12px 30px', display: 'flex', flexDirection: 'column', gap: 8, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>
+                        <span>ID:</span><code style={{ background: 'rgba(0,0,0,0.4)', padding: '2px 8px', borderRadius: 4 }}>{task.id}</code>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                        <div>
+                          <label style={tmLabelStyle}>Chế độ</label>
+                          <select value={task.flowConfig.mode} onChange={e => updatePass1Task(task.id, { flowConfig: { ...task.flowConfig, mode: e.target.value as any } })} style={tmSelectStyle}>
+                            <option value="image">Hình ảnh</option>
+                            <option value="video">Video</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={tmLabelStyle}>Variant</label>
+                          <select value={task.flowConfig.variantCount} onChange={e => updatePass1Task(task.id, { flowConfig: { ...task.flowConfig, variantCount: Number(e.target.value) as any } })} style={tmSelectStyle}>
+                            {VARIANT_COUNTS.map(v => <option key={v} value={v}>x{v}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={tmLabelStyle}>Tỉ lệ</label>
+                          <select value={task.flowConfig.aspectRatio} onChange={e => updatePass1Task(task.id, { flowConfig: { ...task.flowConfig, aspectRatio: e.target.value as any } })} style={tmSelectStyle}>
+                            {ASPECT_RATIOS.map(r => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label style={tmLabelStyle}>Prompt task này</label>
+                        <textarea value={task.prompt} onChange={e => updatePass1Task(task.id, { prompt: e.target.value })} style={{ ...tmInputStyle, minHeight: 180, fontFamily: 'monospace', resize: 'vertical' }} placeholder="Prompt cho phương án này. Hệ thống sẽ append project data sau prompt." />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <label style={tmLabelStyle}>Prompt</label>
+          <label style={tmLabelStyle}>Prompt {draft.branch === 'interior' && pass1Tasks.length > 0 ? '(fallback — chỉ dùng khi không có task)' : ''}</label>
           <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>{(draft.prompt || '').length} ký tự</span>
         </div>
         <textarea
@@ -4346,7 +4455,9 @@ function TabEditor({ tab, onSave, disabled }: { tab: TabModel; onSave: (patch: P
           style={{ ...tmInputStyle, minHeight: '400px', fontFamily: 'monospace', resize: 'vertical' }}
         />
         <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '6px' }}>
-          Hệ thống tự ghép thông tin khách hàng + assets vào cuối prompt khi chạy Flow.
+          {draft.branch === 'interior' && pass1Tasks.length > 0
+            ? 'Tab nội thất có Pass 1 task — bot dùng prompt từng task ở trên, không dùng prompt này. Có thể để rỗng.'
+            : 'Hệ thống tự ghép thông tin khách hàng + assets vào cuối prompt khi chạy Flow.'}
         </p>
       </div>
     </div>
