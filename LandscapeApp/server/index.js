@@ -1185,21 +1185,27 @@ app.post('/api/projects', async (req, res) => {
           console.log(`[AUTO] Đang bắt đầu xử lý ảnh qua Google Labs Flow cho "${data.customerName}" với pipeline giống nút admin...`);
           
           if (projectForAi.interiorPairs && projectForAi.interiorPairs.length > 0) {
-            console.log(`[AUTO] Phát hiện ${projectForAi.interiorPairs.length} cặp Nội thất. Chạy Google Flow song song trên ${projectForAi.interiorPairs.length} tab.`);
             const tab = await resolveTabForProject(newProject);
-            // Mỗi pair (góc nhìn) → 1 Flow tab riêng, assets per-pair (siteImage + referenceImage).
-            // Chạy Promise.allSettled để 1 pair fail không kéo đổ các pair khác.
+            // pass1Tasks[i] ↔ interiorPairs[i] (1-to-1): mỗi góc nhìn = 1 task, dùng prompt
+            // + flowConfig của task đó (admin chỉnh trong UI "Pass 1 — Task song song").
+            // Sort theo order để khớp thứ tự admin set.
+            const sortedTasks = Array.isArray(tab?.pass1Tasks)
+              ? [...tab.pass1Tasks].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+              : [];
+            console.log(`[AUTO] Phát hiện ${projectForAi.interiorPairs.length} cặp Nội thất × ${sortedTasks.length || 1} pass1Task. Chạy Flow song song.`);
+
             const flowResults = await Promise.allSettled(
               projectForAi.interiorPairs.map(async (pair, idx) => {
+                const task = sortedTasks[idx] || null;
                 const pairAssets = [
                   { label: `Ảnh hiện trạng góc ${idx + 1}`, url: pair.siteImage, role: 'Ảnh nền chính, phải giữ nguyên kiến trúc, góc chụp và phối cảnh.' },
                   { label: `Mẫu phong cách tham khảo ${idx + 1}`, url: pair.referenceImage, role: 'Mẫu phong cách tham khảo. Dùng làm nguồn cảm hứng.' }
                 ];
-                const pairPrompt = buildPromptWithTabOverride(
-                  tab?.prompt,
-                  buildProjectFlowPrompt({ ...projectForAi, rawImage: pair.siteImage, referenceModelUrl: pair.referenceImage, selections: {} })
-                );
-                const cfg = tab?.flowConfig || { mode: 'image', variantCount: 1, aspectRatio: '16:9' };
+                const fallbackPrompt = buildProjectFlowPrompt({ ...projectForAi, rawImage: pair.siteImage, referenceModelUrl: pair.referenceImage, selections: {} });
+                // Ưu tiên prompt task; fallback tab.prompt; fallback project data.
+                const pairPrompt = buildPromptWithTabOverride(task?.prompt || tab?.prompt, fallbackPrompt);
+                // Ưu tiên flowConfig task (admin set variantCount=1 thì respect); fallback tab; fallback default x1 16:9.
+                const cfg = task?.flowConfig || tab?.flowConfig || { mode: 'image', variantCount: 1, aspectRatio: '16:9' };
                 return await runFlowAutomation({
                   prompt: pairPrompt,
                   assets: pairAssets,
