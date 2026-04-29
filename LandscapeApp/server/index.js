@@ -473,6 +473,11 @@ const ProjectSchema = new mongoose.Schema({
   workflowBranch: String,
   finalImage: String,
   aiResults: [String],
+  interiorPairs: [{
+    _id: false,
+    siteImage: String,
+    referenceImage: String
+  }],
   pass2Results: {
     type: new mongoose.Schema({
       referenceImageUrl: String,
