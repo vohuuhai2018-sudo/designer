@@ -17,7 +17,7 @@ timeout /t 2 /nobreak >nul
 echo.
 echo [2/5] Git pull...
 cd /d "%~dp0"
-git pull --rebase
+git pull --rebase --autostash
 if errorlevel 1 (
     echo.
     echo *** GIT PULL LOI - kiem tra conflict roi chay lai ***
