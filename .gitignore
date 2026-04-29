@@ -14,4 +14,14 @@ tooltaoanh/Tai nguyen/.cache/
 # Local screenshots / scratch images at repo root
 /admin-library.png
 /user-categories.png
+/admin-after-upload.png
+/user-after-upload.png
+/interior-final.png
 *.local.png
+
+# Local upload staging — seed Cloudinary 1 lần, không cần track
+/1. UP LÊN/
+
+# macOS junk
+.DS_Store
+**/.DS_Store
