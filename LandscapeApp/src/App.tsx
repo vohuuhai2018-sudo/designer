@@ -1152,7 +1152,7 @@ const ASSETS = {
       }
     ]
   }],
-  Indochine: [{
+  INDOCHINE: [{
     id: 'Indochine_root',
     name: 'Nội Thất Indochine',
     variants: [
@@ -3284,7 +3284,7 @@ function BasicSelectionView({
     if (branch === 'interior') return [
       { id: 'hien_dai', name: t('cat_interior_hien_dai', 'Nội thất hiện đại'), thumb: '/assets/Nội thất/1. HIEN DAI _ THUMB.png', active: true, libraryKey: 'HIEN_DAI' },
       { id: 'tan_co_dien', name: t('cat_interior_tan_co_dien', 'Tân cổ điển quý phái'), thumb: '/assets/Nội thất/2. TAN CO DIEN_THUMB.png', active: true, libraryKey: 'TAN_CO_DIEN' },
-      { id: 'indochine', name: t('cat_interior_indochine', 'Phong cách Indochine'), thumb: '/assets/Nội thất/3. INDOCHINE_THUMB.png', active: true, libraryKey: 'Indochine' },
+      { id: 'indochine', name: t('cat_interior_indochine', 'Phong cách Indochine'), thumb: '/assets/Nội thất/3. INDOCHINE_THUMB.png', active: true, libraryKey: 'INDOCHINE' },
       { id: 'wabi_sabi', name: t('cat_interior_wabi_sabi', 'Wabi sabi tối giản'), thumb: '/assets/Nội thất/4. WABI SABI_THUMB.png', active: true, libraryKey: 'WABI_SABI' },
       { id: 'tan_co_dien_go', name: t('cat_interior_tan_co_dien_go', 'Tân cổ điển gỗ'), thumb: '/assets/Nội thất/5. NOI THAT GO_THUMB.png', active: true, libraryKey: 'TAN_CO_DIEN_GO' },
     ];
