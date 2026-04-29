@@ -3742,6 +3742,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
   const [pass2Starting, setPass2Starting] = useState(false);
   const [pass2Msg, setPass2Msg] = useState('');
   const [project, setProject] = useState<Project | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
   const presetPay = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('pay') : null;
   const [paymentOpen, setPaymentOpen] = useState(!!presetPay);
@@ -3806,7 +3807,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                  <p style={{ fontSize: '0.85rem', color: '#888', marginTop: '1rem', textAlign: 'center', fontWeight: 600 }}>Kết quả lần 1:</p>
                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '8px', width: '100%' }}>
                    {previousImages.map((url, i) => (
-                     <div key={`prev-${i}`} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', aspectRatio: '16/10' }}>
+                     <div key={`prev-${i}`} onClick={() => setPreviewImage(url)} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', aspectRatio: '16/10', cursor: 'pointer' }}>
                        <ProtectedImage src={url} alt={`Lần 1 - ${i+1}`} />
                        <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.7)', padding: '4px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.7rem' }}>
                          Lần 1 - PA{i + 1}
@@ -3835,7 +3836,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                  ? (isOld ? `Lần 1 - PA${i + 1}` : `Lần 2 - PA${i - previousImages.length + 1}`)
                  : `Phương án ${i + 1}`;
                return (
-                 <div key={i} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.25)', aspectRatio: '16/10' }}>
+                 <div key={i} onClick={() => setPreviewImage(url)} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.25)', aspectRatio: '16/10', cursor: 'pointer' }}>
                    <ProtectedImage src={url} alt={label} />
                    <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: isOld ? 'rgba(0,0,0,0.7)' : 'rgba(226,177,112,0.85)', padding: '5px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.75rem', color: isOld ? '#fff' : '#000' }}>
                      {label}
@@ -3849,7 +3850,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
 {!isDone && images.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '1rem', width: '100%' }}>
             {images.map((url, i) => (
-              <div key={i} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', aspectRatio: '16/10' }}>
+              <div key={i} onClick={() => setPreviewImage(url)} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', aspectRatio: '16/10', cursor: 'pointer' }}>
                 <ProtectedImage src={url} alt={`Phương án ${i+1}`} />
                 <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.7)', padding: '5px', textAlign: 'center', fontWeight: 'bold', fontSize: '1rem' }}>
                   Phương án {i + 1}
@@ -4098,6 +4099,46 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
              </button>
            </div>
          )}
+
+        {previewImage && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+            background: 'rgba(0,0,0,0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(5px)'
+          }}>
+            <button onClick={() => setPreviewImage(null)} style={{
+              position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', color: '#fff', cursor: 'pointer', zIndex: 10
+            }}>
+              <X size={36} />
+            </button>
+            <div style={{ position: 'relative', width: '100%', maxWidth: '800px', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', background: '#fff' }}>
+              <div style={{ position: 'relative', width: '100%', aspectRatio: '16/10' }}>
+                <img src={previewImage} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(10px) brightness(1.2)' }} />
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: 'url("/assets/CHU KY _ HAI VO.png")', backgroundSize: '150px', backgroundRepeat: 'repeat', opacity: 0.8, mixBlendMode: 'multiply' }}></div>
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(255,255,255,0.4)' }}></div>
+                
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', width: '90%' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.95)', padding: '24px', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', backdropFilter: 'blur(10px)' }}>
+                    <p style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1a1a1a', marginBottom: '8px' }}>Bản vẽ độ phân giải cao</p>
+                    <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '20px' }}>Thanh toán để tải về bản vẽ sắc nét, không có logo bản quyền và sử dụng cho dự án của bạn.</p>
+                    <button
+                      onClick={() => { setPaymentOpen(true); setPreviewImage(null); }}
+                      style={{
+                        padding: '14px 24px', borderRadius: '12px', fontSize: '1rem', fontWeight: 800,
+                        border: 'none', cursor: 'pointer', width: '100%',
+                        background: 'linear-gradient(135deg, #a50064, #d6336c)', color: '#fff',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        boxShadow: '0 8px 22px rgba(165,0,100,0.3)'
+                      }}
+                    >
+                      💳 Thanh toán để tải bản vẽ
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <PaymentModal
           projectId={projectId}
           open={paymentOpen}
