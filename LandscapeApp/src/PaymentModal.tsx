@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Check, Copy as CopyIcon, ExternalLink, Loader2, Sparkles, Zap, Building2, Smartphone, Clock } from 'lucide-react';
 
 const API_BASE = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
@@ -269,7 +270,7 @@ export function PaymentModal({ projectId, open, onClose, onPaid, presetPackageId
 
   const visiblePackages = PACKAGES.filter(p => !p.hidden);
 
-  return (
+  return createPortal(
     <div
       onClick={onClose}
       style={{
@@ -741,6 +742,7 @@ export function PaymentModal({ projectId, open, onClose, onPaid, presetPackageId
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

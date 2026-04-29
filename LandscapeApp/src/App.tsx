@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Upload,
   Paintbrush,
@@ -4100,9 +4101,9 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
            </div>
          )}
 
-        {previewImage && (
+        {previewImage && createPortal(
           <div style={{
-            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+            position: 'fixed', inset: 0,
             background: 'rgba(0,0,0,0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(5px)'
           }}>
             <button onClick={() => setPreviewImage(null)} style={{
@@ -4115,7 +4116,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                 <img src={previewImage} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(10px) brightness(1.2)' }} />
                 <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: 'url("/assets/CHU KY _ HAI VO.png")', backgroundSize: '150px', backgroundRepeat: 'repeat', opacity: 0.8, mixBlendMode: 'multiply' }}></div>
                 <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(255,255,255,0.4)' }}></div>
-                
+
                 <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', width: '90%' }}>
                   <div style={{ background: 'rgba(255,255,255,0.95)', padding: '24px', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', backdropFilter: 'blur(10px)' }}>
                     <p style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1a1a1a', marginBottom: '8px' }}>Bản vẽ độ phân giải cao</p>
@@ -4136,7 +4137,8 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                 </div>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         <PaymentModal
