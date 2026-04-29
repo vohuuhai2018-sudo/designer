@@ -341,8 +341,8 @@ const ASSETS = {
     },
   ],
   KE: [
-    { 
-      id: 'group_ke_da', 
+    {
+      id: 'group_ke_da',
       name: 'Kè đá hệ thống',
       variants: [
         { id: 'sys-ke-01', name: 'Kè hệ thống 01', url: '/assets/KÈ/ChatGPT Image 12_44_41 10 thg 4, 2026.png' },
@@ -351,218 +351,928 @@ const ASSETS = {
     },
   ],
   CANH: [
-    { 
-      id: 'group_canh_quan', 
+    {
+      id: 'group_canh_quan',
       name: 'Cảnh quan hệ thống',
       variants: [
         { id: 'sys-canh-01', name: 'Cảnh quan mẫu 01', url: '/assets/CANH/ChatGPT Image 12_48_58 10 thg 4, 2026.png' }
       ]
     }
   ],
-  HO: [
-    {
-      id: 'ho_co_dien',
-      url: '/assets/Cảnh quan/1. HO KOI SAN VUON CO DIEN_THUMB.png',
-      name: 'Hồ Koi Cổ Điển',
-      variants: [
-        { id: 'ho_co_dien_v1', url: '/assets/Cảnh quan/1. HO KOI SAN VUON CO DIEN_THUMB.png', name: 'Mẫu hồ số 01' }
-      ]
-    }
-  ],
-  HO_HIEN_DAI: [
-    {
-      id: 'ho_hien_dai_root',
-      url: '/assets/Cảnh quan/2. HO KOI SAN VUON HIEN DAI_THUMB.png',
-      name: 'Hồ Koi Hiện Đại',
-      variants: [
-        { id: 'ho_hien_dai_v1', url: '/assets/Cảnh quan/2. HO KOI SAN VUON HIEN DAI_THUMB.png', name: 'Mẫu hồ số 01' }
-      ]
-    }
-  ],
-  TUONG_DA: [
-    {
-      id: 'tuong_da_root',
-      url: '/assets/Cảnh quan/3. TUONG DA TRANG TRI _THUMB.png',
-      name: 'Tường Đá Trang Trí',
-      variants: [
-        { id: 'tuong_da_v1', url: '/assets/Cảnh quan/3. TUONG DA TRANG TRI _THUMB.png', name: 'Mẫu tường đá 01' }
-      ]
-    }
-  ],
-  TUONG_CAY: [
-    {
-      id: 'tuong_cay_root',
-      url: '/assets/Cảnh quan/4. TUONG CAY_THUMB.png',
-      name: 'Tường Cây',
-      variants: [
-        { id: 'tuong_cay_v1', url: '/assets/Cảnh quan/4. TUONG CAY_THUMB.png', name: 'Mẫu tường cây 01' }
-      ]
-    }
-  ],
-  FARM: [
-    {
-      id: 'farm_root',
-      url: '/assets/Cảnh quan/5. QUY HOACH FARM_THUMB.png',
-      name: 'Quy Hoạch Farm',
-      variants: [
-        { id: 'farm_v1', url: '/assets/Cảnh quan/5. QUY HOACH FARM_THUMB.png', name: 'Mẫu farm 01' }
-      ]
-    }
-  ],
-  CAFE: [
-    {
-      id: 'cafe_root',
-      url: '/assets/Cảnh quan/6. CANH QUAN CA PHE_THUMB.png',
-      name: 'Cảnh Quan Cafe',
-      variants: [
-        { id: 'cafe_v1', url: '/assets/Cảnh quan/6. CANH QUAN CA PHE_THUMB.png', name: 'Mẫu cafe 01' }
-      ]
-    }
-  ],
-  HO_BOI: [
-    {
-      id: 'ho_boi_root',
-      url: '/assets/Cảnh quan/7. HO BOI THIEN NHIEN_THUMB.png',
-      name: 'Hồ Bơi Thiên Nhiên',
-      variants: [
-        { id: 'ho_boi_v1', url: '/assets/Cảnh quan/7. HO BOI THIEN NHIEN_THUMB.png', name: 'Mẫu hồ bơi 01' }
-      ]
-    }
-  ],
-  // Architecture
-  NHA_PHO: [
-    {
-      id: 'nha_pho_root',
-      url: '/assets/Kiến trúc/1. NHA PHO_THUMB.png',
-      name: 'Nhà Phố Hiện Đại',
-      variants: [
-        { id: 'nha_pho_v1', url: '/assets/Kiến trúc/1. NHA PHO_THUMB.png', name: 'Mẫu nhà phố 01' }
-      ]
-    }
-  ],
-  BIET_THU: [
-    {
-      id: 'biet_thu_root',
-      url: '/assets/Kiến trúc/2. BIET THU_THUMB.png',
-      name: 'Biệt Thự Sang Trọng',
-      variants: [
-        { id: 'biet_thu_v1', url: '/assets/Kiến trúc/2. BIET THU_THUMB.png', name: 'Mẫu biệt thự 01' }
-      ]
-    }
-  ],
-  NHA_CAP_4: [
-    {
-      id: 'nha_cap_4_root',
-      url: '/assets/Kiến trúc/3. NHA CAP 4_THUMB.png',
-      name: 'Nhà Cấp 4',
-      variants: [
-        { id: 'nha_cap_4_v1', url: '/assets/Kiến trúc/3. NHA CAP 4_THUMB.png', name: 'Mẫu nhà cấp 4 01' }
-      ]
-    }
-  ],
-  NHA_VUON: [
-    {
-      id: 'nha_vuon_root',
-      url: '/assets/Kiến trúc/4. NHA VUON_THUMB.png',
-      name: 'Nhà Vườn',
-      variants: [
-        { id: 'nha_vuon_v1', url: '/assets/Kiến trúc/4. NHA VUON_THUMB.png', name: 'Mẫu nhà vườn 01' }
-      ]
-    }
-  ],
-  NHA_TIEN_CHE: [
-    {
-      id: 'nha_tien_che_root',
-      url: '/assets/Kiến trúc/5. NHA TIEN CHE_THUMB.png',
-      name: 'Nhà Tiền Chế',
-      variants: [
-        { id: 'nha_tien_che_v1', url: '/assets/Kiến trúc/5. NHA TIEN CHE_THUMB.png', name: 'Mẫu nhà tiền chế 01' }
-      ]
-    }
-  ],
-  // Interior — each variant needs `images` array for 4-photo combo flow
-  HIEN_DAI: [
-    {
-      id: 'hien_dai_root',
-      url: '/assets/Nội thất/1. HIEN DAI _ THUMB.png',
-      name: 'Nội Thất Hiện Đại',
-      images: [
-        '/assets/Nội thất/1. HIEN DAI _ THUMB.png',
-        '/assets/Nội thất/1. HIEN DAI _ THUMB.png',
-        '/assets/Nội thất/1. HIEN DAI _ THUMB.png',
-        '/assets/Nội thất/1. HIEN DAI _ THUMB.png'
-      ],
-      variants: [
-        { id: 'hien_dai_v1', url: '/assets/Nội thất/1. HIEN DAI _ THUMB.png', name: 'Mẫu hiện đại 01', images: ['/assets/Nội thất/1. HIEN DAI _ THUMB.png', '/assets/Nội thất/1. HIEN DAI _ THUMB.png', '/assets/Nội thất/1. HIEN DAI _ THUMB.png', '/assets/Nội thất/1. HIEN DAI _ THUMB.png'] }
-      ]
-    }
-  ],
-  TAN_CO_DIEN: [
-    {
-      id: 'tan_co_dien_root',
-      url: '/assets/Nội thất/2. TAN CO DIEN_THUMB.png',
-      name: 'Tân Cổ Điển',
-      images: [
-        '/assets/Nội thất/2. TAN CO DIEN_THUMB.png',
-        '/assets/Nội thất/2. TAN CO DIEN_THUMB.png',
-        '/assets/Nội thất/2. TAN CO DIEN_THUMB.png',
-        '/assets/Nội thất/2. TAN CO DIEN_THUMB.png'
-      ],
-      variants: [
-        { id: 'tan_co_dien_v1', url: '/assets/Nội thất/2. TAN CO DIEN_THUMB.png', name: 'Mẫu tân cổ điển 01', images: ['/assets/Nội thất/2. TAN CO DIEN_THUMB.png', '/assets/Nội thất/2. TAN CO DIEN_THUMB.png', '/assets/Nội thất/2. TAN CO DIEN_THUMB.png', '/assets/Nội thất/2. TAN CO DIEN_THUMB.png'] }
-      ]
-    }
-  ],
-  INDOCHINE: [
-    {
-      id: 'indochine_root',
-      url: '/assets/Nội thất/3. INDOCHINE_THUMB.png',
-      name: 'Indochine',
-      images: [
-        '/assets/Nội thất/3. INDOCHINE_THUMB.png',
-        '/assets/Nội thất/3. INDOCHINE_THUMB.png',
-        '/assets/Nội thất/3. INDOCHINE_THUMB.png',
-        '/assets/Nội thất/3. INDOCHINE_THUMB.png'
-      ],
-      variants: [
-        { id: 'indochine_v1', url: '/assets/Nội thất/3. INDOCHINE_THUMB.png', name: 'Mẫu Indochine 01', images: ['/assets/Nội thất/3. INDOCHINE_THUMB.png', '/assets/Nội thất/3. INDOCHINE_THUMB.png', '/assets/Nội thất/3. INDOCHINE_THUMB.png', '/assets/Nội thất/3. INDOCHINE_THUMB.png'] }
-      ]
-    }
-  ],
-  WABI_SABI: [
-    {
-      id: 'wabi_sabi_root',
-      url: '/assets/Nội thất/4. WABI SABI_THUMB.png',
-      name: 'Wabi Sabi',
-      images: [
-        '/assets/Nội thất/4. WABI SABI_THUMB.png',
-        '/assets/Nội thất/4. WABI SABI_THUMB.png',
-        '/assets/Nội thất/4. WABI SABI_THUMB.png',
-        '/assets/Nội thất/4. WABI SABI_THUMB.png'
-      ],
-      variants: [
-        { id: 'wabi_sabi_v1', url: '/assets/Nội thất/4. WABI SABI_THUMB.png', name: 'Mẫu Wabi Sabi 01', images: ['/assets/Nội thất/4. WABI SABI_THUMB.png', '/assets/Nội thất/4. WABI SABI_THUMB.png', '/assets/Nội thất/4. WABI SABI_THUMB.png', '/assets/Nội thất/4. WABI SABI_THUMB.png'] }
-      ]
-    }
-  ],
-  TAN_CO_DIEN_GO: [
-    {
-      id: 'tan_co_dien_go_root',
-      url: '/assets/Nội thất/5. NOI THAT GO_THUMB.png',
-      name: 'Tân Cổ Điển Gỗ',
-      images: [
-        '/assets/Nội thất/5. NOI THAT GO_THUMB.png',
-        '/assets/Nội thất/5. NOI THAT GO_THUMB.png',
-        '/assets/Nội thất/5. NOI THAT GO_THUMB.png',
-        '/assets/Nội thất/5. NOI THAT GO_THUMB.png'
-      ],
-      variants: [
-        { id: 'tan_co_dien_go_v1', url: '/assets/Nội thất/5. NOI THAT GO_THUMB.png', name: 'Mẫu tân cổ điển gỗ 01', images: ['/assets/Nội thất/5. NOI THAT GO_THUMB.png', '/assets/Nội thất/5. NOI THAT GO_THUMB.png', '/assets/Nội thất/5. NOI THAT GO_THUMB.png', '/assets/Nội thất/5. NOI THAT GO_THUMB.png'] }
-      ]
-    }
-  ],
+  FARM: [{
+    id: 'FARM_root',
+    url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU FARM & DU LỊCH/SH_AI_1715ea47d69359c8dfba345f6fd5e389.png',
+    name: 'FARM & DU LỊCH',
+    variants: [
+      { id: 'FARM_v1', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU FARM & DU LỊCH/SH_AI_1715ea47d69359c8dfba345f6fd5e389.png', name: 'Mẫu 01' },
+      { id: 'FARM_v2', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU FARM & DU LỊCH/SH_AI_2f89ddfe1ecf8d62edddc6fdf2bece77.png', name: 'Mẫu 02' },
+      { id: 'FARM_v3', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU FARM & DU LỊCH/SH_AI_300cc6dea308dd21a2c6a645430b1666.png', name: 'Mẫu 03' },
+      { id: 'FARM_v4', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU FARM & DU LỊCH/SH_AI_52dd5088c65c47c083f99cafde0199cd.png', name: 'Mẫu 04' },
+      { id: 'FARM_v5', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU FARM & DU LỊCH/SH_AI_5e5cace62c2838059e00774b69cb28c7.png', name: 'Mẫu 05' },
+      { id: 'FARM_v6', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU FARM & DU LỊCH/SH_AI_66a44b30c593052d837f88bd88f0d839.png', name: 'Mẫu 06' },
+      { id: 'FARM_v7', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU FARM & DU LỊCH/SH_AI_9ce8d5a243f67b639d60bf42e36bc4c2.png', name: 'Mẫu 07' },
+      { id: 'FARM_v8', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU FARM & DU LỊCH/SH_AI_9e3229e106dfb518e0ee3462c92ca359.png', name: 'Mẫu 08' },
+      { id: 'FARM_v9', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU FARM & DU LỊCH/SH_AI_af009743acdd44b924d25befd70b9c01.png', name: 'Mẫu 09' },
+      { id: 'FARM_v10', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU FARM & DU LỊCH/SH_AI_d61229b57d2422f95185128ba542e727.png', name: 'Mẫu 10' },
+      { id: 'FARM_v11', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU FARM & DU LỊCH/SH_AI_f9a8d7df58d15fbf44f84ce926802779.png', name: 'Mẫu 11' }
+    ]
+  }],
+  HO_BOI: [{
+    id: 'HO_BOI_root',
+    url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ BƠI THIÊN NHIÊN/SH_AI_2f82584a12f22a516a8adb15554e6f08.png',
+    name: 'HỒ BƠI THIÊN NHIÊN',
+    variants: [
+      { id: 'HO_BOI_v1', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ BƠI THIÊN NHIÊN/SH_AI_2f82584a12f22a516a8adb15554e6f08.png', name: 'Mẫu 01' },
+      { id: 'HO_BOI_v2', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ BƠI THIÊN NHIÊN/SH_AI_455b50ee898f2925c0a9e71153e87a8f.png', name: 'Mẫu 02' },
+      { id: 'HO_BOI_v3', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ BƠI THIÊN NHIÊN/SH_AI_511aa26431fad3f02025b6a8a12c221b.png', name: 'Mẫu 03' },
+      { id: 'HO_BOI_v4', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ BƠI THIÊN NHIÊN/SH_AI_6f9a466232614f86df95d5590ebf405a.png', name: 'Mẫu 04' },
+      { id: 'HO_BOI_v5', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ BƠI THIÊN NHIÊN/SH_AI_7026500ffe0f452b969d83bbc026dfc0.png', name: 'Mẫu 05' },
+      { id: 'HO_BOI_v6', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ BƠI THIÊN NHIÊN/SH_AI_7e7a7c51465791dbfc177884171e65ce.png', name: 'Mẫu 06' },
+      { id: 'HO_BOI_v7', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ BƠI THIÊN NHIÊN/SH_AI_9a0f5bae9e7b618a18c9d0c187556da6.png', name: 'Mẫu 07' },
+      { id: 'HO_BOI_v8', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ BƠI THIÊN NHIÊN/SH_AI_c497196cfd56e71694eaee391ff38034.png', name: 'Mẫu 08' },
+      { id: 'HO_BOI_v9', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ BƠI THIÊN NHIÊN/SH_AI_d795ba10ccc62a058e75ac79a4939711.png', name: 'Mẫu 09' },
+      { id: 'HO_BOI_v10', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ BƠI THIÊN NHIÊN/SH_AI_de4ea84ed43af3fe56f25dae4783932d.png', name: 'Mẫu 10' },
+      { id: 'HO_BOI_v11', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ BƠI THIÊN NHIÊN/SH_AI_eee9901286e7527eb56d40de51e84674.png', name: 'Mẫu 11' },
+      { id: 'HO_BOI_v12', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ BƠI THIÊN NHIÊN/SH_AI_f8e5003e03978eb74575177315cfd467.png', name: 'Mẫu 12' }
+    ]
+  }],
+  HO: [{
+    id: 'HO_root',
+    url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_39_06 2 thg 4, 2026.png',
+    name: 'HỒ KOI CỔ ĐIỂN',
+    variants: [
+      { id: 'HO_v1', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_39_06 2 thg 4, 2026.png', name: 'Mẫu 01' },
+      { id: 'HO_v2', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_39_21 2 thg 4, 2026.png', name: 'Mẫu 02' },
+      { id: 'HO_v3', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_39_48 2 thg 4, 2026.png', name: 'Mẫu 03' },
+      { id: 'HO_v4', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_40_04 2 thg 4, 2026.png', name: 'Mẫu 04' },
+      { id: 'HO_v5', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_40_27 2 thg 4, 2026.png', name: 'Mẫu 05' },
+      { id: 'HO_v6', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_40_31 2 thg 4, 2026.png', name: 'Mẫu 06' },
+      { id: 'HO_v7', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_41_50 2 thg 4, 2026.png', name: 'Mẫu 07' },
+      { id: 'HO_v8', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_41_57 2 thg 4, 2026.png', name: 'Mẫu 08' },
+      { id: 'HO_v9', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_42_07 2 thg 4, 2026.png', name: 'Mẫu 09' },
+      { id: 'HO_v10', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_43_11 2 thg 4, 2026.png', name: 'Mẫu 10' },
+      { id: 'HO_v11', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_43_59 2 thg 4, 2026.png', name: 'Mẫu 11' },
+      { id: 'HO_v12', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_44_07 2 thg 4, 2026.png', name: 'Mẫu 12' },
+      { id: 'HO_v13', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_46_19 2 thg 4, 2026.png', name: 'Mẫu 13' },
+      { id: 'HO_v14', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_46_23 2 thg 4, 2026.png', name: 'Mẫu 14' },
+      { id: 'HO_v15', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_47_20 2 thg 4, 2026.png', name: 'Mẫu 15' },
+      { id: 'HO_v16', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_48_03 2 thg 4, 2026.png', name: 'Mẫu 16' },
+      { id: 'HO_v17', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_48_17 2 thg 4, 2026.png', name: 'Mẫu 17' },
+      { id: 'HO_v18', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_48_31 2 thg 4, 2026.png', name: 'Mẫu 18' },
+      { id: 'HO_v19', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_50_32 2 thg 4, 2026.png', name: 'Mẫu 19' },
+      { id: 'HO_v20', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_50_37 2 thg 4, 2026.png', name: 'Mẫu 20' },
+      { id: 'HO_v21', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_54_26 2 thg 4, 2026.png', name: 'Mẫu 21' },
+      { id: 'HO_v22', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_54_59 2 thg 4, 2026.png', name: 'Mẫu 22' },
+      { id: 'HO_v23', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_55_39 2 thg 4, 2026.png', name: 'Mẫu 23' },
+      { id: 'HO_v24', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_56_57 2 thg 4, 2026.png', name: 'Mẫu 24' },
+      { id: 'HO_v25', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_57_22 2 thg 4, 2026.png', name: 'Mẫu 25' },
+      { id: 'HO_v26', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_57_38 2 thg 4, 2026.png', name: 'Mẫu 26' },
+      { id: 'HO_v27', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_59_25 2 thg 4, 2026.png', name: 'Mẫu 27' },
+      { id: 'HO_v28', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_59_44 2 thg 4, 2026.png', name: 'Mẫu 28' },
+      { id: 'HO_v29', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 14_59_57 2 thg 4, 2026.png', name: 'Mẫu 29' },
+      { id: 'HO_v30', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 15_00_09 2 thg 4, 2026.png', name: 'Mẫu 30' },
+      { id: 'HO_v31', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 15_06_49 2 thg 4, 2026.png', name: 'Mẫu 31' },
+      { id: 'HO_v32', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 15_07_19 2 thg 4, 2026.png', name: 'Mẫu 32' },
+      { id: 'HO_v33', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 15_07_21 2 thg 4, 2026.png', name: 'Mẫu 33' },
+      { id: 'HO_v34', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 15_11_05 2 thg 4, 2026.png', name: 'Mẫu 34' },
+      { id: 'HO_v35', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 15_11_22 2 thg 4, 2026.png', name: 'Mẫu 35' },
+      { id: 'HO_v36', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 15_13_49 2 thg 4, 2026.png', name: 'Mẫu 36' },
+      { id: 'HO_v37', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 15_14_06 2 thg 4, 2026.png', name: 'Mẫu 37' },
+      { id: 'HO_v38', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 15_14_09 2 thg 4, 2026.png', name: 'Mẫu 38' },
+      { id: 'HO_v39', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 15_17_07 2 thg 4, 2026.png', name: 'Mẫu 39' },
+      { id: 'HO_v40', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/ChatGPT Image 15_17_18 2 thg 4, 2026.png', name: 'Mẫu 40' },
+      { id: 'HO_v41', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_0999a94386c5360455af69a9dc00dc6f.png', name: 'Mẫu 41' },
+      { id: 'HO_v42', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_0a87d7917781ac9ad2ff4ba5d6fb5f81.png', name: 'Mẫu 42' },
+      { id: 'HO_v43', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_0c8e90ec87bd3518307f1792d01c07bb.png', name: 'Mẫu 43' },
+      { id: 'HO_v44', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_117fe2f3a82c0764e78e7d231f0271ac.png', name: 'Mẫu 44' },
+      { id: 'HO_v45', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_19a56a93ebf97421b32b1f77459154e7.png', name: 'Mẫu 45' },
+      { id: 'HO_v46', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_24202b401fa32eb93031280e220691cf.png', name: 'Mẫu 46' },
+      { id: 'HO_v47', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_354b8f6799c1d6e56f57cbb0987ba973.png', name: 'Mẫu 47' },
+      { id: 'HO_v48', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_48fa47927745c443a6b1b64ea017fdcc.png', name: 'Mẫu 48' },
+      { id: 'HO_v49', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_4a787396d056466d1fa3cd2fa816af0b.png', name: 'Mẫu 49' },
+      { id: 'HO_v50', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_4d35f4baf48de62307caf999df78b870.png', name: 'Mẫu 50' },
+      { id: 'HO_v51', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_5134cb642f51ea1296df907077fccb30.png', name: 'Mẫu 51' },
+      { id: 'HO_v52', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_68f0814c2f6fafa6d78b5f4c93b5940c.png', name: 'Mẫu 52' },
+      { id: 'HO_v53', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_6d7fef5cf83f403e8a152b8f6382d500.png', name: 'Mẫu 53' },
+      { id: 'HO_v54', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_8a9d9c820160a8f37e8e8f8d7fc85f59.png', name: 'Mẫu 54' },
+      { id: 'HO_v55', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_8ae330a78245b04d56d93dfb102dfe52.png', name: 'Mẫu 55' },
+      { id: 'HO_v56', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_a2268083008e91b0c660bd726da89a10.png', name: 'Mẫu 56' },
+      { id: 'HO_v57', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_a370efbdbd51f4cff658d2c54dacd900.png', name: 'Mẫu 57' },
+      { id: 'HO_v58', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_a6adc7cb8aac5a9398c3d2a9c95c801e.png', name: 'Mẫu 58' },
+      { id: 'HO_v59', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_ace959727ccc59984109132237658971.png', name: 'Mẫu 59' },
+      { id: 'HO_v60', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_b1491a2d1a6fa2ec4729ccb27aa67614.png', name: 'Mẫu 60' },
+      { id: 'HO_v61', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_b26c30df5fbd499c79d6ed383471523f.png', name: 'Mẫu 61' },
+      { id: 'HO_v62', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_b2bb48568a04ad7f9e193b929d46f556.png', name: 'Mẫu 62' },
+      { id: 'HO_v63', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_b3d47212fa007183264c72f8a67920cf.png', name: 'Mẫu 63' },
+      { id: 'HO_v64', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_b739fd14546a6794941cbd16e6b10815.png', name: 'Mẫu 64' },
+      { id: 'HO_v65', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_bcff90f97e494fab4c67aee32d16a3ec.png', name: 'Mẫu 65' },
+      { id: 'HO_v66', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_c045f45c4b222fc798629e34af483f35.png', name: 'Mẫu 66' },
+      { id: 'HO_v67', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_c2d432751e5ada02e2360504bcad6a01.png', name: 'Mẫu 67' },
+      { id: 'HO_v68', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_c79f2faba50020effcf6a08974688a11.png', name: 'Mẫu 68' },
+      { id: 'HO_v69', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_cd3e53eb648396a7c117b427efa9b626.png', name: 'Mẫu 69' },
+      { id: 'HO_v70', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_d7a6c1245dff294367d7ad14f77794f1.png', name: 'Mẫu 70' },
+      { id: 'HO_v71', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_e2f15d27da00958927536b0a08df57ca.png', name: 'Mẫu 71' },
+      { id: 'HO_v72', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_f0d12577f9165a665247ffc379e16555.png', name: 'Mẫu 72' },
+      { id: 'HO_v73', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_f7c5920c672e1a2616a2b9b38c4b5e9e.png', name: 'Mẫu 73' },
+      { id: 'HO_v74', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI CỔ ĐIỂN/SH_AI_tải xuống.png', name: 'Mẫu 74' }
+    ]
+  }],
+  HO_HIEN_DAI: [{
+    id: 'HO_HIEN_DAI_root',
+    url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_0871f74e3658461896dcaf9380a2d461.png',
+    name: 'HỒ KOI HIỆN ĐẠI',
+    variants: [
+      { id: 'HO_HIEN_DAI_v1', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_0871f74e3658461896dcaf9380a2d461.png', name: 'Mẫu 01' },
+      { id: 'HO_HIEN_DAI_v2', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_08e9ae372342c3efbd96a6ed87ebbfc6.png', name: 'Mẫu 02' },
+      { id: 'HO_HIEN_DAI_v3', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_179a64fcb78b345e6c6b5ee00d8b0c00.png', name: 'Mẫu 03' },
+      { id: 'HO_HIEN_DAI_v4', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_24d28d61b8d3e9e55f158488893a47e7.png', name: 'Mẫu 04' },
+      { id: 'HO_HIEN_DAI_v5', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_2550413b7aca6831ef47019486b72b74.png', name: 'Mẫu 05' },
+      { id: 'HO_HIEN_DAI_v6', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_2c7220ceae485079a46aee3b63bee528.png', name: 'Mẫu 06' },
+      { id: 'HO_HIEN_DAI_v7', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_33e172ad44a72f9087e4875a4f638a56.png', name: 'Mẫu 07' },
+      { id: 'HO_HIEN_DAI_v8', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_35f344b247fc7f90f1086000cef03229.png', name: 'Mẫu 08' },
+      { id: 'HO_HIEN_DAI_v9', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_36b57dd62c9e3a69752449600b1d80b0.png', name: 'Mẫu 09' },
+      { id: 'HO_HIEN_DAI_v10', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_3eae0bd668823b57bd272ad19eb677b1.png', name: 'Mẫu 10' },
+      { id: 'HO_HIEN_DAI_v11', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_40741b8e480c24080f3300ffe3465764.png', name: 'Mẫu 11' },
+      { id: 'HO_HIEN_DAI_v12', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_4151fcf374b08ac3863e9bf347609975.png', name: 'Mẫu 12' },
+      { id: 'HO_HIEN_DAI_v13', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_44b940bb82c2f3afa6af66a01fad8db5.png', name: 'Mẫu 13' },
+      { id: 'HO_HIEN_DAI_v14', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_4f76edf9b16e045faf12f2a58509faa2.png', name: 'Mẫu 14' },
+      { id: 'HO_HIEN_DAI_v15', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_50c6a9e6317b2715eb50c7ec583db39f.png', name: 'Mẫu 15' },
+      { id: 'HO_HIEN_DAI_v16', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_58a6d6d24ee0ee451f2af0101fb73094.png', name: 'Mẫu 16' },
+      { id: 'HO_HIEN_DAI_v17', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_5d75a19ea9e333f66fc7d7826f63ff0b.png', name: 'Mẫu 17' },
+      { id: 'HO_HIEN_DAI_v18', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_5e61d46929b6423a29ba73a9dcb6d215.png', name: 'Mẫu 18' },
+      { id: 'HO_HIEN_DAI_v19', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_5fd472d766e7600ef445bcf27b9c610d.png', name: 'Mẫu 19' },
+      { id: 'HO_HIEN_DAI_v20', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_6311a587c21652bb3e8f672acadabb77.png', name: 'Mẫu 20' },
+      { id: 'HO_HIEN_DAI_v21', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_646890325439a79386eb0bdb518c7f91.png', name: 'Mẫu 21' },
+      { id: 'HO_HIEN_DAI_v22', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_72e242f4e1e4b67f15d87c37d188ea56.png', name: 'Mẫu 22' },
+      { id: 'HO_HIEN_DAI_v23', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_77d823e696ebee7131a1850424de4df4.png', name: 'Mẫu 23' },
+      { id: 'HO_HIEN_DAI_v24', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_80675b5e3e130dfdeef727dc802f94fc.png', name: 'Mẫu 24' },
+      { id: 'HO_HIEN_DAI_v25', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_8129af1efcfc073331ce6e80fba700af.png', name: 'Mẫu 25' },
+      { id: 'HO_HIEN_DAI_v26', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_833fd6b1333f17534f86a96412abd8b2.png', name: 'Mẫu 26' },
+      { id: 'HO_HIEN_DAI_v27', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_84c9baebbb71f3cae51bf4cea166b42a.png', name: 'Mẫu 27' },
+      { id: 'HO_HIEN_DAI_v28', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_8578467e2497336949ae4f45cc680084.png', name: 'Mẫu 28' },
+      { id: 'HO_HIEN_DAI_v29', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_a75f9619cf1fa7a5e2ed3c0f06382fe9.png', name: 'Mẫu 29' },
+      { id: 'HO_HIEN_DAI_v30', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_a9649d79cffffc8f676ec7917bad9a3a.png', name: 'Mẫu 30' },
+      { id: 'HO_HIEN_DAI_v31', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_aafebe044b684156482bec54ebec70d5.png', name: 'Mẫu 31' },
+      { id: 'HO_HIEN_DAI_v32', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_b57cb7b535064759230d6c487174a227.png', name: 'Mẫu 32' },
+      { id: 'HO_HIEN_DAI_v33', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_bb331d2f67c74077e5b3627ae6fb1091.png', name: 'Mẫu 33' },
+      { id: 'HO_HIEN_DAI_v34', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_c530b973ce7147c0940e269bd16996d9.png', name: 'Mẫu 34' },
+      { id: 'HO_HIEN_DAI_v35', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_d39c82fe8f6466ae1394ff9dba3c3adf.png', name: 'Mẫu 35' },
+      { id: 'HO_HIEN_DAI_v36', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_d3b54e2e8e09fb428a1455aa8b8db1b7.png', name: 'Mẫu 36' },
+      { id: 'HO_HIEN_DAI_v37', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_d5b6126ba2950f6198df8e906e9133b3.png', name: 'Mẫu 37' },
+      { id: 'HO_HIEN_DAI_v38', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_d623857fe9373b43c7c1d9581b92d0eb.png', name: 'Mẫu 38' },
+      { id: 'HO_HIEN_DAI_v39', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_f20228ac0dbb9c0e60860a655ee5b9f3.png', name: 'Mẫu 39' },
+      { id: 'HO_HIEN_DAI_v40', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_f731fe6a6ed6afeb64861def7fb9d926.png', name: 'Mẫu 40' },
+      { id: 'HO_HIEN_DAI_v41', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU HỒ KOI HIỆN ĐẠI/SH_AI_f81aa7f6022ae1807a623baf0b3e7c80.png', name: 'Mẫu 41' }
+    ]
+  }],
+  CAFE: [{
+    id: 'CAFE_root',
+    url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_09eefae1cfe399dcf62de4d408a2e0ab.png',
+    name: 'QUÁN CÀ PHÊ',
+    variants: [
+      { id: 'CAFE_v1', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_09eefae1cfe399dcf62de4d408a2e0ab.png', name: 'Mẫu 01' },
+      { id: 'CAFE_v2', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_130ab15e081cadcad5d3af18a2efcc1c.png', name: 'Mẫu 02' },
+      { id: 'CAFE_v3', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_162b1aefff4f95f09d02e23de174e965.png', name: 'Mẫu 03' },
+      { id: 'CAFE_v4', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_1a5310faaa17a2dedbfe560777ec3bb3.png', name: 'Mẫu 04' },
+      { id: 'CAFE_v5', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_2301d340b1ec206d4581a35bc4f51c5d.png', name: 'Mẫu 05' },
+      { id: 'CAFE_v6', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_256361e4e5a74288716bae3b2fb46e99.png', name: 'Mẫu 06' },
+      { id: 'CAFE_v7', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_289f93d59aede628aed1e13b7ec3b30f.png', name: 'Mẫu 07' },
+      { id: 'CAFE_v8', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_2e8505efc4a892dc0f0196ea67417efa.png', name: 'Mẫu 08' },
+      { id: 'CAFE_v9', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_30af530b0ed938a3e365829b0dbeb541.png', name: 'Mẫu 09' },
+      { id: 'CAFE_v10', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_312fc56ae04595041f5392a03f9058fe.png', name: 'Mẫu 10' },
+      { id: 'CAFE_v11', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_368fc11e14bc54f20b3ad33e69f18279.png', name: 'Mẫu 11' },
+      { id: 'CAFE_v12', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_3a776408d84d0b2d8e695e1108005055.png', name: 'Mẫu 12' },
+      { id: 'CAFE_v13', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_3ade6de6764426b5e4cfeb283c7abaa2.png', name: 'Mẫu 13' },
+      { id: 'CAFE_v14', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_3d7b3eb3332612f2bc10081ab5fea46b.png', name: 'Mẫu 14' },
+      { id: 'CAFE_v15', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_467582049eb25ea719577787fc22cf34.png', name: 'Mẫu 15' },
+      { id: 'CAFE_v16', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_4a6c343605112a94cffee7dde6cd1633.png', name: 'Mẫu 16' },
+      { id: 'CAFE_v17', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_637a133936c83d13fca1650cf65202f1.png', name: 'Mẫu 17' },
+      { id: 'CAFE_v18', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_666943907_122257197656167328_3910190054970877836_n.png', name: 'Mẫu 18' },
+      { id: 'CAFE_v19', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_667372644_122166540230687967_136770082156050228_n.png', name: 'Mẫu 19' },
+      { id: 'CAFE_v20', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_668507034_122166540524687967_7637305089493677909_n.png', name: 'Mẫu 20' },
+      { id: 'CAFE_v21', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_668974865_1662795091526224_1407607583112426588_n.png', name: 'Mẫu 21' },
+      { id: 'CAFE_v22', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_669345340_1662794064859660_6164140105996664566_n.png', name: 'Mẫu 22' },
+      { id: 'CAFE_v23', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_669521900_122166684770687967_6172335877234359904_n.png', name: 'Mẫu 23' },
+      { id: 'CAFE_v24', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_669599199_122166540572687967_7003826850582947002_n.png', name: 'Mẫu 24' },
+      { id: 'CAFE_v25', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_669645232_122166684560687967_6342729061297908643_n.png', name: 'Mẫu 25' },
+      { id: 'CAFE_v26', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_669739092_1662794961526237_3769543768573701148_n.png', name: 'Mẫu 26' },
+      { id: 'CAFE_v27', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_670246622_1662795544859512_691311268688376772_n.png', name: 'Mẫu 27' },
+      { id: 'CAFE_v28', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_673051624_122167508042687967_283051805392859348_n.png', name: 'Mẫu 28' },
+      { id: 'CAFE_v29', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_673951493_122167508642687967_623306788946444933_n.png', name: 'Mẫu 29' },
+      { id: 'CAFE_v30', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_676483733_1599817294574812_5501326559426420624_n.png', name: 'Mẫu 30' },
+      { id: 'CAFE_v31', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_677172036_122167508438687967_480064491553558387_n.png', name: 'Mẫu 31' },
+      { id: 'CAFE_v32', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_68cc95badf41c4ca5e35428a9deb00d8.png', name: 'Mẫu 32' },
+      { id: 'CAFE_v33', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_6a2e6a97dacbfa7a6074da613e29b62a.png', name: 'Mẫu 33' },
+      { id: 'CAFE_v34', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_735bf9f8910d2fcd775d5c7f2fb2149c.png', name: 'Mẫu 34' },
+      { id: 'CAFE_v35', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_7368facd7dcf9c84877bde84c8784b5a.png', name: 'Mẫu 35' },
+      { id: 'CAFE_v36', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_78f89a77daea9e0d6dc517d38592e9c0.png', name: 'Mẫu 36' },
+      { id: 'CAFE_v37', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_836506be5085d03fc58e5d94b1b55e65.png', name: 'Mẫu 37' },
+      { id: 'CAFE_v38', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_8382b589def6a64688a43a2c37113716.png', name: 'Mẫu 38' },
+      { id: 'CAFE_v39', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_840f39debba18af2a61bcd03a9a94bfe.png', name: 'Mẫu 39' },
+      { id: 'CAFE_v40', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_89a4ee2567df29670d54953ffdff1942.png', name: 'Mẫu 40' },
+      { id: 'CAFE_v41', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_8cc631cf3a6fe22daccdbdd340f55468.png', name: 'Mẫu 41' },
+      { id: 'CAFE_v42', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_8ef11f6038800d36698d0a5d12e633cf.png', name: 'Mẫu 42' },
+      { id: 'CAFE_v43', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_9405324869e8f8fec79bd0310be1b5ec.png', name: 'Mẫu 43' },
+      { id: 'CAFE_v44', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_aee4e48fca620ae8785286348810622b.png', name: 'Mẫu 44' },
+      { id: 'CAFE_v45', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_c21952cf97ba270090d0520471f96259.png', name: 'Mẫu 45' },
+      { id: 'CAFE_v46', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_cd1c0bc056f3d9fd9bbb279e011e0bd2.png', name: 'Mẫu 46' },
+      { id: 'CAFE_v47', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_ce31014a2e071f897244536b441f98c1.png', name: 'Mẫu 47' },
+      { id: 'CAFE_v48', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_d62b4379ff91edd7abc0e2d36276c266.png', name: 'Mẫu 48' },
+      { id: 'CAFE_v49', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_e085aafd499bc2e84d511210ccf6808d.png', name: 'Mẫu 49' },
+      { id: 'CAFE_v50', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_e166ac2442f770fd398bbf6c5fd06f2c.png', name: 'Mẫu 50' },
+      { id: 'CAFE_v51', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_e325f43ec223516b43ebdb5e744dd1c9.png', name: 'Mẫu 51' },
+      { id: 'CAFE_v52', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_eb5b5be0a691404ae9b12faaf1c20204.png', name: 'Mẫu 52' },
+      { id: 'CAFE_v53', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_ef1c46ccb573d858e5a78124eac57625.png', name: 'Mẫu 53' },
+      { id: 'CAFE_v54', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_ef291242355780e23f98c433bb0340aa.png', name: 'Mẫu 54' },
+      { id: 'CAFE_v55', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU QUÁN CÀ PHÊ/SH_AI_f08da84335eda87e0dc7245e3bb0383c.png', name: 'Mẫu 55' }
+    ]
+  }],
+  TUONG_CAY: [{
+    id: 'TUONG_CAY_root',
+    url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_00413902cb693ad920ee1fedf3c39d58.png',
+    name: 'TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI',
+    variants: [
+      { id: 'TUONG_CAY_v1', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_00413902cb693ad920ee1fedf3c39d58.png', name: 'Mẫu 01' },
+      { id: 'TUONG_CAY_v2', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_02d315f07fdb332211279245658b5aba.png', name: 'Mẫu 02' },
+      { id: 'TUONG_CAY_v3', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_0d215216a89536f2a8391a1d8b1a9149.png', name: 'Mẫu 03' },
+      { id: 'TUONG_CAY_v4', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_16a71a3120997d45319885ba3926e7a7.png', name: 'Mẫu 04' },
+      { id: 'TUONG_CAY_v5', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_197b1a6f1f69b917a251c1d8f13d2bef.png', name: 'Mẫu 05' },
+      { id: 'TUONG_CAY_v6', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_20fb338ad7a36757f47b6187496e4eb8.png', name: 'Mẫu 06' },
+      { id: 'TUONG_CAY_v7', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_2467d38478533578a974cbdc1386e600.png', name: 'Mẫu 07' },
+      { id: 'TUONG_CAY_v8', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_42fbeddad5eccfa1a81cc5fc1ac1e4b3.png', name: 'Mẫu 08' },
+      { id: 'TUONG_CAY_v9', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_47da2e61831359b57c3500c098f74955.png', name: 'Mẫu 09' },
+      { id: 'TUONG_CAY_v10', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_6361117df970b234a6e4f6e6ff599813.png', name: 'Mẫu 10' },
+      { id: 'TUONG_CAY_v11', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_6bc0072de2573b28d0c2099ce8b57f6f.png', name: 'Mẫu 11' },
+      { id: 'TUONG_CAY_v12', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_743041afd5acae7b442f83dc62cab4da.png', name: 'Mẫu 12' },
+      { id: 'TUONG_CAY_v13', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_77c4bb51099c2f6b4701d42b97f06ba3.png', name: 'Mẫu 13' },
+      { id: 'TUONG_CAY_v14', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_7f836a3791406fc658bebcf50b54fc94.png', name: 'Mẫu 14' },
+      { id: 'TUONG_CAY_v15', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_8dd491ceb934352a1fa42a3536ee8542.png', name: 'Mẫu 15' },
+      { id: 'TUONG_CAY_v16', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_8fd1c08398569c80da637a0163add532.png', name: 'Mẫu 16' },
+      { id: 'TUONG_CAY_v17', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_af2992bd48560bd2404813bacd2f657a.png', name: 'Mẫu 17' },
+      { id: 'TUONG_CAY_v18', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_b6cc3743afbc850548d77a6fdc16c4ad.png', name: 'Mẫu 18' },
+      { id: 'TUONG_CAY_v19', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_bd9c36fd44e6632ae7f0fe50e0c0cd6f.png', name: 'Mẫu 19' },
+      { id: 'TUONG_CAY_v20', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_c171981f70010ca2b371889a73fd7a0f.png', name: 'Mẫu 20' },
+      { id: 'TUONG_CAY_v21', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_def4b572c022b502142b920431497969.png', name: 'Mẫu 21' },
+      { id: 'TUONG_CAY_v22', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_e2fdb029827117b94f7b9bd7f27403db.png', name: 'Mẫu 22' },
+      { id: 'TUONG_CAY_v23', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_e80244d799f8214f11a029b463f2434c.png', name: 'Mẫu 23' },
+      { id: 'TUONG_CAY_v24', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_e9784b3b131144c1df76caed6e2d6533.png', name: 'Mẫu 24' },
+      { id: 'TUONG_CAY_v25', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_f0c2143a164e6d00fb95985f91e2f5c4.png', name: 'Mẫu 25' },
+      { id: 'TUONG_CAY_v26', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_fbdedfea250251ed69425ffc4a1b38ac.png', name: 'Mẫu 26' },
+      { id: 'TUONG_CAY_v27', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI/SH_AI_tải xuống.png', name: 'Mẫu 27' }
+    ]
+  }],
+  TUONG_DA: [{
+    id: 'TUONG_DA_root',
+    url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1713_Image Generation_remix_01kn6tx9yrftqb6f264z9pqfe4.png',
+    name: 'TƯỜNG ĐÁ TRANG TRÍ',
+    variants: [
+      { id: 'TUONG_DA_v1', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1713_Image Generation_remix_01kn6tx9yrftqb6f264z9pqfe4.png', name: 'Mẫu 01' },
+      { id: 'TUONG_DA_v2', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1713_Image Generation_remix_01kn6txjxdeprr9sqr6m4mjzmr.png', name: 'Mẫu 02' },
+      { id: 'TUONG_DA_v3', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1716_Quán Cà Phê Thác Nước_remix_01kn6v1wrbfabasdq8bww9bj0v.png', name: 'Mẫu 03' },
+      { id: 'TUONG_DA_v4', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1718_Image Generation_remix_01kn6v6kjgemvs6k0ejg2tsv4q.png', name: 'Mẫu 04' },
+      { id: 'TUONG_DA_v5', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1719_Image Generation_remix_01kn6v81h5fphvxswg2d6wg12s.png', name: 'Mẫu 05' },
+      { id: 'TUONG_DA_v6', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1719_Image Generation_remix_01kn6v8k3gf15vjyhhtnvq25bv.png', name: 'Mẫu 06' },
+      { id: 'TUONG_DA_v7', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1719_Xây Dựng Hang Động_remix_01kn6v7c8tedats02az3m0a7rn.png', name: 'Mẫu 07' },
+      { id: 'TUONG_DA_v8', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1720_Image Generation_remix_01kn6v982jet7tr3gasbsve370.png', name: 'Mẫu 08' },
+      { id: 'TUONG_DA_v9', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1747_Image Generation_remix_01kn6wtzq6ep3vz8ssr6zs9w9w.png', name: 'Mẫu 09' },
+      { id: 'TUONG_DA_v10', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1747_Image Generation_remix_01kn6wv8x7eqhb9s0mk2cnnj2a.png', name: 'Mẫu 10' },
+      { id: 'TUONG_DA_v11', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1747_Image Generation_remix_01kn6wvyyjfxjr11r3qgrjw11c.png', name: 'Mẫu 11' },
+      { id: 'TUONG_DA_v12', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1747_Image Generation_remix_01kn6wwdvrf559mxj1s4tfd9qg.png', name: 'Mẫu 12' },
+      { id: 'TUONG_DA_v13', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1748_Image Generation_remix_01kn6wx1vxej4a5fsvxz4xmvbg.png', name: 'Mẫu 13' },
+      { id: 'TUONG_DA_v14', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1748_Image Generation_remix_01kn6wxqwkfddaz7sbys06hfpq.png', name: 'Mẫu 14' },
+      { id: 'TUONG_DA_v15', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1748_Image Generation_remix_01kn6wy1n5fvyrw59p8bfncyhf.png', name: 'Mẫu 15' },
+      { id: 'TUONG_DA_v16', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1749_Image Generation_remix_01kn6wyktxfazvwatqa1jpedpg.png', name: 'Mẫu 16' },
+      { id: 'TUONG_DA_v17', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1749_Image Generation_remix_01kn6wyxpfft4a6zsnnbxkqv2b.png', name: 'Mẫu 17' },
+      { id: 'TUONG_DA_v18', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1753_Image Generation_remix_01kn6x71f4e4rvz0ke1vh0azyj.png', name: 'Mẫu 18' },
+      { id: 'TUONG_DA_v19', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1754_Image Generation_remix_01kn6x83cxep4b6f23tma5e2gw.png', name: 'Mẫu 19' },
+      { id: 'TUONG_DA_v20', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/20260402_1759_Image Generation_remix_01kn6xgtn5fyevhppkwqrrvymy.png', name: 'Mẫu 20' },
+      { id: 'TUONG_DA_v21', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_34_08 2 thg 4, 2026.png', name: 'Mẫu 21' },
+      { id: 'TUONG_DA_v22', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_39_56 2 thg 4, 2026.png', name: 'Mẫu 22' },
+      { id: 'TUONG_DA_v23', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_40_04 2 thg 4, 2026.png', name: 'Mẫu 23' },
+      { id: 'TUONG_DA_v24', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_40_58 2 thg 4, 2026.png', name: 'Mẫu 24' },
+      { id: 'TUONG_DA_v25', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_42_36 2 thg 4, 2026.png', name: 'Mẫu 25' },
+      { id: 'TUONG_DA_v26', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_43_02 2 thg 4, 2026.png', name: 'Mẫu 26' },
+      { id: 'TUONG_DA_v27', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_43_18 2 thg 4, 2026.png', name: 'Mẫu 27' },
+      { id: 'TUONG_DA_v28', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_45_18 2 thg 4, 2026.png', name: 'Mẫu 28' },
+      { id: 'TUONG_DA_v29', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_45_32 2 thg 4, 2026.png', name: 'Mẫu 29' },
+      { id: 'TUONG_DA_v30', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_45_55 2 thg 4, 2026.png', name: 'Mẫu 30' },
+      { id: 'TUONG_DA_v31', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_47_10 2 thg 4, 2026.png', name: 'Mẫu 31' },
+      { id: 'TUONG_DA_v32', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_48_35 2 thg 4, 2026.png', name: 'Mẫu 32' },
+      { id: 'TUONG_DA_v33', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_49_20 2 thg 4, 2026.png', name: 'Mẫu 33' },
+      { id: 'TUONG_DA_v34', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_49_43 2 thg 4, 2026.png', name: 'Mẫu 34' },
+      { id: 'TUONG_DA_v35', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_50_54 2 thg 4, 2026.png', name: 'Mẫu 35' },
+      { id: 'TUONG_DA_v36', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_52_00 2 thg 4, 2026.png', name: 'Mẫu 36' },
+      { id: 'TUONG_DA_v37', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_52_39 2 thg 4, 2026.png', name: 'Mẫu 37' },
+      { id: 'TUONG_DA_v38', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_54_22 2 thg 4, 2026.png', name: 'Mẫu 38' },
+      { id: 'TUONG_DA_v39', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_54_44 2 thg 4, 2026.png', name: 'Mẫu 39' },
+      { id: 'TUONG_DA_v40', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_55_19 2 thg 4, 2026.png', name: 'Mẫu 40' },
+      { id: 'TUONG_DA_v41', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_55_28 2 thg 4, 2026.png', name: 'Mẫu 41' },
+      { id: 'TUONG_DA_v42', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_56_03 2 thg 4, 2026.png', name: 'Mẫu 42' },
+      { id: 'TUONG_DA_v43', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_56_16 2 thg 4, 2026.png', name: 'Mẫu 43' },
+      { id: 'TUONG_DA_v44', url: '/assets/THIẾT KẾ CẢNH QUAN/MẪU TƯỜNG ĐÁ TRANG TRÍ/ChatGPT Image 16_57_01 2 thg 4, 2026.png', name: 'Mẫu 44' }
+    ]
+  }],
+  BIET_THU: [{
+    id: 'BIET_THU_root',
+    url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ BIỆT THỰ/SH_AI_1ec11ffff58c17883e9933feef25b5a6.png',
+    name: 'NHÀ BIỆT THỰ',
+    variants: [
+      { id: 'BIET_THU_v1', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ BIỆT THỰ/SH_AI_1ec11ffff58c17883e9933feef25b5a6.png', name: 'Mẫu 01' },
+      { id: 'BIET_THU_v2', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ BIỆT THỰ/SH_AI_2c3aaf8ec04a7f8faa417601b108e1f3.png', name: 'Mẫu 02' },
+      { id: 'BIET_THU_v3', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ BIỆT THỰ/SH_AI_341167b8db76802510dcde073541c55b.png', name: 'Mẫu 03' },
+      { id: 'BIET_THU_v4', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ BIỆT THỰ/SH_AI_455cd15940337c437d74750fa9883fd2.png', name: 'Mẫu 04' },
+      { id: 'BIET_THU_v5', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ BIỆT THỰ/SH_AI_476252776df586be36238f99345020fe.png', name: 'Mẫu 05' },
+      { id: 'BIET_THU_v6', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ BIỆT THỰ/SH_AI_517ea99e2410d0d2147c4142b3aba5f7.png', name: 'Mẫu 06' },
+      { id: 'BIET_THU_v7', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ BIỆT THỰ/SH_AI_950b0fa3d146577e1e68d1935f37fd75.png', name: 'Mẫu 07' },
+      { id: 'BIET_THU_v8', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ BIỆT THỰ/SH_AI_ac7b92859928b886c6ad196786e30102.png', name: 'Mẫu 08' },
+      { id: 'BIET_THU_v9', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ BIỆT THỰ/SH_AI_bb9f409fe190f7ea2ef11e3494043db1.png', name: 'Mẫu 09' },
+      { id: 'BIET_THU_v10', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ BIỆT THỰ/SH_AI_be0724ce73fe14a91fcca60135e33709.png', name: 'Mẫu 10' },
+      { id: 'BIET_THU_v11', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ BIỆT THỰ/SH_AI_e2f932d1e5f05126934318bd4e6f0f4e.png', name: 'Mẫu 11' },
+      { id: 'BIET_THU_v12', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ BIỆT THỰ/SH_AI_f9d6e6155cfaa409e32458d4713ba705.png', name: 'Mẫu 12' },
+      { id: 'BIET_THU_v13', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ BIỆT THỰ/SH_AI_fd884701118b7b8f02b02f0dad4e5969.png', name: 'Mẫu 13' }
+    ]
+  }],
+  NHA_CAP_4: [{
+    id: 'NHA_CAP_4_root',
+    url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_00fa5902e2bcad71972298c4dab5bced.png',
+    name: 'NHÀ CẤP 4',
+    variants: [
+      { id: 'NHA_CAP_4_v1', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_00fa5902e2bcad71972298c4dab5bced.png', name: 'Mẫu 01' },
+      { id: 'NHA_CAP_4_v2', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_1566d228c2573afcf22fc9123f1b62c5.png', name: 'Mẫu 02' },
+      { id: 'NHA_CAP_4_v3', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_2392e2573fb2dd63a421223eed105ce3.png', name: 'Mẫu 03' },
+      { id: 'NHA_CAP_4_v4', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_28ab71736f02c82b6f73920739baf15e.png', name: 'Mẫu 04' },
+      { id: 'NHA_CAP_4_v5', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_2ac0ff09fd18da0f5a3bc7130ee0adf0.png', name: 'Mẫu 05' },
+      { id: 'NHA_CAP_4_v6', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_2caa11b5cfe7e8198c66a6719475400d.png', name: 'Mẫu 06' },
+      { id: 'NHA_CAP_4_v7', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_39aefb51670508f61b39fd261f49fa66.png', name: 'Mẫu 07' },
+      { id: 'NHA_CAP_4_v8', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_4b6da01dc9774eda70a2d95d31c69f1c.png', name: 'Mẫu 08' },
+      { id: 'NHA_CAP_4_v9', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_66490555eebe991184c49695fe86a3e2.png', name: 'Mẫu 09' },
+      { id: 'NHA_CAP_4_v10', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_66ffc834f6a8dc2f76cbd40d90d86d3f.png', name: 'Mẫu 10' },
+      { id: 'NHA_CAP_4_v11', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_7716b02c98e7ed15e23291f0380ebaee.png', name: 'Mẫu 11' },
+      { id: 'NHA_CAP_4_v12', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_78be6d6fa7418d63838fe445357f7283.png', name: 'Mẫu 12' },
+      { id: 'NHA_CAP_4_v13', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_7c2f108a5945f6532ceac728039f9259.png', name: 'Mẫu 13' },
+      { id: 'NHA_CAP_4_v14', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_7cc000c5128dbe93b53d0d38a01ee4e6.png', name: 'Mẫu 14' },
+      { id: 'NHA_CAP_4_v15', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_7f98d772191b026c8706993acecda29d.png', name: 'Mẫu 15' },
+      { id: 'NHA_CAP_4_v16', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_80ebd0284c56df95570d6cf0e3cdfd43.png', name: 'Mẫu 16' },
+      { id: 'NHA_CAP_4_v17', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_a3af12c7440995074a3fe7091aaab939.png', name: 'Mẫu 17' },
+      { id: 'NHA_CAP_4_v18', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_ab8a1f71b1e28d25ec54a6b068f1a158.png', name: 'Mẫu 18' },
+      { id: 'NHA_CAP_4_v19', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_b90987a9d9c32700e7ce6304ec48f693.png', name: 'Mẫu 19' },
+      { id: 'NHA_CAP_4_v20', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_bd3961116d5e1b766190fbc625eeb0f4.png', name: 'Mẫu 20' },
+      { id: 'NHA_CAP_4_v21', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_d13d1759133a2c83a6ebd8903a814243.png', name: 'Mẫu 21' },
+      { id: 'NHA_CAP_4_v22', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_d37fd01d5b71bfb9f33dce5c532a58b9.png', name: 'Mẫu 22' },
+      { id: 'NHA_CAP_4_v23', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_df2be54ad370c25f1f1d5be15134292b.png', name: 'Mẫu 23' },
+      { id: 'NHA_CAP_4_v24', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_e4776222fa069daaba72ed180bc7ea88.png', name: 'Mẫu 24' },
+      { id: 'NHA_CAP_4_v25', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_e6dfc8d9c7de5b92d46f4ed83593e8f4.png', name: 'Mẫu 25' },
+      { id: 'NHA_CAP_4_v26', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_e890fef8ded81f9ab9657ca0d1c8d160.png', name: 'Mẫu 26' },
+      { id: 'NHA_CAP_4_v27', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_edc1659b198c0ce2563ab3a802472e2a.png', name: 'Mẫu 27' },
+      { id: 'NHA_CAP_4_v28', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_ef95f2199390853234b7cc37f3e3e43b.png', name: 'Mẫu 28' },
+      { id: 'NHA_CAP_4_v29', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_f92ad32c15d316fb8b2feafe1f51c112.png', name: 'Mẫu 29' },
+      { id: 'NHA_CAP_4_v30', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ CẤP 4/SH_AI_tải xuống.png', name: 'Mẫu 30' }
+    ]
+  }],
+  NHA_PHO: [{
+    id: 'NHA_PHO_root',
+    url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_1376b3816faee9a052ad8fab11a4504f.png',
+    name: 'NHÀ PHỐ',
+    variants: [
+      { id: 'NHA_PHO_v1', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_1376b3816faee9a052ad8fab11a4504f.png', name: 'Mẫu 01' },
+      { id: 'NHA_PHO_v2', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_1d94ff81931cdb1c69ef3e468e98ff04.png', name: 'Mẫu 02' },
+      { id: 'NHA_PHO_v3', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_39d0e718fea58706d8ea8287f0ad2209.png', name: 'Mẫu 03' },
+      { id: 'NHA_PHO_v4', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_3c9fb7c8c2b7581bb70dfe431c9d8f73.png', name: 'Mẫu 04' },
+      { id: 'NHA_PHO_v5', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_3d5fddae8e9cf9ef35aaee0fdac01668.png', name: 'Mẫu 05' },
+      { id: 'NHA_PHO_v6', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_3f760fa1f110e177a25a03734fb0e6f6.png', name: 'Mẫu 06' },
+      { id: 'NHA_PHO_v7', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_47d1da7ddd6dffb8285992f55efd5981.png', name: 'Mẫu 07' },
+      { id: 'NHA_PHO_v8', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_59b7c30cbc3fd044a97753eec27bdc10.png', name: 'Mẫu 08' },
+      { id: 'NHA_PHO_v9', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_886e9f4b97e8407c3b112440e1c5bb87.png', name: 'Mẫu 09' },
+      { id: 'NHA_PHO_v10', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_a4928bcc8482712c8f2ff0e7f671397e.png', name: 'Mẫu 10' },
+      { id: 'NHA_PHO_v11', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_a5ba55e142fcddb83963c1966cd8dbc7.png', name: 'Mẫu 11' },
+      { id: 'NHA_PHO_v12', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_b7cdac0344c66b6075ae9f2cc1004fdb.png', name: 'Mẫu 12' },
+      { id: 'NHA_PHO_v13', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_bc1d4ec5de63d52371de7d810e905349.png', name: 'Mẫu 13' },
+      { id: 'NHA_PHO_v14', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_bf19052aea7c4a4d71d242966da609de.png', name: 'Mẫu 14' },
+      { id: 'NHA_PHO_v15', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_c7dd46f1068f25d72ae92998c70b2635.png', name: 'Mẫu 15' },
+      { id: 'NHA_PHO_v16', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_ca6903ec366279e36e384d5ad1bd54e2.png', name: 'Mẫu 16' },
+      { id: 'NHA_PHO_v17', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_e7e35453c4039435a9edb0c363606dce.png', name: 'Mẫu 17' },
+      { id: 'NHA_PHO_v18', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ PHỐ/SH_AI_fd16cad7af40e856451411088186539c.png', name: 'Mẫu 18' }
+    ]
+  }],
+  NHA_TIEN_CHE: [{
+    id: 'NHA_TIEN_CHE_root',
+    url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_057aa8e23627601c0ce6c024a6ca461a.png',
+    name: 'NHÀ TIỀN CHẾ',
+    variants: [
+      { id: 'NHA_TIEN_CHE_v1', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_057aa8e23627601c0ce6c024a6ca461a.png', name: 'Mẫu 01' },
+      { id: 'NHA_TIEN_CHE_v2', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_09452e407c1217c89642fabc47623bb3.png', name: 'Mẫu 02' },
+      { id: 'NHA_TIEN_CHE_v3', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_1371e9dc3a4d4fc434b870e509fbdc15.png', name: 'Mẫu 03' },
+      { id: 'NHA_TIEN_CHE_v4', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_14d1920b4aec322bf6e1f080378b6941.png', name: 'Mẫu 04' },
+      { id: 'NHA_TIEN_CHE_v5', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_16533156f6ef439a07a39cd061370186.png', name: 'Mẫu 05' },
+      { id: 'NHA_TIEN_CHE_v6', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_17ea0a2a5e2bac3e072641970735b653.png', name: 'Mẫu 06' },
+      { id: 'NHA_TIEN_CHE_v7', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_22845aa13010da3292bcce7a246f7e2c.png', name: 'Mẫu 07' },
+      { id: 'NHA_TIEN_CHE_v8', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_22ccc388fca40083162c74780ad57e7b (1).png', name: 'Mẫu 08' },
+      { id: 'NHA_TIEN_CHE_v9', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_2d66c6f3b4ed470c3efe87b4883fe981.png', name: 'Mẫu 09' },
+      { id: 'NHA_TIEN_CHE_v10', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_2f0aebbfa0126a72f0c4231699ccac89.png', name: 'Mẫu 10' },
+      { id: 'NHA_TIEN_CHE_v11', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_39b1d5334e11eb4e78b3d1d53fd9e53a.png', name: 'Mẫu 11' },
+      { id: 'NHA_TIEN_CHE_v12', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_52d9161035ba70471f7fa7c9588b2142.png', name: 'Mẫu 12' },
+      { id: 'NHA_TIEN_CHE_v13', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_630e5ec7300ddeffef4e894420bb1c7c.png', name: 'Mẫu 13' },
+      { id: 'NHA_TIEN_CHE_v14', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_6f5951152c0e01520fbcaee7d3ee0cdf.png', name: 'Mẫu 14' },
+      { id: 'NHA_TIEN_CHE_v15', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_79467376cf88215f7ae41b30437e7c6f.png', name: 'Mẫu 15' },
+      { id: 'NHA_TIEN_CHE_v16', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_88285758708d112d993a8ff3883de3e9.png', name: 'Mẫu 16' },
+      { id: 'NHA_TIEN_CHE_v17', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_8b2f8c9269a8f76608bdb595a3ab9aac.png', name: 'Mẫu 17' },
+      { id: 'NHA_TIEN_CHE_v18', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_8c4cf2e831b3ee2b7c977beecee68fec.png', name: 'Mẫu 18' },
+      { id: 'NHA_TIEN_CHE_v19', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_ad995203c6f4a6b78a4416312b529439.png', name: 'Mẫu 19' },
+      { id: 'NHA_TIEN_CHE_v20', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_ae4c1a49fab1a20779464d741036f93d.png', name: 'Mẫu 20' },
+      { id: 'NHA_TIEN_CHE_v21', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_c8fd356ed5eeab486b8f5d6494ab51a8.png', name: 'Mẫu 21' },
+      { id: 'NHA_TIEN_CHE_v22', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_ca74212d53c90dab0ee3612209de3604.png', name: 'Mẫu 22' },
+      { id: 'NHA_TIEN_CHE_v23', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_cc589ea8ad4b85f9137fb3e70d9e7ebb.png', name: 'Mẫu 23' },
+      { id: 'NHA_TIEN_CHE_v24', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_d102f7f6f594c968e5fab331da5da85c.png', name: 'Mẫu 24' },
+      { id: 'NHA_TIEN_CHE_v25', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_d3af80d235b38ec3aa16de5f214e06e2.png', name: 'Mẫu 25' },
+      { id: 'NHA_TIEN_CHE_v26', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_f096995977759dbbb13ac9cc6aecd559.png', name: 'Mẫu 26' },
+      { id: 'NHA_TIEN_CHE_v27', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_f41e6b023b2f3e06ee6e4673290be681.png', name: 'Mẫu 27' },
+      { id: 'NHA_TIEN_CHE_v28', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_f5e41fc9858cb71696df7bd592567549.png', name: 'Mẫu 28' },
+      { id: 'NHA_TIEN_CHE_v29', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_f8b13b96005ff93be4ccefde565f5b58.png', name: 'Mẫu 29' },
+      { id: 'NHA_TIEN_CHE_v30', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_fa29d9d7ab43765e0c0fad97f660bf9d.png', name: 'Mẫu 30' },
+      { id: 'NHA_TIEN_CHE_v31', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ TIỀN CHẾ/SH_AI_fd42ff10e97d27f3d55b4249acad6991.png', name: 'Mẫu 31' }
+    ]
+  }],
+  NHA_VUON: [{
+    id: 'NHA_VUON_root',
+    url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ VƯỜN/SH_AI_01057b7c288741a03ad2da539b4bd9fa.png',
+    name: 'NHÀ VƯỜN',
+    variants: [
+      { id: 'NHA_VUON_v1', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ VƯỜN/SH_AI_01057b7c288741a03ad2da539b4bd9fa.png', name: 'Mẫu 01' },
+      { id: 'NHA_VUON_v2', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ VƯỜN/SH_AI_3343b5894abde56b74f10c6edfea2f30.png', name: 'Mẫu 02' },
+      { id: 'NHA_VUON_v3', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ VƯỜN/SH_AI_65ed42ecf46a8f645df97a58f7181281.png', name: 'Mẫu 03' },
+      { id: 'NHA_VUON_v4', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ VƯỜN/SH_AI_69e1bdd5a5ecec339cdb50a6364cc226.png', name: 'Mẫu 04' },
+      { id: 'NHA_VUON_v5', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ VƯỜN/SH_AI_6d2eed4e4b449a577e2474c5ff4682fa.png', name: 'Mẫu 05' },
+      { id: 'NHA_VUON_v6', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ VƯỜN/SH_AI_8a87b9e685c69ce3038c589635d66d46.png', name: 'Mẫu 06' },
+      { id: 'NHA_VUON_v7', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ VƯỜN/SH_AI_bcf428949b334675274f4977a6962dbe.png', name: 'Mẫu 07' },
+      { id: 'NHA_VUON_v8', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ VƯỜN/SH_AI_c31cce8f52308c9dd9d80a07d35f2fe8.png', name: 'Mẫu 08' },
+      { id: 'NHA_VUON_v9', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ VƯỜN/SH_AI_c333d3438ad8256bebf1cd33782d1f8f.png', name: 'Mẫu 09' },
+      { id: 'NHA_VUON_v10', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ VƯỜN/SH_AI_d70e4203a6e8c41eed9bf95609e63922.png', name: 'Mẫu 10' },
+      { id: 'NHA_VUON_v11', url: '/assets/THIẾT KẾ KIẾN TRÚC/MẪU NHÀ VƯỜN/SH_AI_ef5cc6bc393f0532671b9580afd3c22d.png', name: 'Mẫu 11' }
+    ]
+  }],
+  TAN_CO_DIEN: [{
+    id: 'TAN_CO_DIEN_root',
+    name: 'Nội Thất Tân Cổ Điển',
+    variants: [
+      {
+        id: 'TAN_CO_DIEN_v1',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/1/1.png',
+        name: 'Tân Cổ Điển 1',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/1/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/1/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/1/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/1/4.png']
+      },
+      {
+        id: 'TAN_CO_DIEN_v2',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/2/1.png',
+        name: 'Tân Cổ Điển 2',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/2/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/2/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/2/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/2/4.png']
+      },
+      {
+        id: 'TAN_CO_DIEN_v3',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/3/1.png',
+        name: 'Tân Cổ Điển 3',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/3/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/3/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/3/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/3/4.png']
+      },
+      {
+        id: 'TAN_CO_DIEN_v4',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/4/1.png',
+        name: 'Tân Cổ Điển 4',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/4/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/4/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/4/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/4/4.png']
+      },
+      {
+        id: 'TAN_CO_DIEN_v5',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/5/1.png',
+        name: 'Tân Cổ Điển 5',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/5/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/5/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/5/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/5/4.png']
+      },
+      {
+        id: 'TAN_CO_DIEN_v6',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/6/1.png',
+        name: 'Tân Cổ Điển 6',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/6/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/6/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/6/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/6/4.png']
+      },
+      {
+        id: 'TAN_CO_DIEN_v7',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/7/1.png',
+        name: 'Tân Cổ Điển 7',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/7/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/7/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/7/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/7/4.png']
+      },
+      {
+        id: 'TAN_CO_DIEN_v8',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/8/1.png',
+        name: 'Tân Cổ Điển 8',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/8/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/8/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/8/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/8/4.png']
+      },
+      {
+        id: 'TAN_CO_DIEN_v9',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/9/1.png',
+        name: 'Tân Cổ Điển 9',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/9/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/9/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/9/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/9/4.png']
+      },
+      {
+        id: 'TAN_CO_DIEN_v10',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/10/1.png',
+        name: 'Tân Cổ Điển 10',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/10/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/10/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/10/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT CỔ ĐIỂN/10/4.png']
+      }
+    ]
+  }],
+  TAN_CO_DIEN_GO: [{
+    id: 'TAN_CO_DIEN_GO_root',
+    name: 'Nội Thất Tân Cổ Điển Gỗ',
+    variants: [
+      {
+        id: 'TAN_CO_DIEN_GO_v1',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/1/2.png',
+        name: 'Tân Cổ Điển Gỗ 1',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/1/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/1/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/1/4.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/1/SH_AI_3abea2086144f677cd952ca3e4c1d640.png']
+      },
+      {
+        id: 'TAN_CO_DIEN_GO_v2',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/2/1.png',
+        name: 'Tân Cổ Điển Gỗ 2',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/2/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/2/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/2/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/2/4.jpeg']
+      },
+      {
+        id: 'TAN_CO_DIEN_GO_v3',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/3/1.png',
+        name: 'Tân Cổ Điển Gỗ 3',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/3/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/3/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/3/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/3/4.jpeg']
+      },
+      {
+        id: 'TAN_CO_DIEN_GO_v4',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/4/1.png',
+        name: 'Tân Cổ Điển Gỗ 4',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/4/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/4/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/4/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/4/4.png']
+      },
+      {
+        id: 'TAN_CO_DIEN_GO_v5',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/5/2.png',
+        name: 'Tân Cổ Điển Gỗ 5',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/5/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/5/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/5/4.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/5/SH_AI_ebf438b7fa129d85fcf081858d677e7c.png']
+      },
+      {
+        id: 'TAN_CO_DIEN_GO_v6',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/6/1.png',
+        name: 'Tân Cổ Điển Gỗ 6',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/6/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/6/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/6/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/6/4.png']
+      },
+      {
+        id: 'TAN_CO_DIEN_GO_v7',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/7/1.png',
+        name: 'Tân Cổ Điển Gỗ 7',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/7/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/7/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/7/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/7/4.png']
+      },
+      {
+        id: 'TAN_CO_DIEN_GO_v8',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/8/2.png',
+        name: 'Tân Cổ Điển Gỗ 8',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/8/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/8/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/8/4.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/8/SH_AI_5691e2df128ed940c60b1f1281662d53.png']
+      },
+      {
+        id: 'TAN_CO_DIEN_GO_v9',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/9/1.png',
+        name: 'Tân Cổ Điển Gỗ 9',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/9/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/9/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/9/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/9/4.png']
+      },
+      {
+        id: 'TAN_CO_DIEN_GO_v10',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/10/1.png',
+        name: 'Tân Cổ Điển Gỗ 10',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/10/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/10/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/10/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT GỖ TÂN CỔ ĐIỂN/10/4.png']
+      }
+    ]
+  }],
+  HIEN_DAI: [{
+    id: 'HIEN_DAI_root',
+    name: 'Nội Thất Hiện Đại',
+    variants: [
+      {
+        id: 'HIEN_DAI_v1',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/1/1.png',
+        name: 'Hiện Đại 1',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/1/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/1/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/1/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/1/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v2',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/2/1.png',
+        name: 'Hiện Đại 2',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/2/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/2/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/2/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/2/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v3',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/3/1.png',
+        name: 'Hiện Đại 3',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/3/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/3/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/3/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/3/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v4',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/4/1.png',
+        name: 'Hiện Đại 4',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/4/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/4/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/4/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/4/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v5',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/5/1.png',
+        name: 'Hiện Đại 5',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/5/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/5/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/5/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/5/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v6',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/6/1.png',
+        name: 'Hiện Đại 6',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/6/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/6/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/6/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/6/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v7',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/7/1.png',
+        name: 'Hiện Đại 7',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/7/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/7/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/7/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/7/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v8',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/8/1.png',
+        name: 'Hiện Đại 8',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/8/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/8/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/8/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/8/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v9',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/9/1.png',
+        name: 'Hiện Đại 9',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/9/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/9/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/9/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/9/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v10',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/10/1.png',
+        name: 'Hiện Đại 10',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/10/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/10/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/10/3.jpeg', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/10/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v11',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/11/1.png',
+        name: 'Hiện Đại 11',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/11/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/11/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/11/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/11/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v12',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/12/1.png',
+        name: 'Hiện Đại 12',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/12/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/12/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/12/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/12/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v13',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/13/1.png',
+        name: 'Hiện Đại 13',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/13/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/13/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/13/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/13/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v14',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/14/1.png',
+        name: 'Hiện Đại 14',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/14/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/14/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/14/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/14/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v15',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/15/1.png',
+        name: 'Hiện Đại 15',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/15/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/15/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/15/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/15/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v16',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/16/1.png',
+        name: 'Hiện Đại 16',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/16/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/16/2.jpeg', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/16/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/16/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v17',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/17/1.png',
+        name: 'Hiện Đại 17',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/17/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/17/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/17/3.jpeg', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/17/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v18',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/18/1.png',
+        name: 'Hiện Đại 18',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/18/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/18/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/18/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/18/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v19',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/19/1.png',
+        name: 'Hiện Đại 19',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/19/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/19/2.jpeg', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/19/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/19/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v20',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/20/1.png',
+        name: 'Hiện Đại 20',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/20/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/20/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/20/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/20/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v21',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/21/1.png',
+        name: 'Hiện Đại 21',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/21/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/21/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/21/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/21/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v22',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/22/1.png',
+        name: 'Hiện Đại 22',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/22/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/22/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/22/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/22/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v23',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/23/1.png',
+        name: 'Hiện Đại 23',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/23/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/23/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/23/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/23/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v24',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/24/1.png',
+        name: 'Hiện Đại 24',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/24/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/24/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/24/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/24/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v25',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/25/2.png',
+        name: 'Hiện Đại 25',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/25/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/25/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/25/4.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/25/SH_AI_e7ba3c1f79c80337f100f25189c867cc.png']
+      },
+      {
+        id: 'HIEN_DAI_v26',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/26/1.png',
+        name: 'Hiện Đại 26',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/26/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/26/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/26/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/26/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v27',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/27/1.png',
+        name: 'Hiện Đại 27',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/27/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/27/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/27/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/27/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v28',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/28/1.png',
+        name: 'Hiện Đại 28',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/28/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/28/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/28/3.jpeg', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/28/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v29',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/29/1.png',
+        name: 'Hiện Đại 29',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/29/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/29/2.jpeg', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/29/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/29/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v30',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/30/2.png',
+        name: 'Hiện Đại 30',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/30/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/30/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/30/4.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/30/SH_AI_e28722ecaf7884ece3f2d56d025f17ad.png']
+      },
+      {
+        id: 'HIEN_DAI_v31',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/31/2.png',
+        name: 'Hiện Đại 31',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/31/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/31/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/31/4.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/31/SH_AI_f5a4f5fa04cc1d8bc6ef0f61561672e7.png']
+      },
+      {
+        id: 'HIEN_DAI_v32',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/32/1.png',
+        name: 'Hiện Đại 32',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/32/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/32/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/32/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/32/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v33',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/33/1.png',
+        name: 'Hiện Đại 33',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/33/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/33/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/33/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/33/4.png']
+      },
+      {
+        id: 'HIEN_DAI_v34',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/34/1.png',
+        name: 'Hiện Đại 34',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/34/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/34/2.jpeg', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/34/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT HIỆN ĐẠI/34/4.png']
+      }
+    ]
+  }],
+  Indochine: [{
+    id: 'Indochine_root',
+    name: 'Nội Thất Indochine',
+    variants: [
+      {
+        id: 'Indochine_v1',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/1/1.png',
+        name: 'Indochine 1',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/1/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/1/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/1/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/1/4.png']
+      },
+      {
+        id: 'Indochine_v2',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/2/1.png',
+        name: 'Indochine 2',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/2/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/2/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/2/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/2/4.png']
+      },
+      {
+        id: 'Indochine_v3',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/3/1.png',
+        name: 'Indochine 3',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/3/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/3/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/3/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/3/t.png']
+      },
+      {
+        id: 'Indochine_v4',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/4/1.png',
+        name: 'Indochine 4',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/4/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/4/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/4/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/4/4.png']
+      },
+      {
+        id: 'Indochine_v5',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/5/1.png',
+        name: 'Indochine 5',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/5/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/5/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/5/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/5/4.png']
+      },
+      {
+        id: 'Indochine_v6',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/6/1.png',
+        name: 'Indochine 6',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/6/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/6/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/6/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/6/4.png']
+      },
+      {
+        id: 'Indochine_v7',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/7/1.png',
+        name: 'Indochine 7',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/7/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/7/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/7/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/7/t.png']
+      },
+      {
+        id: 'Indochine_v8',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/8/1.png',
+        name: 'Indochine 8',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/8/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/8/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/8/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT INDOCHINE/8/4.png']
+      }
+    ]
+  }],
+  WABI_SABI: [{
+    id: 'WABI_SABI_root',
+    name: 'Nội Thất Wabi Sabi',
+    variants: [
+      {
+        id: 'WABI_SABI_v1',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/1/1.png',
+        name: 'Wabi Sabi 1',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/1/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/1/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/1/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/1/4.png']
+      },
+      {
+        id: 'WABI_SABI_v2',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/2/1.png',
+        name: 'Wabi Sabi 2',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/2/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/2/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/2/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/2/4.png']
+      },
+      {
+        id: 'WABI_SABI_v3',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/3/1.png',
+        name: 'Wabi Sabi 3',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/3/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/3/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/3/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/3/4.png']
+      },
+      {
+        id: 'WABI_SABI_v4',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/4/1.png',
+        name: 'Wabi Sabi 4',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/4/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/4/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/4/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/4/4.png']
+      },
+      {
+        id: 'WABI_SABI_v5',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/5/2.png',
+        name: 'Wabi Sabi 5',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/5/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/5/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/5/4.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/5/SH_AI_585b9c061c2422894012d34ca84570f7.png']
+      },
+      {
+        id: 'WABI_SABI_v6',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/6/1.png',
+        name: 'Wabi Sabi 6',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/6/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/6/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/6/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/6/4.png']
+      },
+      {
+        id: 'WABI_SABI_v7',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/7/1.png',
+        name: 'Wabi Sabi 7',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/7/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/7/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/7/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/7/4.png']
+      },
+      {
+        id: 'WABI_SABI_v8',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/8/1.png',
+        name: 'Wabi Sabi 8',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/8/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/8/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/8/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/8/4.png']
+      },
+      {
+        id: 'WABI_SABI_v9',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/9/1.png',
+        name: 'Wabi Sabi 9',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/9/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/9/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/9/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/9/4.png']
+      },
+      {
+        id: 'WABI_SABI_v10',
+        url: '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/10/1.png',
+        name: 'Wabi Sabi 10',
+        images: ['/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/10/1.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/10/2.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/10/3.png', '/assets/THIẾT KẾ NỘI THẤT/NỘI THẤT WABI SABI/10/4.png']
+      }
+    ]
+  }]
 };
-
 const SYSTEM_REFERENCE_LIBRARY: DesignerLibraryItem[] = [
   {
     id: 'sys-thac-cover',
@@ -683,6 +1393,8 @@ export default function App() {
 
   // --- PRIVACY SHIELD & SECURITY ---
   useEffect(() => {
+    // Chức năng chặn cap màn hình tạm thời bị vô hiệu hoá theo yêu cầu
+    /*
     const handleBlur = () => document.body.classList.add('privacy-locked');
     const handleFocus = () => document.body.classList.remove('privacy-locked');
     const handleVisibility = () => {
@@ -710,6 +1422,7 @@ export default function App() {
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('keydown', handleKeyDown);
     };
+    */
   }, []);
 
   // --- SIMPLE ROUTING ---
@@ -2159,7 +2872,7 @@ function ServiceView({
           <p style={{ fontSize: '1.1rem' }}>Hãy chọn một danh mục để thực hiện dự án của bạn.</p>
         </div>
 
-        {/* === 1. HỒ KOI SÂN VƯỜN CỔ ĐIỂN === */}
+        {/* === 1. HỒ KOI SÂN VƯỜN 'Tân Cổ Điển' === */}
         <section className="asset-group">
           <div className="asset-group-header">
             <h4>1. Hồ Koi Sân Vườn Cổ Điển</h4>
@@ -2208,7 +2921,7 @@ function ServiceView({
           </AnimatePresence>
         </section>
 
-        {/* === 2. HỒ KOI SÂN VƯỜN HIỆN ĐẠI === */}
+        {/* === 2. HỒ KOI SÂN VƯỜN 'Hiện Đại' === */}
         <section className="asset-group">
           <div className="asset-group-header">
             <h4>2. Hồ Koi Sân Vườn Hiện Đại</h4>
@@ -2257,7 +2970,7 @@ function ServiceView({
           </AnimatePresence>
         </section>
 
-        {/* === 2. TƯỜNG ĐÁ TRANG TRÍ === */}
+        {/* === 2. 'Tường Đá Trang Trí' === */}
         <section className="asset-group">
           <div className="asset-group-header">
             <h4>3. Tường Đá Trang Trí</h4>
@@ -2306,7 +3019,7 @@ function ServiceView({
           </AnimatePresence>
         </section>
 
-        {/* === 3. TƯỜNG CÂY & VƯỜN NHIỆT ĐỚI === */}
+        {/* === 3. 'Tường Cây & Vườn Nhiệt Đới' === */}
         <section className="asset-group">
           <div className="asset-group-header">
             <h4>4. Tường Cây & Vườn Nhiệt Đới</h4>
@@ -2571,7 +3284,7 @@ function BasicSelectionView({
     if (branch === 'interior') return [
       { id: 'hien_dai', name: t('cat_interior_hien_dai', 'Nội thất hiện đại'), thumb: '/assets/Nội thất/1. HIEN DAI _ THUMB.png', active: true, libraryKey: 'HIEN_DAI' },
       { id: 'tan_co_dien', name: t('cat_interior_tan_co_dien', 'Tân cổ điển quý phái'), thumb: '/assets/Nội thất/2. TAN CO DIEN_THUMB.png', active: true, libraryKey: 'TAN_CO_DIEN' },
-      { id: 'indochine', name: t('cat_interior_indochine', 'Phong cách Indochine'), thumb: '/assets/Nội thất/3. INDOCHINE_THUMB.png', active: true, libraryKey: 'INDOCHINE' },
+      { id: 'indochine', name: t('cat_interior_indochine', 'Phong cách Indochine'), thumb: '/assets/Nội thất/3. INDOCHINE_THUMB.png', active: true, libraryKey: 'Indochine' },
       { id: 'wabi_sabi', name: t('cat_interior_wabi_sabi', 'Wabi sabi tối giản'), thumb: '/assets/Nội thất/4. WABI SABI_THUMB.png', active: true, libraryKey: 'WABI_SABI' },
       { id: 'tan_co_dien_go', name: t('cat_interior_tan_co_dien_go', 'Tân cổ điển gỗ'), thumb: '/assets/Nội thất/5. NOI THAT GO_THUMB.png', active: true, libraryKey: 'TAN_CO_DIEN_GO' },
     ];
@@ -3427,7 +4140,7 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
 }) {
   const getBranchCats = (branch: MainBranch) => {
     if (branch === 'architecture') return ['NHA_PHO', 'BIET_THU', 'NHA_CAP_4', 'NHA_VUON', 'NHA_TIEN_CHE'];
-    if (branch === 'interior') return ['HIEN_DAI', 'TAN_CO_DIEN', 'INDOCHINE', 'WABI_SABI', 'TAN_CO_DIEN_GO'];
+    if (branch === 'interior') return ['HIEN_DAI', 'TAN_CO_DIEN', 'Indochine', 'WABI_SABI', 'TAN_CO_DIEN_GO'];
     return ['HO', 'HO_HIEN_DAI', 'TUONG_DA', 'TUONG_CAY', 'FARM', 'CAFE', 'HO_BOI'];
   };
 
@@ -3604,27 +4317,52 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
            <h3>KHO TÀI NGUYÊN</h3>
         </div>
 
+        <div style={{ padding: '0 20px 15px' }}>
+          <button 
+            onClick={() => {
+              if (confirm('Bạn có muốn làm mới toàn bộ thư viện từ Source Code không? Hành động này sẽ ghi đè các thay đổi hiện tại.')) {
+                onSystemContentUpdate({ ...systemContent, library: ASSETS });
+                onFeedback('Đã làm mới thư viện từ Source Code. Hãy bấm Lưu & Xuất bản để áp dụng.');
+              }
+            }}
+            style={{
+              width: '100%',
+              padding: '10px',
+              background: 'rgba(226,177,112,0.1)',
+              color: '#e2b170',
+              border: '1px dashed #e2b170',
+              borderRadius: '8px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              marginBottom: '10px'
+            }}
+          >
+            <RefreshCw size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> LÀM MỚI TỪ SOURCE CODE
+          </button>
+        </div>
+
         <div className="sidebar-group">
           <label>DANH MỤC THƯ VIỆN</label>
           {libraryCats.map(cat => {
             const labelMap: Record<string, string> = {
-              HO: 'MẪU HỒ KOI CỔ ĐIỂN',
-              HO_HIEN_DAI: 'MẪU HỒ KOI HIỆN ĐẠI',
-              TUONG_DA: 'MẪU TƯỜNG ĐÁ TRANG TRÍ',
-              TUONG_CAY: 'MẪU TƯỜNG CÂY & VƯỜN',
-              FARM: 'MẪU FARM & DU LỊCH',
-              CAFE: 'MẪU CẢNH QUAN CÀ PHÊ',
-              HO_BOI: 'MẪU HỒ BƠI THIÊN NHIÊN',
-              NHA_PHO: 'MẪU NHÀ PHỐ',
-              BIET_THU: 'MẪU BIỆT THỰ',
-              NHA_CAP_4: 'MẪU NHÀ CẤP 4',
-              NHA_VUON: 'MẪU NHÀ VƯỜN',
-              NHA_TIEN_CHE: 'MẪU NHÀ TIỀN CHẾ',
-              HIEN_DAI: 'NỘI THẤT HIỆN ĐẠI',
-              TAN_CO_DIEN: 'NỘI THẤT TÂN CỔ ĐIỂN',
-              INDOCHINE: 'NỘI THẤT INDOCHINE',
-              WABI_SABI: 'NỘI THẤT WABI SABI',
-              TAN_CO_DIEN_GO: 'TÂN CỔ ĐIỂN GỖ'
+              HO: 'Hồ Koi Cổ Điển',
+              HO_HIEN_DAI: 'Hồ Koi Hiện Đại',
+              TUONG_DA: 'Mẫu Tường Đá Trang Trí',
+              TUONG_CAY: 'Mẫu Tường Cây & Vườn Nhiệt Đới',
+              FARM: 'Farm & Du Lịch',
+              CAFE: 'Mẫu Cà Phê',
+              HO_BOI: 'Hồ Bơi Thiên Nhiên',
+              NHA_PHO: 'Mẫu Nhà Phố',
+              BIET_THU: 'Mẫu Biệt Thự',
+              NHA_CAP_4: 'Mẫu Nhà Cấp 4',
+              NHA_VUON: 'Mẫu Nhà Vườn',
+              NHA_TIEN_CHE: 'Mẫu Nhà Tiền Chế',
+              HIEN_DAI: 'Nội Thất Hiện Đại',
+              TAN_CO_DIEN: "NỘI THẤT TÂN 'Tân Cổ Điển'",
+              'Indochine': 'Nội Thất Indochine',
+              WABI_SABI: 'Nội Thất Wabi Sabi',
+              TAN_CO_DIEN_GO: "TÂN 'Tân Cổ Điển' GỖ"
             };
             const iconMap: Record<string, any> = {
               HO: <Waves size={18} />,
@@ -3641,7 +4379,7 @@ function AssetManagerView({ systemContent, onSystemContentUpdate, onSync, onFeed
               NHA_TIEN_CHE: <Layers size={18} />,
               HIEN_DAI: <Monitor size={18} />,
               TAN_CO_DIEN: <ShieldCheck size={18} />,
-              INDOCHINE: <Sprout size={18} />,
+              'Indochine': <Sprout size={18} />,
               WABI_SABI: <Waves size={18} />,
               TAN_CO_DIEN_GO: <Layers size={18} />
             };
