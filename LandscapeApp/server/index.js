@@ -1185,19 +1185,35 @@ app.post('/api/projects', async (req, res) => {
           console.log(`[AUTO] Đang bắt đầu xử lý ảnh qua Google Labs Flow cho "${data.customerName}" với pipeline giống nút admin...`);
           
           if (projectForAi.interiorPairs && projectForAi.interiorPairs.length > 0) {
-            console.log(`[AUTO] Phát hiện ${projectForAi.interiorPairs.length} cặp Nội thất. Sẽ tạo song song.`);
-            // Tạo danh sách jobs để chạy song song 1 lúc
-            const jobs = projectForAi.interiorPairs.map((pair, idx) => {
-              const pairAssets = [
-                { label: `Ảnh hiện trạng góc ${idx + 1}`, url: pair.siteImage, role: 'Ảnh nền chính, phải giữ nguyên kiến trúc, góc chụp và phối cảnh.' },
-                { label: `Mẫu phong cách tham khảo ${idx + 1}`, url: pair.referenceImage, role: 'Mẫu phong cách tham khảo. Dùng làm nguồn cảm hứng.' }
-              ];
-              const pairPrompt = buildProjectFlowPrompt({ ...projectForAi, rawImage: pair.siteImage, referenceModelUrl: pair.referenceImage, selections: {} });
-              return { prompt: pairPrompt, assets: pairAssets };
-            });
-
-            await runChatGptAutomationBatch(jobs, onImageReady).catch(err => {
-                console.error('[AUTO] Lỗi ChatGPT song song:', err.message);
+            console.log(`[AUTO] Phát hiện ${projectForAi.interiorPairs.length} cặp Nội thất. Chạy Google Flow song song trên ${projectForAi.interiorPairs.length} tab.`);
+            const tab = await resolveTabForProject(newProject);
+            // Mỗi pair (góc nhìn) → 1 Flow tab riêng, assets per-pair (siteImage + referenceImage).
+            // Chạy Promise.allSettled để 1 pair fail không kéo đổ các pair khác.
+            const flowResults = await Promise.allSettled(
+              projectForAi.interiorPairs.map(async (pair, idx) => {
+                const pairAssets = [
+                  { label: `Ảnh hiện trạng góc ${idx + 1}`, url: pair.siteImage, role: 'Ảnh nền chính, phải giữ nguyên kiến trúc, góc chụp và phối cảnh.' },
+                  { label: `Mẫu phong cách tham khảo ${idx + 1}`, url: pair.referenceImage, role: 'Mẫu phong cách tham khảo. Dùng làm nguồn cảm hứng.' }
+                ];
+                const pairPrompt = buildPromptWithTabOverride(
+                  tab?.prompt,
+                  buildProjectFlowPrompt({ ...projectForAi, rawImage: pair.siteImage, referenceModelUrl: pair.referenceImage, selections: {} })
+                );
+                const cfg = tab?.flowConfig || { mode: 'image', variantCount: 1, aspectRatio: '16:9' };
+                return await runFlowAutomation({
+                  prompt: pairPrompt,
+                  assets: pairAssets,
+                  onImageReady,
+                  flowConfig: cfg
+                });
+              })
+            );
+            flowResults.forEach((r, idx) => {
+              if (r.status === 'rejected') {
+                console.warn(`[AUTO][interior pair ${idx + 1}] FAIL: ${r.reason?.message || r.reason}`);
+              } else {
+                console.log(`[AUTO][interior pair ${idx + 1}] OK: ${r.value?.outputPaths?.length || 0} ảnh`);
+              }
             });
           } else {
             const tab = await resolveTabForProject(newProject);
