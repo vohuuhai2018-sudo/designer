@@ -910,8 +910,11 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
           }
         }
 
-        // 3. Variant count (x1 / x2 / x3 / x4)
-        const variantBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: new RegExp(`^${variantLabel}$`) }).first();
+        // 3. Variant count (1x / x2 / x3 / x4)
+        // Google Flow UI: variant 1 hiển thị "1x" (đảo thứ tự), 2-4 hiển thị "x2"/"x3"/"x4".
+        // Match cả 2 chiều "x{N}" và "{N}x" để tương thích nếu Google đổi UI.
+        const variantRegex = new RegExp(`^(${variantLabel}|${targetCount}x)$`);
+        const variantBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: variantRegex }).first();
         if (await variantBtn.count() > 0) {
           const isSelected = await variantBtn.getAttribute('aria-selected');
           if (isSelected !== 'true') {
@@ -919,6 +922,8 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
             await delay(500);
             console.log(`[FlowV2] Da chon ${variantLabel}.`);
           }
+        } else {
+          console.log(`[FlowV2] Khong tim thay nut variant ${variantLabel}/${targetCount}x.`);
         }
 
         // 4. Đóng config panel bằng click lại config button (toggle)
@@ -1251,12 +1256,19 @@ async function runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideo
           }
         }
 
-        // Chọn variant count (x1/x2/x3/x4)
-        const x1Btn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: new RegExp(`^${variantLabel}$`) }).first();
+        // Chọn variant count (1x/x2/x3/x4)
+        // Google Flow UI: variant 1 hiển thị "1x" (đảo thứ tự), 2-4 hiển thị "x2"/"x3"/"x4".
+        const variantRegex = new RegExp(`^(${variantLabel}|${variantCount}x)$`);
+        const x1Btn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: variantRegex }).first();
         if (await x1Btn.count() > 0) {
-          await x1Btn.click();
-          await delay(500);
-          console.log(`[FlowVideo] Đã chọn ${variantLabel}.`);
+          const isSelected = await x1Btn.getAttribute('aria-selected');
+          if (isSelected !== 'true') {
+            await x1Btn.click();
+            await delay(500);
+            console.log(`[FlowVideo] Đã chọn ${variantLabel}.`);
+          }
+        } else {
+          console.log(`[FlowVideo] Không tìm thấy nút variant ${variantLabel}/${variantCount}x.`);
         }
 
         // Đóng config panel bằng click lại config button (toggle)
