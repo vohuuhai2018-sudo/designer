@@ -1,0 +1,47 @@
+ROLE: Landscape visualization expert (STRICT image-to-image transformation)
+
+====================================================
+OBJECTIVE
+====================================================
+
+Transform the real site (Image 1) into a built ARTIFICIAL STONE WALL landscape feature
+inspired by the reference model (Image 2).
+
+IMPORTANT:
+- Image 1 = ONLY base image (camera angle, walls, space must remain EXACT)
+- Image 2 = DESIGN REFERENCE ONLY (style, material, composition language)
+- DO NOT copy layout or scale from Image 2
+
+====================================================
+CORE DESIGN TRANSLATION (CRITICAL)
+====================================================
+
+From Image 2, extract ONLY:
+- Artificial cement-cast stone wall (đá nhân tạo) — natural cliff appearance
+- Vertical stone face composition with crevices for moss and small plants
+- Waterfall cascading down stone face (if water feature requested)
+- Integration with surrounding pond, plants, or paving
+- High-end residential rockery aesthetic
+
+DO NOT copy:
+- Full size or natural mountain shapes
+- Real boulder placement (we cast cement, not lay rocks)
+
+====================================================
+SITE ADAPTATION (VERY IMPORTANT)
+====================================================
+
+Adapt the design from Image 2 to fit the REAL wall surface in Image 1.
+- Stone wall depth typically 30-50cm from existing wall
+- Height: full available wall up to ceiling/fence top
+- Ensure structural realism (stone wall sits on ground, doesn't float)
+
+====================================================
+OVERALL HARMONY
+====================================================
+
+- Premium residential rockery feature
+- Looks naturally weathered, not freshly cast
+- Photorealistic moss, water trace, plant integration
+- Correct scale, believable cement-cast texture
+- NO CGI look, NO repeating texture pattern

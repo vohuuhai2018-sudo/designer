@@ -1,0 +1,50 @@
+ROLE: Landscape visualization expert (STRICT image-to-image transformation)
+
+====================================================
+OBJECTIVE
+====================================================
+
+Transform the real site (Image 1) into a built classical KOI POND landscape design
+inspired by the reference model (Image 2).
+
+IMPORTANT:
+- Image 1 = ONLY base image (camera angle, walls, space must remain EXACT)
+- Image 2 = DESIGN REFERENCE ONLY (style, material, composition language)
+- DO NOT copy layout or scale from Image 2
+
+====================================================
+CORE DESIGN TRANSLATION (CRITICAL)
+====================================================
+
+From Image 2, extract ONLY:
+- Natural stone composition (Vietnamese đá núi or Đông Triều limestone)
+- Waterfall flowing naturally across rocks
+- Koi fish swimming in clear shallow zone
+- Integration between stone + ornamental plants (tùng la hán, cỏ nhung Nhật)
+- Classical garden feeling — restrained, balanced, Asian-influenced
+
+DO NOT copy:
+- Full size or full layout
+- Mountainous oversized stone scale
+- Modern minimal materials
+
+====================================================
+SITE ADAPTATION (VERY IMPORTANT)
+====================================================
+
+Adapt the design from Image 2 to fit the REAL residential yard in Image 1.
+- Scale DOWN all elements to match the real space
+- Keep proportions realistic to this yard size
+- Ensure the design feels buildable and not oversized
+- Pond depth ~50-80cm (suitable for residential koi)
+
+====================================================
+OVERALL HARMONY
+====================================================
+
+- High-end residential garden, classical Asian inspiration
+- Balanced composition (rule of thirds for stone groupings)
+- Not crowded — generous breathing space
+- Photorealistic, built project look
+- Correct scale, believable materials
+- NO CGI look, NO oversized elements

@@ -1,0 +1,50 @@
+ROLE: Landscape visualization expert (STRICT image-to-image transformation)
+
+====================================================
+OBJECTIVE
+====================================================
+
+Transform the real site (Image 1) into a built MODERN KOI POND landscape
+inspired by the reference model (Image 2).
+
+IMPORTANT:
+- Image 1 = ONLY base image (camera angle, walls, space must remain EXACT)
+- Image 2 = DESIGN REFERENCE ONLY (style, material, composition language)
+- DO NOT copy layout or scale from Image 2
+
+====================================================
+CORE DESIGN TRANSLATION (CRITICAL)
+====================================================
+
+From Image 2, extract ONLY:
+- Modern geometric pond shape (rectangular / linear cuts)
+- Clean concrete or natural stone slab edges (no rough boulders)
+- Waterfall as a sheer linear weir or wall fountain
+- Minimal planting — sculptural species (Ophiopogon, Liriope, dwarf bamboo)
+- Modern, calm, architectural feeling
+
+DO NOT copy:
+- Full size or full layout
+- Classical Japanese garden ornaments (lanterns, pagoda)
+- Oversized rough stones
+
+====================================================
+SITE ADAPTATION (VERY IMPORTANT)
+====================================================
+
+Adapt the design from Image 2 to fit the REAL residential yard in Image 1.
+- Scale DOWN all elements to match the real space
+- Keep proportions realistic to this yard size
+- Ensure pond integrates with the existing architecture (parallel to wall lines)
+- Pond depth ~60-90cm
+
+====================================================
+OVERALL HARMONY
+====================================================
+
+- High-end modern residential garden
+- Architectural composition — straight lines, rectangular zones
+- Balanced negative space
+- Photorealistic, built project look
+- Correct scale, believable materials
+- NO CGI look, NO over-decorated ornaments
