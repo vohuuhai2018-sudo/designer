@@ -20,6 +20,26 @@ const fs = require('fs/promises');
 const express = require('express');
 const cors = require('cors');
 const pLimit = require('p-limit');
+const cloudinary = require('cloudinary').v2;
+
+// Cloudinary creds (worker tự upload kết quả → giảm payload về Vercel webhook
+// xuống chỉ còn URL, tránh giới hạn body size 4.5MB của Hobby).
+if (process.env.CLOUDINARY_CLOUD_NAME) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+}
+
+async function uploadFileToCloudinary(filePath) {
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader.upload(filePath, { resource_type: 'auto' }, (err, res) => {
+      if (err) return reject(err);
+      resolve(res.secure_url);
+    });
+  });
+}
 
 // Pull in the existing flowAutomation from LandscapeApp/server.
 // In production deploy, we'll either symlink or copy the file in.
@@ -137,6 +157,71 @@ app.post('/gen-video', async (req, res) => {
     });
   }
 });
+
+// =============================================================================
+// ASYNC GEN — webhook pattern (cho Vercel Hobby 60s timeout không đủ chờ gen
+// thật mất 60-130s). Worker nhận request → ack 202 ngay → gen async → upload
+// Cloudinary → POST URLs về callbackUrl với header X-Webhook-Auth.
+//
+// Body: { prompt, assets, flowConfig, projectId, callbackUrl, callbackAuth }
+// Returns 202: { jobId, status: 'processing' }
+// Webhook payload: { jobId, projectId, status: 'done'|'failed', urls?: [], error?: '...' }
+// =============================================================================
+app.post('/gen-image-async', async (req, res) => {
+  const { prompt, assets, flowConfig, projectId, callbackUrl, callbackAuth } = req.body || {};
+  if (!callbackUrl) return res.status(400).json({ error: 'callbackUrl required' });
+  if (!projectId) return res.status(400).json({ error: 'projectId required' });
+  const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  res.status(202).json({ jobId, projectId, status: 'processing' });
+
+  // Run gen in background — Express has already responded.
+  (async () => {
+    const t0 = Date.now();
+    const urls = [];
+    try {
+      console.log(`[async ${jobId}] start gen for project ${projectId}`);
+      await limit(() => runFlowAutomation({
+        prompt,
+        assets: assets || [],
+        flowConfig: flowConfig || {},
+        onImageReady: async (localPath) => {
+          try {
+            const url = await uploadFileToCloudinary(localPath);
+            urls.push(url);
+            await fs.unlink(localPath).catch(() => null);
+            console.log(`[async ${jobId}] uploaded ${urls.length}: ${url}`);
+          } catch (e) {
+            console.error(`[async ${jobId}] upload err:`, e.message);
+          }
+        },
+      }));
+      console.log(`[async ${jobId}] gen done in ${Date.now() - t0}ms, ${urls.length} urls`);
+      await postWebhook(callbackUrl, callbackAuth, { jobId, projectId, status: urls.length ? 'done' : 'failed', urls, error: urls.length ? null : 'no images uploaded' });
+    } catch (e) {
+      console.error(`[async ${jobId}] error:`, e.message);
+      await postWebhook(callbackUrl, callbackAuth, { jobId, projectId, status: 'failed', urls, error: e.message });
+    }
+  })();
+});
+
+async function postWebhook(url, auth, body) {
+  for (let i = 0; i < 3; i++) {
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Webhook-Auth': auth || '' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (r.ok) return;
+      console.warn(`[webhook] ${url} returned ${r.status}, retry ${i + 1}/3`);
+    } catch (e) {
+      console.warn(`[webhook] err ${e.message}, retry ${i + 1}/3`);
+    }
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  console.error(`[webhook] failed after 3 retries: ${url}`);
+}
 
 app.listen(PORT, () => {
   console.log(`[flow-worker] listening on :${PORT} (concurrency=${FLOW_CONCURRENCY})`);

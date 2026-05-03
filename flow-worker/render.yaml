@@ -30,3 +30,15 @@ services:
         generateValue: true  # Render auto-sinh secret
       - key: FLOW_STATE_B64
         sync: false  # User paste manual (output từ export-state.js)
+      # Cloudinary creds: worker tự upload ảnh kết quả → giảm payload webhook
+      # về Vercel xuống chỉ còn URL JSON (tránh 4.5MB body limit Hobby).
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      # Webhook auth — phải MATCH Vercel env WEBHOOK_SECRET. Worker gửi header
+      # X-Webhook-Auth khi POST result về /api/internal/projects/:id/aiResults.
+      - key: WEBHOOK_SECRET
+        sync: false

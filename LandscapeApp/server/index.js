@@ -1357,6 +1357,13 @@ app.post('/api/projects/:id/ai-prompt', async (req, res) => {
   }
 });
 
+// Admin trigger gen — async pattern. Vercel function trả 202 ngay sau khi gọi
+// worker /gen-image-async. Worker gen ~60-130s, upload Cloudinary, POST URLs
+// về /api/internal/projects/:id/aiResults webhook. Frontend admin poll
+// /api/projects/:id để lấy aiResults khi worker xong.
+//
+// Sync mode (gen trực tiếp trong handler) chỉ giữ lại khi FLOW_WORKER_URL
+// chưa set (local dev hoặc upgrade Vercel Pro 300s).
 app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
   try {
     const { prompt, assets } = req.body;
@@ -1370,14 +1377,54 @@ app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
+    const tab = await resolveTabForProject(project);
+    const resolvedPrompt = typeof prompt === 'string' && prompt.trim()
+      ? prompt.trim()
+      : await generateLandscapePrompt(project.toObject(), assets);
+
+    // ASYNC PATH — Vercel + Render Free combo (gen >60s phải decoupled).
+    if (process.env.FLOW_WORKER_URL && process.env.WEBHOOK_SECRET) {
+      const updated = await Project.findOneAndUpdate(
+        { id: req.params.id },
+        { $set: { status: 'processing', workflowBranch: 'chatgpt_image', aiResults: [] } },
+        { new: true }
+      );
+
+      const flowConfig = tab?.flowConfig || { mode: 'image', variantCount: 4, aspectRatio: '16:9' };
+      // Tự bắn về chính origin của request (server không biết public URL).
+      const origin = `${req.protocol}://${req.get('host')}`;
+      const callbackUrl = `${origin}/api/internal/projects/${req.params.id}/aiResults`;
+
+      const workerUrl = process.env.FLOW_WORKER_URL.replace(/\/$/, '');
+      fetch(`${workerUrl}/gen-image-async`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Worker-Auth': process.env.FLOW_WORKER_SECRET || '',
+        },
+        body: JSON.stringify({
+          prompt: resolvedPrompt,
+          assets,
+          flowConfig,
+          projectId: req.params.id,
+          callbackUrl,
+          callbackAuth: process.env.WEBHOOK_SECRET,
+        }),
+      }).catch(e => console.error('[gen-async] worker call err:', e.message));
+
+      return res.status(202).json({
+        project: updated,
+        prompt: resolvedPrompt,
+        status: 'queued',
+        message: 'Gen đang chạy ở worker. Refresh sau 60-130s để xem kết quả.',
+      });
+    }
+
+    // SYNC PATH — fallback khi không có worker (local dev hoặc Vercel Pro 300s).
     if (project.status !== 'done') {
       project.status = 'processing';
       await project.save();
     }
-
-    const resolvedPrompt = typeof prompt === 'string' && prompt.trim()
-      ? prompt.trim()
-      : await generateLandscapePrompt(project.toObject(), assets);
 
     let firstUrl = null;
     let uploadCount = 0;
@@ -1396,13 +1443,11 @@ app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
             $push: { aiResults: url }
           }
         );
-        // Dọn file tạm
       } catch (e) {
         console.error('Lỗi upload ảnh:', e.message);
       }
     };
 
-    const tab = await resolveTabForProject(project);
     const automationResult = await runFlowSplitOrSingle({ tab, fallbackPrompt: resolvedPrompt, assets, onImageReady });
 
     const updated = await Project.findOneAndUpdate(
@@ -1424,6 +1469,39 @@ app.post('/api/projects/:id/chatgpt-generate', async (req, res) => {
   } catch (err) {
     console.error('ChatGPT generation error:', err);
     res.status(500).json({ error: err.message || 'Không thể tự động tạo ảnh với ChatGPT.' });
+  }
+});
+
+// Webhook nhận kết quả từ flow-worker (async pattern). Worker đã upload ảnh
+// lên Cloudinary, chỉ POST URLs về đây để Vercel update DB.
+//
+// Auth: header X-Webhook-Auth phải match env WEBHOOK_SECRET.
+// Body: { jobId, projectId, status: 'done'|'failed', urls?: [], error?: '...' }
+app.post('/api/internal/projects/:id/aiResults', async (req, res) => {
+  try {
+    const got = req.headers['x-webhook-auth'];
+    if (!process.env.WEBHOOK_SECRET || got !== process.env.WEBHOOK_SECRET) {
+      return res.status(401).json({ error: 'invalid X-Webhook-Auth' });
+    }
+    const { status, urls, error } = req.body || {};
+    const id = req.params.id;
+    const update = { $set: {} };
+    if (status === 'done' && Array.isArray(urls) && urls.length > 0) {
+      update.$set.status = 'done';
+      update.$set.aiResults = urls;
+      update.$set.finalImage = urls[0];
+      update.$set.workflowBranch = 'chatgpt_image';
+    } else {
+      update.$set.status = 'pending';
+      if (error) update.$set.aiError = error;
+    }
+    const updated = await Project.findOneAndUpdate({ id }, update, { new: true });
+    if (!updated) return res.status(404).json({ error: 'project not found' });
+    console.log(`[webhook] project ${id} status=${status} urls=${urls?.length || 0}`);
+    res.json({ ok: true, project: updated });
+  } catch (err) {
+    console.error('[webhook] error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
