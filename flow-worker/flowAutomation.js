@@ -662,7 +662,11 @@ async function _runFlowAutomationLocal({ prompt, assets, onImageReady, variantCo
   const config = flowConfig && typeof flowConfig === 'object'
     ? flowConfig
     : { variantCount: typeof variantCount === 'number' ? variantCount : 4 };
-  const expectCount = [1, 2, 3, 4].includes(config.variantCount) ? config.variantCount : 4;
+  const requestedCount = [1, 2, 3, 4].includes(config.variantCount) ? config.variantCount : 4;
+  // Render Free 512MB: gen >2 variants song song = OOM mid-stream → kill container.
+  // FLOW_MAX_VARIANTS env (set ở render.yaml) cap số ảnh worker sẵn sàng gen.
+  const maxVariants = parseInt(process.env.FLOW_MAX_VARIANTS || '4', 10);
+  const expectCount = Math.min(requestedCount, [1, 2, 3, 4].includes(maxVariants) ? maxVariants : 4);
   const aspect = config.aspectRatio || '16:9';
 
   const tempDir = path.join(os.tmpdir(), `landscape-flow-${Date.now()}`);

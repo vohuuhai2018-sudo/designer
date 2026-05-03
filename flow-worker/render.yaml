@@ -30,6 +30,11 @@ services:
       # Worker chỉ cần ~150MB heap; 200MB thừa thãi.
       - key: NODE_OPTIONS
         value: "--max-old-space-size=200"
+      # Cap số variants worker gen song song. Free 512MB chỉ chịu được 2 ảnh
+      # cùng lúc — 4 ảnh OOM mid-stream → Render kill container, project kẹt
+      # processing forever. Tăng lên 4 khi upgrade Starter ($7/mo, 1GB).
+      - key: FLOW_MAX_VARIANTS
+        value: "2"
       - key: WORKER_SECRET
         generateValue: true  # Render auto-sinh secret
       - key: FLOW_STATE_B64
