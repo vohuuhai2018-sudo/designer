@@ -1146,7 +1146,12 @@ app.post('/api/projects', async (req, res) => {
       }
     }
     
-    const shouldAutoRunFlow = isBasicService(data.service);
+    // Auto-trigger gen ngay khi tạo project chỉ bật khi `AUTO_GEN_ON_CREATE=1`.
+    // Trên Vercel Hobby (60s timeout) + Render Free (gen 50-80s) → auto-trigger
+    // luôn timeout. Mặc định off → admin bấm nút "Generate" sau (endpoint
+    // /api/projects/:id/chatgpt-generate). Set env=1 để bật lại nếu lên Pro.
+    const autoTriggerEnabled = process.env.AUTO_GEN_ON_CREATE === '1';
+    const shouldAutoRunFlow = autoTriggerEnabled && isBasicService(data.service);
 
     // Create project
     const newProject = new Project({
