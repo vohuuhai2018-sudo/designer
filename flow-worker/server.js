@@ -75,6 +75,13 @@ app.get('/health', (_req, res) => {
     flowAutomation: FLOW_PATH,
     concurrency: FLOW_CONCURRENCY,
     uptime: process.uptime(),
+    env: {
+      FLOW_MAX_VARIANTS: process.env.FLOW_MAX_VARIANTS || '(unset)',
+      NODE_OPTIONS: process.env.NODE_OPTIONS || '(unset)',
+      CHROMIUM_FLAGS: process.env.CHROMIUM_FLAGS || '(unset)',
+      WEBHOOK_SECRET_set: !!process.env.WEBHOOK_SECRET,
+      CLOUDINARY_set: !!process.env.CLOUDINARY_API_KEY,
+    },
   });
 });
 
