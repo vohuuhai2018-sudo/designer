@@ -26,6 +26,10 @@ services:
         value: "0"
       - key: DISPLAY
         value: ":99"
+      # Cap Node heap để dành RAM cho Chrome (Render Free 512MB tổng).
+      # Worker chỉ cần ~150MB heap; 200MB thừa thãi.
+      - key: NODE_OPTIONS
+        value: "--max-old-space-size=200"
       - key: WORKER_SECRET
         generateValue: true  # Render auto-sinh secret
       - key: FLOW_STATE_B64

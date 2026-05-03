@@ -87,10 +87,32 @@ async function getSharedBrowser() {
     //   Xvfb :99 -screen 0 1440x900x24 &
     //   DISPLAY=:99 node server/index.js
     const headless = process.env.FLOW_HEADLESS === '1';
+    // Render Free 512MB: gen 4 ảnh đồng thời rất dễ OOM mid-gen → cần loạt flag
+    // memory-saving + V8 heap cap. CHROMIUM_FLAGS env (set ở Dockerfile.render)
+    // append thêm nếu có.
     const launchArgs = [
       '--disable-blink-features=AutomationControlled',
       '--disable-features=IsolateOrigins,site-per-process',
+      '--no-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-software-rasterizer',
+      '--disable-extensions',
+      '--disable-background-networking',
+      '--disable-default-apps',
+      '--disable-sync',
+      '--disable-translate',
+      '--disable-component-update',
+      '--metrics-recording-only',
+      '--mute-audio',
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--memory-pressure-off',
+      '--js-flags=--max-old-space-size=256',
     ];
+    if (process.env.CHROMIUM_FLAGS) {
+      launchArgs.push(...process.env.CHROMIUM_FLAGS.split(/\s+/).filter(Boolean));
+    }
 
     // FLOW_STATE_B64 mode: portable cookies via Playwright storageState (works
     // across OSes — Mac → Linux Render). When set, use launch() + newContext()
