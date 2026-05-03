@@ -9,6 +9,15 @@ const { runChatGptAutomation, runChatGptAutomationBatch } = require('./chatgptAu
 const { runFlowAutomation, runFlowVideoAutomation } = require('./flowAutomation');
 const { generateLandscapePrompt } = require('./geminiPromptService');
 const { runPass2Tasks, runSinglePass2Task, initPass2State, getTaskById: getPass2TaskById } = require('./pass2Automation');
+// Vercel serverless kill function ngay sau response → setImmediate KHÔNG kịp
+// chạy 30-50s gen. waitUntil giữ function alive tới khi Promise resolve (giới
+// hạn bằng maxDuration). Locally (long-running node), waitUntil chạy promise
+// như task thường — process không die nên gen luôn xong.
+let _waitUntil = (promise) => { promise.catch(() => {}); }; // local fallback
+try {
+  ({ waitUntil: _waitUntil } = require('@vercel/functions'));
+} catch (_) { /* @vercel/functions chỉ cần khi deploy Vercel */ }
+const waitUntil = _waitUntil;
 
 // Helper để tìm Link ảnh mẫu nếu FrontEnd chỉ gửi ID (hoặc fix cho các ca cũ)
 function resolveThacUrl(selections) {
@@ -1151,10 +1160,12 @@ app.post('/api/projects', async (req, res) => {
     console.log('Project saved to DB:', newProject.id);
     res.status(201).json(newProject);
 
-    // Auto-trigger ChatGPT generation in background for Gói Cơ Bản
+    // Auto-trigger ChatGPT generation in background for Gói Cơ Bản.
+    // Vercel: setImmediate sẽ bị kill ngay sau response → dùng waitUntil giữ
+    // function alive tới khi gen xong (giới hạn maxDuration).
     if (shouldAutoRunFlow) {
       console.log(`[AUTO] Tự động kích hoạt ChatGPT cho dự án "${data.customerName}" (${newProject.id})...`);
-      setImmediate(async () => {
+      waitUntil((async () => {
         try {
           const projectForAi = newProject.toObject();
           const assets = buildProjectAiAssets(projectForAi);
@@ -1239,7 +1250,7 @@ app.post('/api/projects', async (req, res) => {
           console.error(`[AUTO] ❌ Lỗi tự động tạo ảnh cho "${data.customerName}":`, err.message);
           await Project.findOneAndUpdate({ id: newProject.id }, { status: 'pending' }).catch(() => null);
         }
-      });
+      })());
     }
   } catch (err) {
     console.error('Submission error:', err);
