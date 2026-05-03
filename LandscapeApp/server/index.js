@@ -1050,7 +1050,11 @@ app.get('/api/projects/by-device/:deviceId', async (req, res) => {
 app.get('/api/projects/:id', async (req, res) => {
   try {
     const project = await Project.findOne({ id: req.params.id }).lean();
-    if (!project) return res.status(404).json({ error: 'Project not found' });
+    if (!project) {
+      console.log(`[POLL] GET ${req.params.id} → 404 NOT FOUND`);
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    console.log(`[POLL] GET ${req.params.id} → status=${project.status} branch=${project.workflowBranch || '-'} imgs=${(project.aiResults || []).length}`);
     res.json(project);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1102,6 +1106,7 @@ app.post('/api/projects/:id/delete', async (req, res) => {
 app.post('/api/projects', async (req, res) => {
   try {
     const data = req.body;
+    console.log(`[POST /api/projects] id=${data.id} customer=${JSON.stringify(data.customerName)} service=${JSON.stringify(data.service)} mainBranch=${data.mainBranch} hasRaw=${!!data.rawImage} hasAnnotated=${!!data.annotatedImage} hasRef=${!!data.referenceModelUrl} interiorPairs=${(data.interiorPairs||[]).length}`);
     console.log('[DEBUG] Full Request Body Selections:', JSON.stringify(data.selections, null, 2));
     console.log('Uploading images to Cloudinary...');
 
@@ -1151,7 +1156,9 @@ app.post('/api/projects', async (req, res) => {
     // luôn timeout. Mặc định off → admin bấm nút "Generate" sau (endpoint
     // /api/projects/:id/chatgpt-generate). Set env=1 để bật lại nếu lên Pro.
     const autoTriggerEnabled = process.env.AUTO_GEN_ON_CREATE === '1';
-    const shouldAutoRunFlow = autoTriggerEnabled && isBasicService(data.service);
+    const isBasic = isBasicService(data.service);
+    const shouldAutoRunFlow = autoTriggerEnabled && isBasic;
+    console.log(`[AUTO-DECISION] autoTriggerEnabled=${autoTriggerEnabled} (env AUTO_GEN_ON_CREATE=${JSON.stringify(process.env.AUTO_GEN_ON_CREATE)}) isBasic=${isBasic} → shouldAutoRunFlow=${shouldAutoRunFlow}`);
 
     // Create project
     const newProject = new Project({
@@ -1162,8 +1169,11 @@ app.post('/api/projects', async (req, res) => {
     });
     await newProject.save();
 
-    console.log('Project saved to DB:', newProject.id);
+    console.log(`Project saved to DB: ${newProject.id} (status=${newProject.status}, branch=${newProject.workflowBranch || '-'})`);
     res.status(201).json(newProject);
+    if (!shouldAutoRunFlow) {
+      console.log(`[AUTO] SKIP gen cho ${newProject.id} — ${!autoTriggerEnabled ? 'AUTO_GEN_ON_CREATE chưa bật' : 'service không phải Gói Cơ Bản'}`);
+    }
 
     // Auto-trigger ChatGPT generation in background for Gói Cơ Bản.
     // Vercel: setImmediate sẽ bị kill ngay sau response → dùng waitUntil giữ
