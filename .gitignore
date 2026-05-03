@@ -51,3 +51,4 @@ flow-api/test-result.json
 /interior-final.png
 /flow-result.png
 *.local.png
+.vercel
