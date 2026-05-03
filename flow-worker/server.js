@@ -245,7 +245,9 @@ const server = app.listen(PORT, () => {
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`\n*** [flow-worker] PORT ${PORT} BI CHIEM — co instance khac dang chay. ***`);
-    console.error(`*** Kill instance cu (taskkill /F /IM node.exe) hoac doi PORT roi chay lai. ***\n`);
+    console.error(`*** Mac/Linux: lsof -iTCP:${PORT} -sTCP:LISTEN -P -t | xargs kill -9`);
+    console.error(`*** Windows : netstat -ano | findstr :${PORT}  →  taskkill /F /PID <pid>`);
+    console.error(`*** Hoac nuke het: taskkill /F /IM node.exe (Windows) / pkill -9 -f node (Mac)\n`);
   } else {
     console.error('[flow-worker] listen error:', err);
   }
