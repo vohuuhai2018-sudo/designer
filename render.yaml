@@ -1,7 +1,6 @@
 # Render Blueprint config for flow-worker.
-# Đặt ở repo root vì Render parse `dockerfilePath` relative tới repo root, KHÔNG
-# phải tới vị trí render.yaml. Dùng `rootDir: flow-worker` để mọi path bên trong
-# (Dockerfile.render, dockerContext) resolve về subdir flow-worker/.
+# Đặt ở repo root vì Render parse `dockerfilePath` relative tới repo root.
+# Docker services KHÔNG honor `rootDir` — phải dùng full path từ repo root.
 #
 # Workflow:
 # 1. Render dashboard → New → Blueprint → connect repo
@@ -14,9 +13,8 @@ services:
     name: flow-worker
     runtime: docker
     plan: free  # 512MB RAM, 0.1 CPU shared, spin down sau 15 phút idle
-    rootDir: flow-worker
-    dockerfilePath: ./Dockerfile.render
-    dockerContext: .
+    dockerfilePath: ./flow-worker/Dockerfile.render
+    dockerContext: ./flow-worker
     healthCheckPath: /health
     autoDeploy: true
     envVars:
