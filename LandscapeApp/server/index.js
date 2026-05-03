@@ -2280,9 +2280,20 @@ app.get('/api/admin/revenue', async (req, res) => {
 // Chỉ tự listen khi chạy như Node process (local dev).
 // Trên Vercel serverless, api/index.js wraps app này, KHÔNG listen.
 if (require.main === module) {
-  app.listen(PORT, () => {
+  // Bắt EADDRINUSE — không có handler thì process im lặng tiếp tục mà không
+  // listen, request đi vào instance cũ → log "biến mất" khỏi terminal mới.
+  const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`MoMo gateway: ${momo.MOMO_ENV}`);
+  });
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`\n*** PORT ${PORT} BI CHIEM — co instance khac dang chay. ***`);
+      console.error(`*** Kill instance cu (lsof -iTCP:${PORT} -sTCP:LISTEN -P -t | xargs kill -9) roi chay lai. ***\n`);
+    } else {
+      console.error('listen error:', err);
+    }
+    process.exit(1);
   });
 }
 

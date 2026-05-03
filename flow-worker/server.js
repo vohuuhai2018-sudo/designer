@@ -230,7 +230,9 @@ async function postWebhook(url, auth, body) {
   console.error(`[webhook] failed after 3 retries: ${url}`);
 }
 
-app.listen(PORT, () => {
+// Bắt EADDRINUSE — không có handler thì process im lặng tiếp tục mà không
+// listen, request đi vào instance cũ → log "biến mất" (không vào terminal mới).
+const server = app.listen(PORT, () => {
   console.log(`[flow-worker] listening on :${PORT} (concurrency=${FLOW_CONCURRENCY})`);
   console.log(`[flow-worker] flowAutomation path: ${FLOW_PATH}`);
   console.log(`[flow-worker] auth: ${WORKER_SECRET ? 'enabled' : 'DISABLED (dev mode)'}`);
@@ -239,4 +241,13 @@ app.listen(PORT, () => {
   if (typeof prewarmBrowser === 'function') {
     prewarmBrowser();
   }
+});
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n*** [flow-worker] PORT ${PORT} BI CHIEM — co instance khac dang chay. ***`);
+    console.error(`*** Kill instance cu (taskkill /F /IM node.exe) hoac doi PORT roi chay lai. ***\n`);
+  } else {
+    console.error('[flow-worker] listen error:', err);
+  }
+  process.exit(1);
 });
