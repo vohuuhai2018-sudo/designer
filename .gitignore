@@ -2,6 +2,7 @@
 LandscapeApp/.env
 LandscapeApp/server/.env
 flow-worker/.env
+flow-worker/env.local.bat
 .env
 .env.local
 .env.*.local
