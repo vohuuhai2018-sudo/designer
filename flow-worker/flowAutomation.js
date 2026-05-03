@@ -57,7 +57,10 @@ async function ensureDirectory(directoryPath) {
 let _sharedBrowser = null;
 let _sharedBrowserPromise = null;
 let _activeTabCount = 0;
-const IDLE_CLOSE_MS = 30000; // Đóng browser sau 30s không có tab nào hoạt động
+// Đóng browser khi idle. 5 phút giữ Chrome warm giữa các admin clicks (single-
+// user worker), tránh cold boot ~10-15s mỗi request. Trên Render Free 512MB,
+// Chrome idle dùng ~150-200MB — chấp nhận được.
+const IDLE_CLOSE_MS = 5 * 60 * 1000;
 let _idleTimer = null;
 
 async function getSharedBrowser() {
@@ -760,7 +763,19 @@ async function runFlowVideoApiPath({ prompt, imageUrl, onVideoReady, flowConfig,
 }
 
 
+// Pre-warm Chrome trước khi nhận request thật — giảm latency lần đầu trên
+// Render. Worker entrypoint gọi hàm này sau khi Express listen.
+async function prewarmBrowser() {
+  try {
+    await getSharedBrowser();
+    console.log('[BROWSER] Pre-warmed.');
+  } catch (e) {
+    console.warn('[BROWSER] Pre-warm failed:', e.message);
+  }
+}
+
 module.exports = {
   runFlowAutomation,
-  runFlowVideoAutomation
+  runFlowVideoAutomation,
+  prewarmBrowser
 };

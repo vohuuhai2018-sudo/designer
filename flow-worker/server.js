@@ -25,7 +25,7 @@ const pLimit = require('p-limit');
 // In production deploy, we'll either symlink or copy the file in.
 const FLOW_PATH = process.env.FLOW_AUTOMATION_PATH ||
   path.resolve(__dirname, '..', 'LandscapeApp', 'server', 'flowAutomation.js');
-const { runFlowAutomation, runFlowVideoAutomation } = require(FLOW_PATH);
+const { runFlowAutomation, runFlowVideoAutomation, prewarmBrowser } = require(FLOW_PATH);
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const WORKER_SECRET = process.env.WORKER_SECRET || '';
@@ -142,4 +142,9 @@ app.listen(PORT, () => {
   console.log(`[flow-worker] listening on :${PORT} (concurrency=${FLOW_CONCURRENCY})`);
   console.log(`[flow-worker] flowAutomation path: ${FLOW_PATH}`);
   console.log(`[flow-worker] auth: ${WORKER_SECRET ? 'enabled' : 'DISABLED (dev mode)'}`);
+  // Pre-warm Chrome (mất ~10-15s) trên Render Free để request đầu tiên không
+  // tốn cold boot — fit trong Vercel 60s timeout.
+  if (typeof prewarmBrowser === 'function') {
+    prewarmBrowser();
+  }
 });
