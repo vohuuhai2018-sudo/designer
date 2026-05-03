@@ -1,14 +1,20 @@
-# Render deploy config for flow-worker
-# 1. Push code to GitHub (folder flow-worker/)
-# 2. Render dashboard → New → Web Service → Connect repo
-# 3. Render auto-reads this file
-# 4. Add FLOW_STATE_B64 env (lấy từ `node export-state.js` trên Mac)
+# Render Blueprint config for flow-worker.
+# Đặt ở repo root vì Render parse `dockerfilePath` relative tới repo root, KHÔNG
+# phải tới vị trí render.yaml. Dùng `rootDir: flow-worker` để mọi path bên trong
+# (Dockerfile.render, dockerContext) resolve về subdir flow-worker/.
+#
+# Workflow:
+# 1. Render dashboard → New → Blueprint → connect repo
+# 2. Render auto-reads file này
+# 3. User paste FLOW_STATE_B64 (output từ `flow-worker/export-state.js`)
+# 4. WORKER_SECRET tự generate
 
 services:
   - type: web
     name: flow-worker
     runtime: docker
     plan: free  # 512MB RAM, 0.1 CPU shared, spin down sau 15 phút idle
+    rootDir: flow-worker
     dockerfilePath: ./Dockerfile.render
     dockerContext: .
     healthCheckPath: /health
