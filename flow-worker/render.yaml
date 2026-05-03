@@ -1,0 +1,28 @@
+# Render deploy config for flow-worker
+# 1. Push code to GitHub (folder flow-worker/)
+# 2. Render dashboard → New → Web Service → Connect repo
+# 3. Render auto-reads this file
+# 4. Add FLOW_STATE_B64 env (lấy từ `node export-state.js` trên Mac)
+
+services:
+  - type: web
+    name: flow-worker
+    runtime: docker
+    plan: free  # 512MB RAM, 0.1 CPU shared, spin down sau 15 phút idle
+    dockerfilePath: ./Dockerfile.render
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: FLOW_CONCURRENCY
+        value: "1"  # Free RAM tight — chỉ 1 page concurrent
+      - key: FLOW_HEADLESS
+        value: "0"
+      - key: DISPLAY
+        value: ":99"
+      - key: WORKER_SECRET
+        generateValue: true  # Render auto-sinh secret
+      - key: FLOW_STATE_B64
+        sync: false  # User paste manual (output từ export-state.js)

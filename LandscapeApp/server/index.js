@@ -2173,7 +2173,13 @@ app.get('/api/admin/revenue', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`MoMo gateway: ${momo.MOMO_ENV}`);
-});
+// Chỉ tự listen khi chạy như Node process (local dev).
+// Trên Vercel serverless, api/index.js wraps app này, KHÔNG listen.
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`MoMo gateway: ${momo.MOMO_ENV}`);
+  });
+}
+
+module.exports = app;

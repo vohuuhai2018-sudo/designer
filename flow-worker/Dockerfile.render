@@ -1,0 +1,43 @@
+# Render Free tier (512MB RAM) — slim image, RAM-conscious Chrome flags.
+# Uses Playwright storageState (FLOW_STATE_B64 env, ~4KB) instead of persistent
+# profile — works across Mac→Linux without cookie decryption issues.
+
+FROM node:20-bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget gnupg ca-certificates fonts-liberation \
+    libasound2 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 \
+    libcairo2 libcups2 libdbus-1-3 libdrm2 libgbm1 libglib2.0-0 \
+    libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 libx11-6 \
+    libxcb1 libxcomposite1 libxdamage1 libxext6 libxfixes3 \
+    libxkbcommon0 libxrandr2 xdg-utils libu2f-udev libvulkan1 \
+    xvfb procps \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+  && apt-get update && apt-get install -y --no-install-recommends /tmp/chrome.deb \
+  && rm /tmp/chrome.deb && rm -rf /var/lib/apt/lists/* /var/cache/apt/* \
+  && rm -rf /usr/share/doc /usr/share/man /usr/share/locale/[a-d]*
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev || npm install --omit=dev
+
+COPY server.js entrypoint.render.sh ./
+# flowAutomation.js phải copy vào trước khi build (chạy prepare-render.sh)
+COPY flowAutomation.js ./
+RUN chmod +x entrypoint.render.sh
+
+# Render assigns PORT, default 10000
+ENV PORT=10000
+ENV FLOW_CONCURRENCY=1
+ENV FLOW_HEADLESS=0
+ENV DISPLAY=:99
+ENV FLOW_AUTOMATION_PATH=/app/flowAutomation.js
+# RAM-saving Chromium flags via process env (consumed by flowAutomation.js)
+ENV CHROMIUM_FLAGS="--memory-pressure-off --disable-dev-shm-usage --no-zygote"
+
+EXPOSE 10000
+
+ENTRYPOINT ["/app/entrypoint.render.sh"]

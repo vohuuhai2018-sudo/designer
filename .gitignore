@@ -1,27 +1,53 @@
+# Env / secrets
 LandscapeApp/.env
 LandscapeApp/server/.env
-LandscapeApp/public/assets/.cache/
+flow-worker/.env
+.env
+.env.local
+.env.*.local
+
+# Node modules (any depth)
+**/node_modules/
+
+# Browser profiles & cookies (large + sensitive)
+**/flow_profile/
+**/chatgpt_profile/
+
+# Build outputs
+LandscapeApp/dist/
+LandscapeApp/server/dist/
+flow-api/out/
+flow-api/test-result.json
+.vercel/
+
+# Python venv / cache
 tooltaoanh/.venv/
 tooltaoanh/__pycache__/
-tooltaoanh/.DS_Store
-tooltaoanh/.claude/
-tooltaoanh/chatgpt_profile/
-tooltaoanh/flow_profile/
-tooltaoanh/Tai nguyen/.cache/
 **/__pycache__/
 *.pyc
 
-# Local screenshots / scratch images at repo root
+# tooltaoanh local cache
+tooltaoanh/Tai nguyen/.cache/
+LandscapeApp/public/assets/.cache/
+
+# Debug + scratch
+.playwright-mcp/
+.claude/
+flow-api/test-result.json
+*.log
+
+# macOS junk
+.DS_Store
+**/.DS_Store
+
+# Local upload staging — seed Cloudinary 1 lần, không cần track
+/1. UP LÊN/
+
+# Local screenshots / scratch images at repo root (giữ ignore từ origin)
 /admin-library.png
 /user-categories.png
 /admin-after-upload.png
 /user-after-upload.png
 /interior-final.png
+/flow-result.png
 *.local.png
-
-# Local upload staging — seed Cloudinary 1 lần, không cần track
-/1. UP LÊN/
-
-# macOS junk
-.DS_Store
-**/.DS_Store

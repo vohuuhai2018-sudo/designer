@@ -1,0 +1,22 @@
+{
+  "name": "flow-gen",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "flow-gen": "./cli.mjs"
+  },
+  "scripts": {
+    "login": "node cli.mjs login",
+    "gen": "node cli.mjs gen",
+    "batch": "node cli.mjs batch",
+    "export-state": "node cli.mjs export-state"
+  },
+  "dependencies": {
+    "@sparticuz/chromium": "^133.0.0",
+    "playwright-core": "^1.57.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
