@@ -462,6 +462,10 @@ const ProjectSchema = new mongoose.Schema({
   id: String,
   timestamp: { type: Date, default: Date.now },
   mainBranch: { type: String, default: 'landscape' },
+  // Tab con người dùng chọn trong "Gói Cơ bản" (slug khớp Tab.id, vd: 'ho_boi',
+  // 'ho_co_dien'). FE gửi field này; BE dùng để resolve prompt đúng tab thay
+  // vì luôn fallback tab đầu tiên (xem resolveTabForProject).
+  basicCategory: String,
   customerName: String,
   customerPhone: String,
   rawImage: String,
@@ -655,13 +659,24 @@ const uploadToCloudinary = async (fileStr) => {
 };
 
 // ============================================================
-// HELPER: lookup tab cho project (theo mainBranch — first active tab)
-// Customer chưa có UI chọn tab cụ thể, mặc định lấy tab đầu tiên active của branch.
+// HELPER: lookup tab cho project.
+// Ưu tiên match theo project.basicCategory (slug user chọn trong "Gói Cơ bản").
+// Fallback: tab đầu tiên active của branch (legacy — record cũ chưa có basicCategory).
 // ============================================================
 async function resolveTabForProject(project) {
   try {
     const branch = project?.mainBranch || 'landscape';
+    const slug = (project?.basicCategory || '').trim();
+    if (slug) {
+      const exact = await Tab.findOne({ branch, id: slug, hidden: { $ne: true } }).lean();
+      if (exact) {
+        console.log(`[resolveTabForProject] project=${project?.id} branch=${branch} basicCategory=${slug} → MATCH tab id=${exact.id}`);
+        return exact;
+      }
+      console.warn(`[resolveTabForProject] project=${project?.id} branch=${branch} basicCategory=${slug} → KHÔNG match tab nào, fallback first.`);
+    }
     const tab = await Tab.findOne({ branch, hidden: { $ne: true } }).sort({ order: 1 }).lean();
+    if (tab) console.log(`[resolveTabForProject] project=${project?.id} branch=${branch} basicCategory=(empty) → fallback tab id=${tab.id}`);
     return tab || null;
   } catch (e) {
     console.warn('[resolveTabForProject] Lỗi:', e.message);

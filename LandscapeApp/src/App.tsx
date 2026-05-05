@@ -6821,7 +6821,7 @@ function AdminView({
 
   const getWorkflowShortLabel = (branch?: WorkflowBranch) => {
     if (branch === 'manual_design') return 'Thiết kế tay';
-    if (branch === 'chatgpt_image') return 'ChatGPT ảnh';
+    if (branch === 'chatgpt_image') return 'Google Flow';
     return 'Chưa chọn';
   };
 
@@ -7593,7 +7593,7 @@ function AdminView({
 
   const workflowOptions = [
     { id: 'manual_design' as WorkflowBranch, title: 'Thiết kế thủ công', description: 'Dùng trình thiết kế trực tuyến (Photopea) để vẽ tay.', icon: <Paintbrush size={22} /> },
-    { id: 'chatgpt_image' as WorkflowBranch, title: 'ChatGPT tạo ảnh', description: 'Dùng ảnh gốc, ảnh khoanh vùng và dữ liệu khách để tạo phương án mới bằng ChatGPT.', icon: <Bot size={22} /> }
+    { id: 'chatgpt_image' as WorkflowBranch, title: 'Google Flow tạo ảnh', description: 'Dùng ảnh gốc, ảnh khoanh vùng và dữ liệu khách để tạo phương án mới bằng Google Labs Flow.', icon: <Bot size={22} /> }
   ];
 
   // --- EFFECTS ---
