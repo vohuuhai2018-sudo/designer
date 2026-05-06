@@ -5,23 +5,13 @@ const { chromium } = require('playwright-core');
 
 const FLOW_PROFILE_DIR = path.resolve(__dirname, '..', '..', 'tooltaoanh', 'flow_profile');
 const CHROME_CANDIDATES = [
-  // Env override (Docker/Render set CHROME_EXECUTABLE_PATH=/usr/bin/google-chrome)
-  process.env.CHROME_EXECUTABLE_PATH,
-  process.env.PUPPETEER_EXECUTABLE_PATH,
-  // Linux (Render Debian + Google Chrome .deb)
-  '/usr/bin/google-chrome',
-  '/usr/bin/google-chrome-stable',
-  '/usr/bin/chromium',
-  '/usr/bin/chromium-browser',
-  // Windows
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-  // macOS
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'
-].filter(Boolean);
+];
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -39,6 +29,22 @@ async function dismissConsentDialog(page) {
   return false;
 }
 
+// Background watcher: check dialog consent mỗi 3s trong suốt thời gian tab hoạt động
+function startDialogWatcher(page, label = 'tab') {
+  let stopped = false;
+  (async () => {
+    while (!stopped) {
+      try {
+        if (page.isClosed && page.isClosed()) break;
+        const clicked = await dismissConsentDialog(page);
+        if (clicked) console.log(`[DialogWatcher][${label}] Tự tắt dialog giữa chừng.`);
+      } catch (_) {}
+      await delay(3000);
+    }
+  })();
+  return () => { stopped = true; };
+}
+
 function resolveBrowserExecutable() {
   const executablePath = CHROME_CANDIDATES.find(candidate => require('fs').existsSync(candidate));
   if (!executablePath) {
@@ -47,20 +53,1003 @@ function resolveBrowserExecutable() {
   return executablePath;
 }
 
+function sanitizeFileName(value) {
+  return value.replace(/[^a-z0-9-_]+/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').toLowerCase() || 'asset';
+}
+
 async function ensureDirectory(directoryPath) {
   await fs.mkdir(directoryPath, { recursive: true });
 }
 
+async function saveDataUrlToFile(dataUrl, filePath) {
+  const [, mimePart = 'image/png', content = ''] = dataUrl.match(/^data:(.*?);base64,(.*)$/) || [];
+  if (!content) throw new Error('Data URL không hợp lệ.');
+  await fs.writeFile(filePath, Buffer.from(content, 'base64'));
+  return { filePath, mimeType: mimePart };
+}
+
+async function downloadAssetToFile(asset, targetDir, index) {
+  const url = (asset.url || '').trim();
+  if (!url) throw new Error(`Asset "${asset.label}" có URL rỗng, không thể tải.`);
+
+  if (url.startsWith('data:')) {
+    const filePath = path.join(targetDir, `${String(index + 1).padStart(2, '0')}_${sanitizeFileName(asset.label)}.png`);
+    return saveDataUrlToFile(url, filePath);
+  }
+
+  let extensionFromUrl = 'png';
+  try {
+    const ext = path.extname(new URL(url).pathname || '').replace('.', '');
+    if (ext) extensionFromUrl = ext;
+  } catch (_) { }
+
+  const filePath = path.join(targetDir, `${String(index + 1).padStart(2, '0')}_${sanitizeFileName(asset.label)}.${extensionFromUrl}`);
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Không tải được tài nguyên: ${asset.label}`);
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  await fs.writeFile(filePath, buffer);
+  return { filePath, mimeType: response.headers.get('content-type') || 'image/png' };
+}
+
+async function buildClipboardPayload(files) {
+  const payload = [];
+  for (let index = 0; index < files.length; index += 1) {
+    const file = files[index];
+    const imageBuffer = await fs.readFile(file.filePath);
+    payload.push({
+      base64: imageBuffer.toString('base64'),
+      mimeType: file.mimeType || 'image/png',
+      name: path.basename(file.filePath) || `image_${index + 1}.png`
+    });
+  }
+  return payload;
+}
+
+async function resolveVisiblePromptSelector(page) {
+  return page.evaluate(() => {
+    const selectors = [
+      'textarea',
+      '[contenteditable="true"]',
+      'div[role="textbox"]'
+    ];
+
+    const isVisible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && style.opacity !== '0'
+        && rect.width > 100
+        && rect.height >= 16;
+    };
+
+    const candidates = selectors.flatMap((selector) =>
+      Array.from(document.querySelectorAll(selector)).map((element) => ({ selector, element }))
+    ).filter(({ element }) => isVisible(element) && !element.closest('[aria-hidden="true"]'));
+
+    candidates.sort((a, b) => {
+      const aRect = a.element.getBoundingClientRect();
+      const bRect = b.element.getBoundingClientRect();
+      return bRect.top - aRect.top;
+    });
+
+    if (candidates[0]) {
+      return candidates[0].selector;
+    }
+
+    return null;
+  });
+}
+
+async function getPromptLocator(page) {
+  const selector = await resolveVisiblePromptSelector(page);
+  if (!selector) {
+    throw new Error('Khong tim thay o nhap prompt dang hien thi tren Flow.');
+  }
+  return page.locator(selector).filter({ hasNot: page.locator('[aria-hidden="true"]') }).last();
+}
+
+async function waitForPromptInputReady(page) {
+  await page.waitForFunction(() => {
+    const candidates = Array.from(document.querySelectorAll('textarea, [contenteditable="true"], div[role="textbox"]'));
+    const isVisible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && style.opacity !== '0'
+        && rect.width > 100
+        && rect.height >= 16;
+    };
+
+    return candidates.some((element) => {
+      if (!isVisible(element)) return false;
+      if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+        return !element.disabled && !element.readOnly;
+      }
+      return element.getAttribute('contenteditable') === 'true' || element.getAttribute('role') === 'textbox';
+    });
+  }, { timeout: 30000 });
+}
+
+async function readPromptText(page) {
+  return page.evaluate(() => {
+    const candidates = Array.from(document.querySelectorAll('textarea, [contenteditable="true"], div[role="textbox"]'));
+    const isVisible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && style.opacity !== '0'
+        && rect.width > 100
+        && rect.height >= 16;
+    };
+
+    const target = candidates
+      .filter((element) => isVisible(element) && !element.closest('[aria-hidden="true"]'))
+      .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0];
+    if (!target) return '';
+
+    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+      return target.value || '';
+    }
+
+    return target.textContent || '';
+  });
+}
+
+async function setPromptTextViaDom(page, prompt) {
+  return page.evaluate((text) => {
+    const candidates = Array.from(document.querySelectorAll('textarea, [contenteditable="true"], div[role="textbox"]'));
+    const isVisible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && style.opacity !== '0'
+        && rect.width > 100
+        && rect.height >= 16;
+    };
+
+    const target = candidates
+      .filter((element) => isVisible(element) && !element.closest('[aria-hidden="true"]'))
+      .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0];
+    if (!target) {
+      return { ok: false, reason: 'prompt-not-found' };
+    }
+
+    target.focus();
+
+    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+      target.value = text;
+      target.dispatchEvent(new InputEvent('input', {
+        bubbles: true,
+        cancelable: true,
+        data: text,
+        inputType: 'insertText'
+      }));
+      target.dispatchEvent(new Event('change', { bubbles: true }));
+      return { ok: (target.value || '').includes(text.slice(0, 20)) };
+    }
+
+    target.textContent = text;
+    target.dispatchEvent(new InputEvent('beforeinput', {
+      bubbles: true,
+      cancelable: true,
+      data: text,
+      inputType: 'insertText'
+    }));
+    target.dispatchEvent(new InputEvent('input', {
+      bubbles: true,
+      cancelable: true,
+      data: text,
+      inputType: 'insertText'
+    }));
+    return { ok: (target.textContent || '').includes(text.slice(0, 20)) };
+  }, prompt);
+}
+
+// Đếm số attachment thumbnail đang có trong composer area (vùng quanh textbox prompt + nút send)
+async function countComposerAttachments(page) {
+  return await page.evaluate(() => {
+    const target = document.querySelector('div[role="textbox"][contenteditable="true"]');
+    if (!target) return 0;
+    let composer = target;
+    for (let i = 0; i < 10; i++) {
+      if (!composer.parentElement) break;
+      composer = composer.parentElement;
+      if ((composer.textContent || '').includes('arrow_forward')) break;
+    }
+    const imgs = Array.from(composer.querySelectorAll('img')).filter((img) => {
+      const src = img.currentSrc || img.src || '';
+      // Thumbnail upload có pattern này, không phải avatar/icon
+      if (!/media\.getMediaUrlRedirect|labs\.google\/fx\/api\/trpc\/media/i.test(src)) return false;
+      if (!img.complete || img.naturalWidth === 0) return false;
+      const r = img.getBoundingClientRect();
+      return r.width >= 20 && r.height >= 20;
+    });
+    return imgs.length;
+  });
+}
+
+// Paste 1 ảnh bằng phương thức THẬT: navigator.clipboard.write() + Meta+V / Ctrl+V
+// Lý do: Flow của Google bỏ qua synthetic ClipboardEvent dispatch; phải dùng paste real từ keyboard.
+// LƯU Ý: navigator.clipboard.write() yêu cầu page có FOCUS (Document is focused) — nếu Playwright
+// chạy trong cửa sổ background, nó sẽ throw "Document is not focused".
+async function pasteSingleImageReal(page, fileInfo) {
+  // 1. Bring page to front để có focus thật
+  let bringOk = true;
+  try { await page.bringToFront(); } catch (e) { bringOk = false; /* ignore */ }
+
+  // 2. Click vào textbox composer trước để document có user activation + element focus
+  const promptBox = await getPromptLocator(page);
+  await promptBox.click();
+  await delay(150);
+
+  // 3. Set clipboard với image; nếu Playwright window không focus, thử bringToFront + retry
+  const writeResult = await page.evaluate(async ({ b64, mimeType }) => {
+    const target = document.querySelector('div[role="textbox"][contenteditable="true"]');
+    if (!target) return { ok: false, error: 'no_textbox' };
+    target.focus();
+
+    let blob;
+    try {
+      const resp = await fetch(`data:${mimeType};base64,${b64}`);
+      blob = await resp.blob();
+    } catch (fetchErr) {
+      return { ok: false, error: 'fetch_failed:' + fetchErr.message };
+    }
+
+    // navigator.clipboard.write chỉ chấp nhận image/png — convert JPEG/WebP/etc về PNG qua canvas
+    if (mimeType !== 'image/png') {
+      try {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = () => reject(new Error('image_load_failed'));
+          img.src = url;
+        });
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+        URL.revokeObjectURL(url);
+        mimeType = 'image/png';
+      } catch (convErr) {
+        return { ok: false, error: 'png_convert_failed:' + convErr.message };
+      }
+    }
+
+    if (!document.hasFocus()) {
+      return { ok: false, error: 'document_not_focused', blobSize: blob.size };
+    }
+
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ [mimeType]: blob })]);
+      return { ok: true, blobSize: blob.size, finalMime: mimeType };
+    } catch (writeErr) {
+      return { ok: false, error: 'clipboard_write_failed:' + writeErr.message, blobSize: blob.size };
+    }
+  }, { b64: fileInfo.base64, mimeType: fileInfo.mimeType });
+
+  if (!writeResult.ok) {
+    // Fallback: dùng CDP để set clipboard ở OS level (không cần document focus)
+    console.log(`[Flow] navigator.clipboard.write that bai (${writeResult.error}); thu CDP Input.dispatchKeyEvent + clipboard fallback...`);
+    const cdp = await page.context().newCDPSession(page);
+    try {
+      // CDP có Browser.grantPermissions để force-grant clipboard
+      await cdp.send('Browser.grantPermissions', {
+        origin: new URL(page.url()).origin,
+        permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite']
+      }).catch(() => {});
+
+      // Bring page to front lại lần nữa
+      await page.bringToFront().catch(() => {});
+      await delay(300);
+
+      // Click textbox lần nữa để có user activation tươi
+      await promptBox.click();
+      await delay(150);
+
+      // Retry clipboard.write 1 lần (cũng convert JPEG/WebP -> PNG nếu cần)
+      const retry = await page.evaluate(async ({ b64, mimeType }) => {
+        try {
+          const target = document.querySelector('div[role="textbox"][contenteditable="true"]');
+          target?.focus();
+          const resp = await fetch(`data:${mimeType};base64,${b64}`);
+          let blob = await resp.blob();
+          if (mimeType !== 'image/png') {
+            const url = URL.createObjectURL(blob);
+            const img = new Image();
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = () => reject(new Error('image_load_failed'));
+              img.src = url;
+            });
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+            URL.revokeObjectURL(url);
+            mimeType = 'image/png';
+          }
+          if (!document.hasFocus()) return { ok: false, error: 'still_not_focused' };
+          await navigator.clipboard.write([new ClipboardItem({ [mimeType]: blob })]);
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: 'retry_failed:' + e.message };
+        }
+      }, { b64: fileInfo.base64, mimeType: fileInfo.mimeType });
+
+      if (!retry.ok) {
+        throw new Error(`Khong set duoc clipboard: ${retry.error || writeResult.error}`);
+      }
+    } finally {
+      await cdp.detach().catch(() => {});
+    }
+  }
+
+  // 4. Click textbox lần cuối để đảm bảo focus, rồi nhấn Cmd+V / Ctrl+V
+  await promptBox.click();
+  await delay(150);
+  const isMac = process.platform === 'darwin';
+  const keyCombo = isMac ? 'Meta+V' : 'Control+V';
+  const focusBeforePress = await page.evaluate(() => document.hasFocus()).catch(() => null);
+  await page.keyboard.press(keyCombo);
+  await delay(500);
+  const immediateCount = await countComposerAttachments(page).catch(() => -1);
+}
+
+async function pasteAssetsIntoPrompt(page, clipboardFiles) {
+  await waitForPromptInputReady(page);
+  const promptBox = await getPromptLocator(page);
+  await promptBox.waitFor({ state: 'visible', timeout: 30000 });
+  await promptBox.click();
+
+  for (let i = 0; i < clipboardFiles.length; i++) {
+    const fileInfo = clipboardFiles[i];
+    const expectedAfter = i + 1;
+
+    let pastedOk = false;
+    for (let attempt = 1; attempt <= 3 && !pastedOk; attempt++) {
+      const before = await countComposerAttachments(page);
+      console.log(`[Flow] Paste anh ${i + 1}/${clipboardFiles.length} (lan ${attempt}): hien co ${before} attachment, can len ${expectedAfter}.`);
+
+      try {
+        await pasteSingleImageReal(page, fileInfo);
+      } catch (e) {
+        console.warn(`[Flow] Paste lan ${attempt} loi: ${e.message}`);
+        await delay(1500);
+        continue;
+      }
+
+      // Đợi thumbnail mới xuất hiện trong composer (tối đa 20s/ảnh)
+      try {
+        await page.waitForFunction(
+          (n) => {
+            const target = document.querySelector('div[role="textbox"][contenteditable="true"]');
+            if (!target) return false;
+            let composer = target;
+            for (let k = 0; k < 10; k++) {
+              if (!composer.parentElement) break;
+              composer = composer.parentElement;
+              if ((composer.textContent || '').includes('arrow_forward')) break;
+            }
+            const imgs = Array.from(composer.querySelectorAll('img')).filter((img) => {
+              const src = img.currentSrc || img.src || '';
+              if (!/media\.getMediaUrlRedirect|labs\.google\/fx\/api\/trpc\/media/i.test(src)) return false;
+              if (!img.complete || img.naturalWidth === 0) return false;
+              const r = img.getBoundingClientRect();
+              return r.width >= 20 && r.height >= 20;
+            });
+            return imgs.length >= n;
+          },
+          expectedAfter,
+          { timeout: 20000 }
+        );
+        pastedOk = true;
+        console.log(`[Flow] ✓ Anh ${i + 1}/${clipboardFiles.length} da xuat hien thumbnail trong composer.`);
+      } catch (waitErr) {
+        const after = await countComposerAttachments(page).catch(() => -1);
+        console.warn(`[Flow] Anh ${i + 1} chua thay thumbnail sau khi paste (sau=${after}, can=${expectedAfter}). Thu lai...`);
+        await delay(1500);
+      }
+    }
+
+    if (!pastedOk) {
+      throw new Error(`Khong upload duoc anh ${i + 1}/${clipboardFiles.length} sau 3 lan thu (composer khong nhan thumbnail).`);
+    }
+
+    await delay(800); // Cho UI ổn định trước khi paste ảnh tiếp theo
+  }
+
+  return promptBox;
+}
+
+async function waitForPromptAssetsReady(page, expectedCount) {
+  console.log(`[Flow] Dang cho ${expectedCount} thumbnail attachment san sang trong composer...`);
+
+  // Đếm img upload thumbnail BÊN TRONG composer area (vùng quanh textbox + nút send)
+  // chứ không scan toàn page (tránh đếm nhầm ảnh ở grid/sidebar).
+  await page.waitForFunction((count) => {
+    const target = document.querySelector('div[role="textbox"][contenteditable="true"]');
+    if (!target) return false;
+    let composer = target;
+    for (let k = 0; k < 10; k++) {
+      if (!composer.parentElement) break;
+      composer = composer.parentElement;
+      if ((composer.textContent || '').includes('arrow_forward')) break;
+    }
+    const ready = Array.from(composer.querySelectorAll('img')).filter((img) => {
+      const src = img.currentSrc || img.src || '';
+      if (!/media\.getMediaUrlRedirect|labs\.google\/fx\/api\/trpc\/media/i.test(src)) return false;
+      if (!img.complete || img.naturalWidth === 0) return false;
+      const r = img.getBoundingClientRect();
+      return r.width >= 20 && r.height >= 20;
+    }).length;
+    if (ready < count) return false;
+    // Đợi không còn progress bar bên trong composer
+    const pending = composer.querySelector('[role="progressbar"], progress, [aria-busy="true"]');
+    return !pending;
+  }, expectedCount, { timeout: 120000 });
+
+  const attachmentDebug = await page.evaluate(() => {
+    const target = document.querySelector('div[role="textbox"][contenteditable="true"]');
+    let composer = target;
+    if (composer) {
+      for (let k = 0; k < 10; k++) {
+        if (!composer.parentElement) break;
+        composer = composer.parentElement;
+        if ((composer.textContent || '').includes('arrow_forward')) break;
+      }
+    }
+    const readyCount = composer ? Array.from(composer.querySelectorAll('img')).filter((img) => {
+      const src = img.currentSrc || img.src || '';
+      return /media\.getMediaUrlRedirect|labs\.google\/fx\/api\/trpc\/media/i.test(src) && img.complete && img.naturalWidth > 0;
+    }).length : 0;
+    const sendButton = Array.from(document.querySelectorAll('button')).find((btn) => /arrow_forward/i.test(btn.textContent || ''));
+    return {
+      readyCount,
+      sendEnabled: !!sendButton && !sendButton.hasAttribute('disabled') && sendButton.getAttribute('aria-disabled') !== 'true'
+    };
+  });
+
+  console.log(`[Flow] ✓ Composer co ${attachmentDebug.readyCount} thumbnail san sang, sendEnabled=${attachmentDebug.sendEnabled}.`);
+  await delay(1500);
+}
+
+async function waitForComposerReadyToSubmit(page, expectedCount, prompt) {
+  const promptNeedle = String(prompt || '').trim().slice(0, 20);
+
+  await page.waitForFunction(({ count, promptSnippet }) => {
+    // Đếm ảnh asset
+    var assetCount = Array.from(document.querySelectorAll('img')).filter(function(img) {
+      if (!(img instanceof HTMLImageElement)) return false;
+      var s = window.getComputedStyle(img);
+      var r = img.getBoundingClientRect();
+      if (s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0') return false;
+      if (r.width < 30 || r.height < 30) return false;
+      if (!img.complete && img.naturalWidth === 0) return false;
+      var src = img.currentSrc || img.src || '';
+      if (!src) return false;
+      if (/avatar|profile|googleusercontent|placeholder|logo|icon|discord|instagram|x-logo|favicon/i.test(src)) return false;
+      if (src.endsWith('.svg')) return false;
+      return true;
+    }).length;
+
+    // Tìm textbox để kiểm tra prompt
+    var candidates = Array.from(document.querySelectorAll('[contenteditable="true"], div[role="textbox"], textarea'));
+    var textbox = candidates.filter(function(el) {
+      if (!(el instanceof HTMLElement)) return false;
+      var s = window.getComputedStyle(el);
+      var r = el.getBoundingClientRect();
+      return s.display !== 'none' && s.visibility !== 'hidden' && s.opacity !== '0' && r.width > 20 && r.height > 20 && !el.closest('[aria-hidden="true"]');
+    }).sort(function(a, b) { return b.getBoundingClientRect().top - a.getBoundingClientRect().top; })[0];
+    if (!textbox) return false;
+
+    var promptValue = textbox instanceof HTMLTextAreaElement || textbox instanceof HTMLInputElement
+      ? (textbox.value || '')
+      : (textbox.textContent || '');
+
+    var sendButton = Array.from(document.querySelectorAll('button')).find(function(btn) {
+      return /arrow_forward/i.test(btn.textContent || '');
+    });
+    var sendEnabled = !!sendButton && !sendButton.hasAttribute('disabled') && sendButton.getAttribute('aria-disabled') !== 'true';
+
+    var promptOk = promptSnippet ? promptValue.includes(promptSnippet) : promptValue.trim().length > 0;
+    return assetCount >= count && promptOk && sendEnabled;
+  }, { count: expectedCount, promptSnippet: promptNeedle }, { timeout: 60000 });
+
+  const composerState = await page.evaluate(() => {
+    var assetCount = Array.from(document.querySelectorAll('img')).filter(function(img) {
+      if (!(img instanceof HTMLImageElement)) return false;
+      var s = window.getComputedStyle(img);
+      var r = img.getBoundingClientRect();
+      if (s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0') return false;
+      if (r.width < 30 || r.height < 30) return false;
+      if (!img.complete && img.naturalWidth === 0) return false;
+      var src = img.currentSrc || img.src || '';
+      if (!src) return false;
+      if (/avatar|profile|googleusercontent|placeholder|logo|icon|discord|instagram|x-logo|favicon/i.test(src)) return false;
+      if (src.endsWith('.svg')) return false;
+      return true;
+    }).length;
+
+    var candidates = Array.from(document.querySelectorAll('[contenteditable="true"], div[role="textbox"], textarea'));
+    var textbox = candidates.filter(function(el) {
+      if (!(el instanceof HTMLElement)) return false;
+      var s = window.getComputedStyle(el);
+      var r = el.getBoundingClientRect();
+      return s.display !== 'none' && s.visibility !== 'hidden' && s.opacity !== '0' && r.width > 20 && r.height > 20 && !el.closest('[aria-hidden="true"]');
+    }).sort(function(a, b) { return b.getBoundingClientRect().top - a.getBoundingClientRect().top; })[0];
+    var promptValue = textbox instanceof HTMLTextAreaElement || textbox instanceof HTMLInputElement
+      ? (textbox.value || '')
+      : (textbox?.textContent || '');
+
+    var sendButton = Array.from(document.querySelectorAll('button')).find(function(btn) {
+      return /arrow_forward/i.test(btn.textContent || '');
+    });
+
+    return {
+      readyCount: assetCount,
+      promptLength: promptValue.trim().length,
+      sendEnabled: !!sendButton && !sendButton.hasAttribute('disabled') && sendButton.getAttribute('aria-disabled') !== 'true'
+    };
+  });
+
+  console.log(`[FlowV2] Composer ready: attachments=${composerState.readyCount}, promptLength=${composerState.promptLength}, sendEnabled=${composerState.sendEnabled}`);
+}
+
+
+async function runFlowVariant(page, prompt, inputFiles, tempDir, onImageReady) {
+  try {
+    const pendingDownloads = []; // giữ lại để tương thích nhưng không dùng tập trung nữa
+
+    // 1. Phải truy cập trang chủ Flow và tạo Dự án mới do link trực tiếp trả về "Đã xảy ra lỗi"
+    console.log(`[Flow] Truy cập trang chủ Flow...`);
+    await page.goto('https://labs.google/fx/vi/tools/flow', { waitUntil: 'domcontentloaded' });
+    await delay(3000);
+
+    // Kích vào tạo dự án mới (hoặc quay lại nếu gặp lỗi)
+    try {
+        const errorBackBtn = page.locator('button:has-text("Quay lại dự án")');
+        if (await errorBackBtn.count() > 0) {
+            await errorBackBtn.click();
+            await delay(2000);
+        }
+        const newProjBtn = page.locator('button, div').filter({ hasText: /Dự án mới|Nouveau projet/i }).last();
+        if (await newProjBtn.count() > 0 && await newProjBtn.isVisible()) {
+            await newProjBtn.click();
+            await delay(3000);
+        }
+    } catch (e) {
+        console.log(`[Flow] Không tìm thấy nút tạo dự án, thử tiếp tục...`);
+    }
+ 
+    // 2. Nạp ảnh bằng phương thức Paste THẬT (navigator.clipboard.write + Cmd/Ctrl+V)
+    //    Lưu ý: dispatchEvent(ClipboardEvent) bị Flow của Google bỏ qua — phải dùng paste thật.
+    console.log(`[Flow] Bắt đầu nạp ${filePaths.length} ảnh bằng phương thức Paste thật...`);
+    const clipboardFiles = [];
+    for (let i = 0; i < filePaths.length; i++) {
+      const buf = await require('fs/promises').readFile(filePaths[i]);
+      clipboardFiles.push({
+        name: `image_${i}.png`,
+        mimeType: 'image/png',
+        base64: buf.toString('base64')
+      });
+    }
+    const promptBox = await pasteAssetsIntoPrompt(page, clipboardFiles);
+    console.log(`[Flow] ✓ Đã paste & xác nhận ${clipboardFiles.length} thumbnail trong composer.`);
+
+    // --- BƯỚC 1: Click dấu + và chọn hình tham khảo nếu cần (Double Check) ---
+    // Ghi chú: Kỹ thuật Paste thường đã tự gắn ảnh vào Prompt rồi, 
+    // nhưng nếu cần mở Asset Panel để kiểm tra thì vẫn giữ lại logic này.
+    console.log(`[Flow] Dán ảnh xong, chuyển sang nhập Prompt...`);
+
+    // 4. Nhập Prompt
+    console.log(`[Flow] Đang gửi Prompt...`);
+    await promptBox.click();
+    await promptBox.fill(prompt);
+    await delay(1000);
+    
+    // 5. Mở cài đặt (chọn x4 ảnh)
+    console.log(`[Flow] Cấu hình tạo 4 ảnh...`);
+    try {
+        const configBtn = page.locator('button').filter({ hasText: /Nano Banana|x/ }).first();
+        if (await configBtn.count() > 0) {
+            await configBtn.click();
+            await delay(1000);
+            // Bấm chọn x4
+            const x4Btn = page.locator('button').filter({ hasText: /^x4$/ }).first();
+            if (await x4Btn.count() > 0) {
+                await x4Btn.click();
+                await delay(500);
+            }
+            await promptBox.click(); // close popup
+        }
+    } catch (e) {
+        console.log(`[Flow] Bỏ qua lỗi chọn ảnh x4.`);
+    }
+
+    // 5. Lưu lại danh sách ảnh hiện tại (để loại bỏ ảnh gốc/ảnh cũ)
+    const existingImgSources = await page.evaluate(() => {
+        return Array.from(document.querySelectorAll('img'))
+            .filter(img => img.width > 100 && !img.src.includes('avatar'))
+            .map(img => img.src);
+    });
+    console.log(`[Flow] Đã ghi nhớ ${existingImgSources.length} ảnh gốc/ảnh cũ.`);
+
+    // 6. Bấm Gửi
+    const sendBtn = page.locator('button:has-text("arrow_forward"), button[aria-label*="Gửi"], button[aria-label*="Send"], button[aria-label*="Tạo"]').first();
+    if (await sendBtn.count() > 0 && await sendBtn.isVisible()) {
+        await sendBtn.click();
+    } else {
+        await page.keyboard.press('Enter');
+    }
+
+    console.log(`[Flow] Đang chờ Google Flow sinh kết quả ảnh... (tối đa 4 phút)`);
+
+    // 7. Chờ kết quả: Đợi ít nhất 4 ảnh MỚI xuất hiện
+    try {
+        await page.waitForFunction((oldSources) => {
+            const currentImages = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
+            const newImages = currentImages.filter(img => !oldSources.includes(img.src));
+            return newImages.length >= 4; 
+        }, existingImgSources, { timeout: 240000 });
+    } catch (e) {
+        console.log(`[Flow] Cảnh báo: Hết thời gian chờ ảnh mới. Xử lý những gì tìm thấy...`);
+    }
+
+    // Đợi thêm cho ảnh render hoàn toàn
+    console.log(`[Flow] Đợi ảnh render hoàn toàn...`);
+    await delay(15000);
+
+    // 8. Tải xuống và Upload (Chỉ lấy ảnh MỚI)
+    console.log(`[Flow] Bắt đầu tải xuống kết quả (đã lọc bỏ ảnh gốc)...`);
+    let processedCount = 0;
+    
+    // Lấy lại danh sách ảnh mới nhất
+    const newResultsInDom = await page.evaluate((oldSources) => {
+        const currentImages = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
+        return currentImages.filter(img => !oldSources.includes(img.src)).map(img => ({
+            src: img.src,
+            rect: {
+                x: img.getBoundingClientRect().x + img.getBoundingClientRect().width / 2,
+                y: img.getBoundingClientRect().y + img.getBoundingClientRect().height / 2,
+                w: img.getBoundingClientRect().width,
+                h: img.getBoundingClientRect().height
+            }
+        }));
+    }, existingImgSources);
+
+    console.log(`[Flow] Tìm thấy ${newResultsInDom.length} ảnh kết quả mới.`);
+
+    for (let i = 0; i < Math.min(newResultsInDom.length, 4); i++) {
+        const item = newResultsInDom[i];
+        console.log(`[Flow] --- Đang xử lý ảnh Kết quả ${i+1}/${newResultsInDom.length} ---`);
+        try {
+            const outputPath = path.join(tempDir, `flow_result_${Date.now()}_${i}.png`);
+            
+            // Tải trực tiếp từ src (Source Extraction) - Ưu tiên vì nhanh và chuẩn nhất
+            if (item.src) {
+                try {
+                    if (item.src.startsWith('data:image')) {
+                        const content = item.src.split('base64,')[1];
+                        await fs.writeFile(outputPath, Buffer.from(content, 'base64'));
+                    } else if (item.src.startsWith('blob:')) {
+                        const base64Data = await page.evaluate(async (blobUrl) => {
+                            const resp = await fetch(blobUrl);
+                            const blob = await resp.blob();
+                            return new Promise((r) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => r(reader.result);
+                                reader.readAsDataURL(blob);
+                            });
+                        }, item.src);
+                        const content = base64Data.split('base64,')[1];
+                        await fs.writeFile(outputPath, Buffer.from(content, 'base64'));
+                    } else {
+                        const arrayBuffer = await page.evaluate(async (url) => {
+                            const res = await fetch(url);
+                            const buffer = await res.arrayBuffer();
+                            return Array.from(new Uint8Array(buffer));
+                        }, item.src);
+                        await fs.writeFile(outputPath, Buffer.from(arrayBuffer));
+                    }
+                    
+                    console.log(`[Flow] ✅ Đã tải xong ảnh kết quả ${i+1}`);
+
+                    if (typeof onImageReady === 'function') {
+                        await onImageReady(outputPath);
+                        processedCount++;
+                    }
+                    continue;
+                } catch (sourceErr) {
+                    console.log(`[Flow] Lỗi tải trực tiếp (${sourceErr.message}), lùi về click UI...`);
+                }
+            }
+
+            // Fallback UI Click nếu Source Extraction lỗi (Dùng cho 2K/4K sau này nếu cần)
+            await page.mouse.move(item.rect.x, item.rect.y);
+            await delay(1000);
+            await page.keyboard.press('Escape'); // Đảm bảo menu cũ đã đóng
+        } catch (err) {
+            console.log(`[Flow] Bỏ qua ảnh lỗi: ${err.message}`);
+        }
+    }
+
+    console.log(`[Flow] ========================================`);
+    console.log(`[Flow] HOÀN TẤT: ${processedCount}/4 ảnh đã tải và upload thành công!`);
+    console.log(`[Flow] ========================================`);
+
+    await page.close().catch(() => null);
+    return [];
+  } catch (error) {
+    console.error(`[Flow] Lỗi nghiêm trọng:`, error);
+    await page.close().catch(() => null);
+    return [];
+  }
+}
+
+async function fillPromptBox(promptBox, prompt) {
+  await waitForPromptInputReady(promptBox.page());
+
+  const currentPromptBox = await getPromptLocator(promptBox.page());
+  await currentPromptBox.click();
+
+  try {
+    await currentPromptBox.fill(prompt);
+  } catch (error) {
+    console.log(`[FlowV2] fill() khong thanh cong, chuyen sang fallback: ${error.message}`);
+  }
+
+  let currentValue = await readPromptText(promptBox.page());
+  if (currentValue.includes(prompt.slice(0, 20))) {
+    return;
+  }
+
+  const domWriteResult = await setPromptTextViaDom(promptBox.page(), prompt);
+  if (domWriteResult?.ok) {
+    currentValue = await readPromptText(promptBox.page());
+    if (currentValue.includes(prompt.slice(0, 20))) {
+      return;
+    }
+  }
+
+  await currentPromptBox.click();
+  await promptBox.page().keyboard.down('Control');
+  await promptBox.page().keyboard.press('a');
+  await promptBox.page().keyboard.up('Control');
+  await promptBox.page().keyboard.press('Backspace');
+  await promptBox.page().keyboard.insertText(prompt);
+
+  currentValue = await readPromptText(promptBox.page());
+  if (!currentValue.includes(prompt.slice(0, 20))) {
+    throw new Error('Da dan anh xong nhung khong the chen prompt vao o chat cua Flow.');
+  }
+
+  console.log(`[FlowV2] Prompt da vao o chat (${currentValue.trim().length} ky tu).`);
+}
+
+async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady, flowConfig = {}) {
+  const outputPaths = [];
+  let chatUrl = 'https://labs.google/fx/vi/tools/flow';
+  // Backwards-compat: support old caller passing `variantCount` (number) instead of flowConfig object
+  const config = (typeof flowConfig === 'number') ? { variantCount: flowConfig } : (flowConfig || {});
+  const mode = config.mode === 'video' ? 'video' : 'image';
+  const variantCount = [1, 2, 3, 4].includes(config.variantCount) ? config.variantCount : 4;
+  const aspectRatio = ['16:9', '4:3', '1:1', '3:4', '9:16'].includes(config.aspectRatio) ? config.aspectRatio : '16:9';
+  const targetCount = variantCount;
+  const variantLabel = `x${targetCount}`;
+  const modeTabRegex = mode === 'video' ? /videocamVideo/ : /imageHình ảnh/;
+  // Aspect ratio button text trong Flow menu format kiểu: "crop_16_916:9", "crop_landscape4:3", "crop_square1:1", "crop_portrait3:4", "crop_9_169:16"
+  const aspectRegex = new RegExp(aspectRatio.replace(':', ':').replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(':', ':') + '$');
+
+  try {
+    console.log('[FlowV2] Truy cap trang chu Flow...');
+    await page.goto('https://labs.google/fx/vi/tools/flow', { waitUntil: 'domcontentloaded' });
+    await delay(3000);
+    await dismissConsentDialog(page);
+
+    try {
+      const errorBackBtn = page.locator('button:has-text("Quay lại dự án"), button:has-text("Quay lai du an")');
+      if (await errorBackBtn.count() > 0) {
+        await errorBackBtn.first().click();
+        await delay(2000);
+      }
+
+      const newProjBtn = page.locator('button, div').filter({ hasText: /Dự án mới|Du an moi|Nouveau projet/i }).last();
+      if (await newProjBtn.count() > 0 && await newProjBtn.isVisible()) {
+        await newProjBtn.click();
+        await delay(3000);
+        await dismissConsentDialog(page);
+      }
+    } catch (error) {
+      console.log(`[FlowV2] Bo qua buoc tao du an moi: ${error.message}`);
+    }
+
+    chatUrl = page.url();
+
+    // === CẤU HÌNH MODE + ASPECT RATIO + VARIANT COUNT ===
+    try {
+      console.log(`[FlowV2] Cau hinh mode=${mode} aspect=${aspectRatio} variants=${variantLabel}...`);
+      const configBtn = page.locator('button').filter({ hasText: /Video.*x|Hình ảnh.*x|Nano.*x|crop/ }).first();
+      if (await configBtn.count() > 0) {
+        await configBtn.click();
+        await delay(1500);
+
+        // 1. Tab mode (Hình ảnh / Video)
+        const modeTabBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: modeTabRegex }).first();
+        if (await modeTabBtn.count() > 0) {
+          const isSelected = await modeTabBtn.getAttribute('aria-selected');
+          if (isSelected !== 'true') {
+            await modeTabBtn.click();
+            await delay(1000);
+            console.log(`[FlowV2] Da chuyen sang tab ${mode}.`);
+          } else {
+            console.log(`[FlowV2] Da dang o tab ${mode}.`);
+          }
+        }
+
+        // 2. Aspect ratio (16:9 / 4:3 / 1:1 / 3:4 / 9:16) — match suffix of button text
+        const aspectBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: aspectRegex }).first();
+        if (await aspectBtn.count() > 0) {
+          const isSelected = await aspectBtn.getAttribute('aria-selected');
+          if (isSelected !== 'true') {
+            await aspectBtn.click();
+            await delay(500);
+            console.log(`[FlowV2] Da chon aspect ${aspectRatio}.`);
+          }
+        }
+
+        // 3. Variant count (1x / x2 / x3 / x4)
+        // Google Flow UI: variant 1 hiển thị "1x" (đảo thứ tự), 2-4 hiển thị "x2"/"x3"/"x4".
+        // Match cả 2 chiều "x{N}" và "{N}x" để tương thích nếu Google đổi UI.
+        const variantRegex = new RegExp(`^(${variantLabel}|${targetCount}x)$`);
+        const variantBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: variantRegex }).first();
+        if (await variantBtn.count() > 0) {
+          const isSelected = await variantBtn.getAttribute('aria-selected');
+          if (isSelected !== 'true') {
+            await variantBtn.click();
+            await delay(500);
+            console.log(`[FlowV2] Da chon ${variantLabel}.`);
+          }
+        } else {
+          console.log(`[FlowV2] Khong tim thay nut variant ${variantLabel}/${targetCount}x.`);
+        }
+
+        // 4. Đóng config panel bằng click lại config button (toggle)
+        await configBtn.click();
+        await delay(800);
+        console.log('[FlowV2] Da dong config panel.');
+      }
+    } catch (error) {
+      console.log(`[FlowV2] Bo qua loi cau hinh: ${error.message}`);
+    }
+
+    console.log(`[FlowV2] Dan cung luc ${inputFiles.length} anh vao Flow...`);
+    const clipboardFiles = await buildClipboardPayload(inputFiles);
+    const promptBox = await pasteAssetsIntoPrompt(page, clipboardFiles);
+    await waitForPromptAssetsReady(page, inputFiles.length);
+
+    console.log('[FlowV2] Nhap prompt sau khi attachment da san sang...');
+    await fillPromptBox(promptBox, prompt);
+    await delay(1000);
+
+    await waitForComposerReadyToSubmit(page, inputFiles.length, prompt);
+
+    const existingImgSources = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('img'))
+        .filter(img => img.width > 100 && !img.src.includes('avatar'))
+        .map(img => img.src);
+    });
+    console.log(`[FlowV2] Da ghi nho ${existingImgSources.length} anh cu tren trang.`);
+
+    const sendBtn = page.locator('button:has-text("arrow_forward"), button[aria-label*="Gửi"], button[aria-label*="Gui"], button[aria-label*="Send"], button[aria-label*="Tạo"], button[aria-label*="Tao"]').first();
+    if (await sendBtn.count() > 0 && await sendBtn.isVisible()) {
+      await sendBtn.click();
+    } else {
+      await page.keyboard.press('Enter');
+    }
+
+    console.log(`[FlowV2] Dang cho Google Flow sinh ket qua ${targetCount} anh (timeout 6 phut)...`);
+    try {
+      await page.waitForFunction(({ oldSources, need }) => {
+        const currentImages = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
+        const newImages = currentImages.filter(img => !oldSources.includes(img.src));
+        return newImages.length >= need;
+      }, { oldSources: existingImgSources, need: targetCount }, { timeout: 360000 });
+    } catch (error) {
+      console.log(`[FlowV2] Het thoi gian cho ${targetCount} anh moi, se xu ly nhung anh da co: ${error.message}`);
+    }
+
+    await delay(20000);
+
+    const newResultsInDom = await page.evaluate((oldSources) => {
+      const currentImages = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
+      return currentImages.filter(img => !oldSources.includes(img.src)).map(img => ({
+        src: img.src,
+        rect: {
+          x: img.getBoundingClientRect().x + img.getBoundingClientRect().width / 2,
+          y: img.getBoundingClientRect().y + img.getBoundingClientRect().height / 2,
+          w: img.getBoundingClientRect().width,
+          h: img.getBoundingClientRect().height
+        }
+      }));
+    }, existingImgSources);
+
+    console.log(`[FlowV2] Tim thay ${newResultsInDom.length} anh ket qua moi.`);
+
+    let processedCount = 0;
+    for (let index = 0; index < Math.min(newResultsInDom.length, targetCount); index += 1) {
+      const item = newResultsInDom[index];
+      const outputPath = path.join(tempDir, `flow_result_${Date.now()}_${index}.png`);
+
+      try {
+        if (!item.src) {
+          continue;
+        }
+
+        if (item.src.startsWith('data:image')) {
+          const content = item.src.split('base64,')[1];
+          await fs.writeFile(outputPath, Buffer.from(content, 'base64'));
+        } else if (item.src.startsWith('blob:')) {
+          const base64Data = await page.evaluate(async (blobUrl) => {
+            const response = await fetch(blobUrl);
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.readAsDataURL(blob);
+            });
+          }, item.src);
+          const content = String(base64Data).split('base64,')[1];
+          await fs.writeFile(outputPath, Buffer.from(content, 'base64'));
+        } else {
+          const arrayBuffer = await page.evaluate(async (url) => {
+            const response = await fetch(url);
+            const buffer = await response.arrayBuffer();
+            return Array.from(new Uint8Array(buffer));
+          }, item.src);
+          await fs.writeFile(outputPath, Buffer.from(arrayBuffer));
+        }
+
+        outputPaths.push(outputPath);
+        processedCount += 1;
+        console.log(`[FlowV2] Da tai xong anh ket qua ${index + 1}`);
+
+        if (typeof onImageReady === 'function') {
+          await onImageReady(outputPath);
+        }
+      } catch (error) {
+        console.log(`[FlowV2] Bo qua anh loi: ${error.message}`);
+      }
+    }
+
+    console.log(`[FlowV2] Hoan tat: ${processedCount}/${targetCount} anh da tai va upload thanh cong.`);
+    await page.close().catch(() => null);
+    return { outputPaths, chatUrl };
+  } catch (error) {
+    console.error('[FlowV2] Loi nghiem trong:', error);
+    await page.close().catch(() => null);
+    return { outputPaths, chatUrl };
+  }
+}
 
 // ===== SHARED BROWSER: 1 browser duy nhất, mỗi project mở 1 tab mới =====
 // Cho phép xử lý nhiều project song song mà không conflict persistent context.
 let _sharedBrowser = null;
 let _sharedBrowserPromise = null;
 let _activeTabCount = 0;
-// Đóng browser khi idle. 5 phút giữ Chrome warm giữa các admin clicks (single-
-// user worker), tránh cold boot ~10-15s mỗi request. Trên Render Free 512MB,
-// Chrome idle dùng ~150-200MB — chấp nhận được.
-const IDLE_CLOSE_MS = 5 * 60 * 1000;
+const IDLE_CLOSE_MS = 30000; // Đóng browser sau 30s không có tab nào hoạt động
 let _idleTimer = null;
 
 async function getSharedBrowser() {
@@ -79,83 +1068,14 @@ async function getSharedBrowser() {
   if (_sharedBrowserPromise) return _sharedBrowserPromise;
 
   _sharedBrowserPromise = (async () => {
-    // headless: false by default — Google reCAPTCHA Enterprise flags pure headless
-    // Chrome with PUBLIC_ERROR_UNUSUAL_ACTIVITY even on residential IP. Set
-    // FLOW_HEADLESS=1 to opt in (works on Vercel/Lambda via @sparticuz/chromium
-    // because that binary has additional masking args; not reliable with system
-    // Chrome). On a Linux server, run under Xvfb to hide the window:
-    //   Xvfb :99 -screen 0 1440x900x24 &
-    //   DISPLAY=:99 node server/index.js
-    const headless = process.env.FLOW_HEADLESS === '1';
-    // Mặc định chỉ 2 flag cơ bản — đủ cho local dev (Mac/Windows). Server low-RAM
-    // (Render Free, VPS nhỏ) set thêm `CHROMIUM_FLAGS` env (Dockerfile / render.yaml)
-    // — vd: "--no-sandbox --disable-dev-shm-usage --disable-gpu --js-flags=--max-old-space-size=256".
-    const launchArgs = [
-      '--disable-blink-features=AutomationControlled',
-      '--disable-features=IsolateOrigins,site-per-process',
-    ];
-    if (process.env.CHROMIUM_FLAGS) {
-      launchArgs.push(...process.env.CHROMIUM_FLAGS.split(/\s+/).filter(Boolean));
-    }
-
-    // FLOW_STATE_B64 mode: portable cookies via Playwright storageState (works
-    // across OSes — Mac → Linux Render). When set, use launch() + newContext()
-    // instead of launchPersistentContext (which encrypts cookies with OS keystore
-    // and won't transfer Mac → Linux).
-    // Chunked support: if state too large for one env var, use FLOW_STATE_B64_1, _2, ...
-    let stateB64 = process.env.FLOW_STATE_B64;
-    if (!stateB64) {
-      const parts = [];
-      for (let i = 1; ; i++) {
-        const v = process.env[`FLOW_STATE_B64_${i}`];
-        if (!v) break;
-        parts.push(v.trim());
-      }
-      if (parts.length) stateB64 = parts.join('');
-    }
-    if (stateB64) {
-      console.log('[BROWSER] Khởi tạo browser từ FLOW_STATE_B64 storageState...');
-      const browser = await chromium.launch({ executablePath: resolveBrowserExecutable(), headless, args: launchArgs });
-      const buf = Buffer.from(stateB64, 'base64');
-      // Auto-detect gzip
-      const isGzip = buf.length >= 2 && buf[0] === 0x1f && buf[1] === 0x8b;
-      const json = isGzip ? require('zlib').gunzipSync(buf).toString('utf8') : buf.toString('utf8');
-      const storageState = JSON.parse(json);
-      const ctx = await browser.newContext({
-        storageState,
-        viewport: { width: 1280, height: 800 },
-        acceptDownloads: true,
-        permissions: ['clipboard-read', 'clipboard-write'],
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36',
-      });
-      await ctx.addInitScript(() => {
-        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-        Object.defineProperty(navigator, 'languages', { get: () => ['vi-VN', 'vi', 'en-US', 'en'] });
-        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-      });
-      // Wrap context to expose context-like API (close, newPage). Underlying browser closed when context closed.
-      ctx._underlyingBrowser = browser;
-      const origClose = ctx.close.bind(ctx);
-      ctx.close = async () => { await origClose(); await browser.close().catch(() => null); };
-      _sharedBrowser = ctx;
-      console.log('[BROWSER] Shared browser (storageState mode) đã sẵn sàng.');
-      return _sharedBrowser;
-    }
-
-    console.log(`[BROWSER] Khởi tạo shared browser (persistent context, headless=${headless})...`);
+    console.log('[BROWSER] Khởi tạo shared browser (persistent context)...');
     _sharedBrowser = await chromium.launchPersistentContext(FLOW_PROFILE_DIR, {
       executablePath: resolveBrowserExecutable(),
-      headless,
+      headless: false,
       viewport: { width: 1440, height: 900 },
       acceptDownloads: true,
       permissions: ['clipboard-read', 'clipboard-write'],
-      args: launchArgs,
-    });
-    // Stealth — mask common headless tells before any page script runs.
-    await _sharedBrowser.addInitScript(() => {
-      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-      Object.defineProperty(navigator, 'languages', { get: () => ['vi-VN', 'vi', 'en-US', 'en'] });
-      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+      args: ['--disable-blink-features=AutomationControlled']
     });
     console.log('[BROWSER] Shared browser đã sẵn sàng.');
     return _sharedBrowser;
@@ -172,822 +1092,316 @@ function scheduleIdleClose() {
       await _sharedBrowser.close().catch(() => null);
       _sharedBrowser = null;
       _sharedBrowserPromise = null;
-      _apiPage = null;
-      _apiPagePromise = null;
-      _apiPageReadyAt = 0;
       _activeTabCount = 0;
     }
   }, IDLE_CLOSE_MS);
 }
 
-// =============================================================================
-// API-DIRECT IMAGE GENERATION
-// =============================================================================
-// Replaces the UI clicks (paste → prompt → send → wait → scrape DOM) with a
-// direct call to Flow's batchGenerateImages API. The browser is still required
-// because: (1) auth cookie sits at /fx/api/auth/session for access_token; and
-// (2) reCAPTCHA Enterprise tokens must be issued by grecaptcha.enterprise.execute
-// running on labs.google. We just open ONE page, inject a tiny client, and call
-// it via page.evaluate from Node.
-//
-// Endpoints (reverse-engineered from Flow's webpack bundle):
-//   POST aisandbox-pa.googleapis.com/v1/flow/uploadImage         (asset upload)
-//   POST aisandbox-pa.googleapis.com/v1/projects/{id}/flowMedia:batchGenerateImages
-//
-// imageInputs format (from chunks/9566...js):
-//   [{ imageInputType: 'IMAGE_INPUT_TYPE_BASE_IMAGE',  name: <mediaId> },
-//    { imageInputType: 'IMAGE_INPUT_TYPE_REFERENCE',   name: <mediaId> }, ...]
-// First asset = BASE_IMAGE (singular in the bundle), rest = REFERENCE.
-// =============================================================================
-
-const FLOW_URL = 'https://labs.google/fx/vi/tools/flow';
-
-const FLOW_CLIENT_SRC = `(() => {
-  const RECAPTCHA_SITE_KEY = '6LdsFiUsAAAAAIjVDZcuLhaHiDn5nnHVXVRQGeMV';
-  const RECAPTCHA_ACTION = 'IMAGE_GENERATION';
-  const GEN_HOST = 'https://aisandbox-pa.googleapis.com';
-  const ASPECT_MAP = {
-    '16:9': 'IMAGE_ASPECT_RATIO_LANDSCAPE',
-    '4:3': 'IMAGE_ASPECT_RATIO_LANDSCAPE_FOUR_THREE',
-    '9:16': 'IMAGE_ASPECT_RATIO_PORTRAIT',
-    '3:4': 'IMAGE_ASPECT_RATIO_PORTRAIT_THREE_FOUR',
-    '1:1': 'IMAGE_ASPECT_RATIO_SQUARE',
-    LANDSCAPE: 'IMAGE_ASPECT_RATIO_LANDSCAPE',
-    PORTRAIT: 'IMAGE_ASPECT_RATIO_PORTRAIT',
-    SQUARE: 'IMAGE_ASPECT_RATIO_SQUARE',
-  };
-  async function getAccessToken() {
-    const r = await fetch('/fx/api/auth/session', { credentials: 'include' });
-    const j = await r.json().catch(() => null);
-    if (!j || !j.access_token) throw new Error('Flow session chưa đăng nhập (no access_token).');
-    return j.access_token;
-  }
-  async function getRecaptchaToken(action) {
-    const ge = window.grecaptcha && window.grecaptcha.enterprise;
-    if (!ge || typeof ge.execute !== 'function') throw new Error('grecaptcha.enterprise chưa load — chờ thêm vài giây.');
-    return await ge.execute(RECAPTCHA_SITE_KEY, { action: action || RECAPTCHA_ACTION });
-  }
-  async function ensureProject({ projectId, projectTitle } = {}) {
-    if (projectId) return projectId;
-    const m = location.pathname.match(/project\\/([a-f0-9-]+)/);
-    if (m && m[1]) return m[1];
-    const title = projectTitle || ('landscape-' + new Date().toISOString().slice(0, 19));
-    const res = await fetch('/fx/api/trpc/project.createProject', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ json: { projectTitle: title, toolName: 'PINHOLE' } }),
-    });
-    const json = await res.json().catch(() => null);
-    const id = json && json.result && json.result.data && json.result.data.json && json.result.data.json.result && json.result.data.json.result.projectId;
-    if (!id) throw new Error('createProject failed: ' + JSON.stringify(json).slice(0, 300));
-    return id;
-  }
-  async function uploadOne({ accessToken, projectId, base64 }) {
-    const body = { clientContext: { projectId, tool: 'PINHOLE' }, imageBytes: base64 };
-    const res = await fetch(GEN_HOST + '/v1/flow/uploadImage', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'text/plain;charset=UTF-8' },
-      body: JSON.stringify(body),
-    });
-    const json = await res.json().catch(() => null);
-    if (!res.ok) throw Object.assign(new Error('upload failed: ' + (json && json.error && json.error.message || res.status)), { status: res.status, body: json });
-    const name = json && json.media && json.media.name;
-    if (!name) throw new Error('upload response missing media.name: ' + JSON.stringify(json).slice(0, 200));
-    return { mediaId: name, workflowId: json.media.workflowId };
-  }
-  async function generateOne({ accessToken, projectId, prompt, aspectRatio, seed, batchId, sessionId, baseImageId, refImageIds, workflowId }) {
-    const recaptchaToken = await getRecaptchaToken();
-    const recaptchaContext = { token: recaptchaToken, applicationType: 'RECAPTCHA_APPLICATION_TYPE_WEB' };
-    const imageInputs = [];
-    if (baseImageId) imageInputs.push({ imageInputType: 'IMAGE_INPUT_TYPE_BASE_IMAGE', name: baseImageId });
-    for (const id of (refImageIds || [])) imageInputs.push({ imageInputType: 'IMAGE_INPUT_TYPE_REFERENCE', name: id });
-    const clientContext = { recaptchaContext, projectId, tool: 'PINHOLE', sessionId };
-    if (workflowId) clientContext.workflowId = workflowId;
-    const body = {
-      clientContext,
-      mediaGenerationContext: { batchId },
-      useNewMedia: true,
-      requests: [{
-        clientContext,
-        imageModelName: 'NARWHAL',
-        imageAspectRatio: ASPECT_MAP[aspectRatio] || ASPECT_MAP.LANDSCAPE,
-        structuredPrompt: { parts: [{ text: prompt }] },
-        seed,
-        imageInputs,
-      }],
-    };
-    const res = await fetch(GEN_HOST + '/v1/projects/' + projectId + '/flowMedia:batchGenerateImages', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'text/plain;charset=UTF-8' },
-      body: JSON.stringify(body),
-    });
-    const json = await res.json().catch(() => null);
-    if (!res.ok) throw Object.assign(new Error('gen failed: ' + (json && json.error && json.error.message || res.status)), { status: res.status, body: json });
-    const m = (json && json.media && json.media[0]) || null;
-    if (!m) throw Object.assign(new Error('gen returned no media'), { body: json });
-    return {
-      mediaId: m.name,
-      workflowId: m.workflowId,
-      fifeUrl: m.image && m.image.generatedImage && m.image.generatedImage.fifeUrl,
-      width: m.image && m.image.dimensions && m.image.dimensions.width,
-      height: m.image && m.image.dimensions && m.image.dimensions.height,
-      seed: m.image && m.image.generatedImage && m.image.generatedImage.seed,
-    };
-  }
-  async function generateImages({ prompt, count = 1, aspectRatio = '16:9', projectId, projectTitle, assets } = {}) {
-    if (!prompt) throw new Error('prompt is required');
-    const t0 = Date.now();
-    const [accessToken, ensuredProjectId] = await Promise.all([
-      getAccessToken(),
-      ensureProject({ projectId, projectTitle }),
-    ]);
-    let baseImageId = null;
-    let refImageIds = [];
-    let workflowId = null;
-    if (Array.isArray(assets) && assets.length) {
-      const uploads = await Promise.allSettled(assets.map(a => uploadOne({ accessToken, projectId: ensuredProjectId, base64: a.base64 })));
-      const ids = [];
-      for (const u of uploads) {
-        if (u.status === 'fulfilled' && u.value && u.value.mediaId) {
-          ids.push(u.value.mediaId);
-          if (!workflowId && u.value.workflowId) workflowId = u.value.workflowId;
-        }
-      }
-      if (ids.length === 0) {
-        const failed = uploads.find(u => u.status === 'rejected');
-        const reason = (failed && failed.reason) || {};
-        throw Object.assign(new Error('All asset uploads failed: ' + (reason.message || 'unknown')), { body: reason.body, status: reason.status });
-      }
-      baseImageId = ids[0];
-      refImageIds = ids.slice(1);
-    }
-    const batchId = (crypto.randomUUID && crypto.randomUUID()) || (Math.random().toString(36).slice(2) + Date.now().toString(36));
-    const sessionId = ';' + Date.now();
-    const tasks = Array.from({ length: count }, () => generateOne({
-      accessToken, projectId: ensuredProjectId, prompt, aspectRatio,
-      seed: Math.floor(Math.random() * 999999), batchId, sessionId,
-      baseImageId, refImageIds, workflowId,
-    }));
-    const settled = await Promise.allSettled(tasks);
-    const images = settled.filter(s => s.status === 'fulfilled').map(s => s.value);
-    const errors = settled.filter(s => s.status === 'rejected').map(s => ({
-      message: s.reason && s.reason.message,
-      status: s.reason && s.reason.status,
-      body: s.reason && s.reason.body,
-    }));
-    return {
-      projectId: ensuredProjectId,
-      elapsedMs: Date.now() - t0,
-      requested: count,
-      received: images.length,
-      images,
-      errors,
-      uploaded: { baseImageId, refImageIds },
-    };
-  }
-  // ==========================================================================
-  // VIDEO GEN — reference-to-video (R2V) via async API.
-  // Endpoints (verified via captured request flow_video_capture.json on 2026-05-03):
-  //   POST aisandbox-pa.googleapis.com/v1/video:batchAsyncGenerateVideoReferenceImages
-  //   POST aisandbox-pa.googleapis.com/v1/video:batchCheckAsyncVideoGenerationStatus  (poll)
-  //   GET  /fx/api/trpc/media.getMediaUrlRedirect?input={"json":{"name":"<id>","mediaUrlType":"MEDIA_URL_TYPE_FULL_MEDIA"}}
-  // The "Component" / "Thành phần" UI mode posts to ReferenceImages, not StartAndEndImage.
-  // referenceImages entry shape: { mediaId, imageUsageType: 'IMAGE_USAGE_TYPE_ASSET' }.
-  // Body needs: useV2ModelConfig=true, mediaGenerationContext.audioFailurePreference,
-  //   clientContext.userPaygateTier, textInput.structuredPrompt.parts[].text.
-  const VIDEO_HOST = 'https://aisandbox-pa.googleapis.com';
-  const VIDEO_ASPECT_MAP = {
-    '16:9': 'VIDEO_ASPECT_RATIO_LANDSCAPE',
-    '9:16': 'VIDEO_ASPECT_RATIO_PORTRAIT',
-    '1:1': 'VIDEO_ASPECT_RATIO_UNSPECIFIED',
-    LANDSCAPE: 'VIDEO_ASPECT_RATIO_LANDSCAPE',
-    PORTRAIT: 'VIDEO_ASPECT_RATIO_PORTRAIT',
-  };
-  // Default model — captured from a real Flow UI session 2026-05-03.
-  // Models follow pattern veo_3_1_r2v_fast_<aspect>_ultra; aspect token derived below.
-  const DEFAULT_VIDEO_MODEL_BY_ASPECT = {
-    '16:9': 'veo_3_1_r2v_fast_landscape_ultra',
-    '9:16': 'veo_3_1_r2v_fast_portrait_ultra',
-    '1:1': 'veo_3_1_r2v_fast_landscape_ultra',
-  };
-  async function startVideoGen({ accessToken, projectId, prompt, aspectRatio, seed, batchId, sessionId, referenceMediaIds, videoModelKey, recaptchaAction }) {
-    const recaptchaToken = await getRecaptchaToken(recaptchaAction || 'VIDEO_GENERATION');
-    const recaptchaContext = { token: recaptchaToken, applicationType: 'RECAPTCHA_APPLICATION_TYPE_WEB' };
-    const clientContext = {
-      projectId,
-      tool: 'PINHOLE',
-      userPaygateTier: 'PAYGATE_TIER_TWO',
-      sessionId,
-      recaptchaContext,
-    };
-    const refs = (referenceMediaIds || []).map(id => ({
-      mediaId: id,
-      imageUsageType: 'IMAGE_USAGE_TYPE_ASSET',
-    }));
-    const requestEntry = {
-      aspectRatio: VIDEO_ASPECT_MAP[aspectRatio] || VIDEO_ASPECT_MAP.LANDSCAPE,
-      seed,
-      textInput: { structuredPrompt: { parts: [{ text: prompt || '' }] } },
-      videoModelKey: videoModelKey || DEFAULT_VIDEO_MODEL_BY_ASPECT[aspectRatio] || DEFAULT_VIDEO_MODEL_BY_ASPECT['16:9'],
-      metadata: {},
-      referenceImages: refs,
-    };
-    const body = {
-      mediaGenerationContext: { batchId, audioFailurePreference: 'BLOCK_SILENCED_VIDEOS' },
-      clientContext,
-      requests: [requestEntry],
-      useV2ModelConfig: true,
-    };
-    const res = await fetch(VIDEO_HOST + '/v1/video:batchAsyncGenerateVideoReferenceImages', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'text/plain;charset=UTF-8' },
-      body: JSON.stringify(body),
-    });
-    const json = await res.json().catch(() => null);
-    if (!res.ok) throw Object.assign(new Error('startVideoGen failed: ' + (json && json.error && json.error.message || res.status)), { status: res.status, body: json });
-    return json;
-  }
-  async function pollVideoStatus({ accessToken, mediaRefs }) {
-    // mediaRefs: [{ name: '<mediaId>', projectId }]
-    const body = { media: mediaRefs };
-    const res = await fetch(VIDEO_HOST + '/v1/video:batchCheckAsyncVideoGenerationStatus', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'text/plain;charset=UTF-8' },
-      body: JSON.stringify(body),
-    });
-    const json = await res.json().catch(() => null);
-    if (!res.ok) throw Object.assign(new Error('pollVideoStatus failed: ' + (json && json.error && json.error.message || res.status)), { status: res.status, body: json });
-    return json;
-  }
-  async function startAndPollVideo({ prompt, aspectRatio = '16:9', referenceImageBase64s, projectId, projectTitle, videoModelKey, pollIntervalMs = 8000, timeoutMs = 10 * 60 * 1000 } = {}) {
-    const refs = Array.isArray(referenceImageBase64s) ? referenceImageBase64s : (referenceImageBase64s ? [referenceImageBase64s] : []);
-    if (!refs.length) throw new Error('referenceImageBase64s is required (at least one)');
-    const t0 = Date.now();
-    const [accessToken, ensuredProjectId] = await Promise.all([
-      getAccessToken(),
-      ensureProject({ projectId, projectTitle }),
-    ]);
-    const uploads = await Promise.all(refs.map(b64 => uploadOne({ accessToken, projectId: ensuredProjectId, base64: b64 })));
-    const referenceMediaIds = uploads.map(u => u.mediaId);
-    const batchId = (crypto.randomUUID && crypto.randomUUID()) || (Math.random().toString(36).slice(2) + Date.now().toString(36));
-    const sessionId = ';' + Date.now();
-    const seed = Math.floor(Math.random() * 999999);
-    let startResp;
-    try {
-      startResp = await startVideoGen({
-        accessToken, projectId: ensuredProjectId, prompt, aspectRatio, seed, batchId, sessionId,
-        referenceMediaIds, videoModelKey,
-      });
-    } catch (e) {
-      // Single retry on transient reCAPTCHA failure (token may have expired between fetch and use).
-      if (/reCAPTCHA evaluation failed|UNUSUAL_ACTIVITY/i.test(e && e.message || '')) {
-        await new Promise(r => setTimeout(r, 3000));
-        startResp = await startVideoGen({
-          accessToken, projectId: ensuredProjectId, prompt, aspectRatio, seed: Math.floor(Math.random() * 999999), batchId, sessionId: ';' + Date.now(),
-          referenceMediaIds, videoModelKey,
-        });
-      } else { throw e; }
-    }
-    const mediaRefs = (Array.isArray(startResp && startResp.media) ? startResp.media : []).map(m => ({
-      name: m.name, projectId: m.projectId || ensuredProjectId,
-    }));
-    if (!mediaRefs.length) throw Object.assign(new Error('startVideoGen returned no media to poll'), { body: startResp });
-    const deadline = Date.now() + timeoutMs;
-    let lastPoll = null;
-    let doneMedia = null;
-    while (Date.now() < deadline && !doneMedia) {
-      await new Promise(r => setTimeout(r, pollIntervalMs));
-      lastPoll = await pollVideoStatus({ accessToken, mediaRefs });
-      const items = Array.isArray(lastPoll && lastPoll.media) ? lastPoll.media : [];
-      const ok = items.find(m => m && m.mediaMetadata && m.mediaMetadata.mediaStatus && m.mediaMetadata.mediaStatus.mediaGenerationStatus === 'MEDIA_GENERATION_STATUS_SUCCESSFUL');
-      const failed = items.find(m => m && m.mediaMetadata && m.mediaMetadata.mediaStatus && /FAILED|ERROR/.test(m.mediaMetadata.mediaStatus.mediaGenerationStatus || ''));
-      if (failed) throw Object.assign(new Error('Video gen FAILED: ' + (failed.mediaMetadata.mediaStatus.mediaGenerationStatus)), { body: failed });
-      if (ok) { doneMedia = ok; break; }
-    }
-    if (!doneMedia) throw Object.assign(new Error('Video gen timed out — last poll: ' + JSON.stringify(lastPoll).slice(0, 600)), { body: lastPoll });
-    return {
-      projectId: ensuredProjectId,
-      elapsedMs: Date.now() - t0,
-      mediaId: doneMedia.name,
-      uploaded: { referenceMediaIds },
-    };
-  }
-  window.FlowClient = { generateImages, startAndPollVideo, getAccessToken, getRecaptchaToken, ensureProject, uploadOne, startVideoGen, pollVideoStatus };
-})();`;
-
-// Logged-in API page (singleton; reused across parallel calls).
-// Recycled if older than API_PAGE_MAX_AGE_MS — recaptcha session state goes stale
-// over long idle periods on a persistent server (not just on idle close), causing
-// 403 PUBLIC_ERROR_UNUSUAL_ACTIVITY or recaptcha-token-expired on later calls.
-const API_PAGE_MAX_AGE_MS = 4 * 60 * 1000;
-let _apiPage = null;
-let _apiPageReadyAt = 0;
-let _apiPagePromise = null;
-
-async function getApiPage() {
-  if (_apiPage) {
-    const stale = Date.now() - _apiPageReadyAt > API_PAGE_MAX_AGE_MS;
-    try {
-      if (!_apiPage.isClosed() && !stale) {
-        const ready = await _apiPage.evaluate(() => typeof window.FlowClient !== 'undefined').catch(() => false);
-        if (ready) return _apiPage;
-      } else if (stale && !_apiPage.isClosed()) {
-        console.log('[FLOW-API] Page stale (>4 phút), tạo page mới để refresh recaptcha session.');
-        await _apiPage.close().catch(() => null);
-      }
-    } catch (_) { /* fall through to recreate */ }
-    _apiPage = null;
-  }
-  if (_apiPagePromise) return _apiPagePromise;
-  _apiPagePromise = (async () => {
-    const browser = await getSharedBrowser();
-    const page = await browser.newPage();
-    page.on('console', (msg) => {
-      const text = msg.text();
-      if (text.startsWith('[FlowVideoAPI]') || text.startsWith('[FlowClient]')) {
-        console.log('[BROWSER-LOG] ' + text);
-      }
-    });
-    // [NET-INTERCEPT] log mọi POST tới batchGenerateImages — verify request body có
-    // structuredPrompt + imageInputs đúng. Listener gắn 1 lần / page; mỗi gen sẽ fire 1+ lần.
-    page.on('request', (req) => {
-      try {
-        const url = req.url();
-        if (url.includes('flowMedia:batchGenerateImages')) {
-          const body = req.postData() || '';
-          let promptInfo = '<not-found>';
-          let imageInputsCount = 0;
-          let model = '<?>';
-          let aspect = '<?>';
-          try {
-            const parsed = JSON.parse(body);
-            const r0 = parsed?.requests?.[0];
-            const t = r0?.structuredPrompt?.parts?.[0]?.text;
-            if (typeof t === 'string') promptInfo = `${t.length} chars HEAD=${JSON.stringify(t.slice(0, 100))}`;
-            imageInputsCount = (r0?.imageInputs || []).length;
-            model = r0?.imageModelName || '<?>';
-            aspect = r0?.imageAspectRatio || '<?>';
-          } catch (_) {}
-          console.log(`[NET-INTERCEPT] batchGenerateImages → model=${model} aspect=${aspect} imageInputs=${imageInputsCount} promptInBody=${promptInfo}`);
-        }
-      } catch (_) {}
-    });
-    console.log('[FLOW-API] Mở page Flow để host FlowClient...');
-    await page.goto(FLOW_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await delay(2500);
-    await dismissConsentDialog(page);
-    await page.waitForFunction(
-      () => window.grecaptcha && window.grecaptcha.enterprise && typeof window.grecaptcha.enterprise.execute === 'function',
-      null,
-      { timeout: 30000 }
-    ).catch((err) => {
-      console.warn(`[FLOW-API] grecaptcha không sẵn sàng trong 30s: ${err.message}`);
-    });
-    await page.evaluate(FLOW_CLIENT_SRC);
-    console.log('[FLOW-API] FlowClient đã inject — sẵn sàng nhận request.');
-    _apiPage = page;
-    _apiPageReadyAt = Date.now();
-    _apiPagePromise = null;
-    return page;
-  })();
-  return _apiPagePromise;
-}
-
-async function fetchAssetToBase64(asset) {
-  const url = (asset && asset.url || '').trim();
-  if (!url) throw new Error(`Asset "${asset && asset.label || 'unknown'}" có URL rỗng.`);
-  if (url.startsWith('data:')) {
-    const m = url.match(/^data:(.*?);base64,(.*)$/);
-    if (!m) throw new Error(`Data URL không hợp lệ: ${asset.label}`);
-    return { base64: m[2], mimeType: m[1] || 'image/png', label: asset.label };
-  }
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Tải asset "${asset.label}" thất bại: ${res.status}`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  return { base64: buf.toString('base64'), mimeType: res.headers.get('content-type') || 'image/png', label: asset.label };
-}
-
-async function downloadFifeUrl(fifeUrl, outputPath) {
-  // Node's native fetch can fail on TLS handshake quirks with lh3.googleusercontent.com.
-  // Retry up to 3 times with exponential backoff before giving up.
-  let lastErr;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const res = await fetch(fifeUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const buf = Buffer.from(await res.arrayBuffer());
-      await fs.writeFile(outputPath, buf);
-      return outputPath;
-    } catch (e) {
-      lastErr = e;
-      if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 500));
-    }
-  }
-  throw new Error(`Tải fifeUrl thất bại sau 3 lần: ${lastErr?.message || lastErr}`);
-}
-
-// =============================================================================
-// HTTP CLIENT MODE (worker proxy)
-// =============================================================================
-// When FLOW_WORKER_URL env is set, runFlowAutomation/runFlowVideoAutomation
-// proxy to the flow-worker microservice via HTTP instead of launching a local
-// browser. This lets the main app (e.g. LandscapeApp on Vercel) be pure HTTP
-// — no Chrome, no Xvfb, no browser process.
-//
-// Worker contract:
-//   POST /gen-image  → { ok, outputs: [{base64, mimeType, sizeBytes}], chatUrl }
-//   POST /gen-video  → { ok, videoBase64, mimeType, sizeBytes, chatUrl }
-//
-// Main app side just gets local temp files via onImageReady/onVideoReady, same
-// as the browser path — so callers (pass2Automation.js, index.js) don't change.
-// =============================================================================
-
-async function _viaWorker(endpoint, body) {
-  const baseUrl = process.env.FLOW_WORKER_URL.replace(/\/$/, '');
-  const headers = { 'Content-Type': 'application/json' };
-  if (process.env.FLOW_WORKER_SECRET) headers['X-Worker-Auth'] = process.env.FLOW_WORKER_SECRET;
-  const res = await fetch(`${baseUrl}${endpoint}`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(15 * 60 * 1000), // 15 min — accommodate slow video gen
-  });
-  const json = await res.json().catch(() => null);
-  if (!res.ok || !json?.ok) {
-    throw Object.assign(new Error(`flow-worker ${endpoint} failed: ${json?.error || res.status}`), {
-      status: res.status, body: json,
-    });
-  }
-  return json;
-}
-
-async function _runFlowAutomationViaWorker({ prompt, assets, onImageReady, flowConfig }) {
-  const tempDir = path.join(os.tmpdir(), `landscape-flow-worker-${Date.now()}`);
-  await ensureDirectory(tempDir);
-  const t0 = Date.now();
-  console.log(`[FLOW-WORKER] gen-image qua worker ${process.env.FLOW_WORKER_URL}...`);
-  const json = await _viaWorker('/gen-image', { prompt, assets, flowConfig });
-  console.log(`[FLOW-WORKER] worker trả ${json.outputCount} ảnh sau ${json.elapsedMs}ms.`);
-  const outputPaths = [];
-  for (let i = 0; i < (json.outputs || []).length; i++) {
-    const o = json.outputs[i];
-    if (!o?.base64) continue;
-    const outputPath = path.join(tempDir, `flow_result_${Date.now()}_${i}.png`);
-    await fs.writeFile(outputPath, Buffer.from(o.base64, 'base64'));
-    outputPaths.push(outputPath);
-    if (typeof onImageReady === 'function') await onImageReady(outputPath);
-  }
-  console.log(`[FLOW-WORKER] hoàn tất ${outputPaths.length} ảnh sau ${((Date.now() - t0) / 1000).toFixed(1)}s.`);
-  return { outputPaths, chatUrl: json.chatUrl };
-}
-
-async function _runFlowVideoAutomationViaWorker({ prompt, imageUrl, onVideoReady, flowConfig }) {
-  const tempDir = path.join(os.tmpdir(), `landscape-flow-worker-video-${Date.now()}`);
-  await ensureDirectory(tempDir);
-  const t0 = Date.now();
-  console.log(`[FLOW-WORKER] gen-video qua worker ${process.env.FLOW_WORKER_URL}...`);
-  const json = await _viaWorker('/gen-video', { prompt, imageUrl, flowConfig });
-  if (!json.videoBase64) throw new Error('worker không trả videoBase64');
-  const outputPath = path.join(tempDir, `flow_video_${Date.now()}.mp4`);
-  await fs.writeFile(outputPath, Buffer.from(json.videoBase64, 'base64'));
-  console.log(`[FLOW-WORKER] video ${(json.sizeBytes / 1024 / 1024).toFixed(2)} MB sau ${((Date.now() - t0) / 1000).toFixed(1)}s.`);
-  if (typeof onVideoReady === 'function') await onVideoReady(outputPath);
-  return { videoPath: outputPath, chatUrl: json.chatUrl };
-}
-
-// =============================================================================
-// HYBRID PIPELINE: token-grab via page + requests via context.request
-// =============================================================================
-// Page chỉ sống ~2s đầu để lấy access_token + N recaptcha tokens + projectId.
-// Sau đó toàn bộ uploadImage + batchGenerateImages fire server-side qua
-// page.context().request — page chết cũng không sao vì requests độc lập.
-// Trade-off: cần grecaptcha tokens hợp lệ trong ~2 phút (TTL Google) cho mọi
-// gen request finish; gen ~60-80s nên OK.
-// =============================================================================
-async function generateImagesViaContextRequest({ page, prompt, count, aspectRatio, validAssets, t0 }) {
-  const RECAPTCHA_SITE_KEY = '6LdsFiUsAAAAAIjVDZcuLhaHiDn5nnHVXVRQGeMV';
-  const GEN_HOST = 'https://aisandbox-pa.googleapis.com';
-  const ASPECT_MAP = {
-    '16:9': 'IMAGE_ASPECT_RATIO_LANDSCAPE',
-    '4:3': 'IMAGE_ASPECT_RATIO_LANDSCAPE_FOUR_THREE',
-    '9:16': 'IMAGE_ASPECT_RATIO_PORTRAIT',
-    '3:4': 'IMAGE_ASPECT_RATIO_PORTRAIT_THREE_FOUR',
-    '1:1': 'IMAGE_ASPECT_RATIO_SQUARE',
-    LANDSCAPE: 'IMAGE_ASPECT_RATIO_LANDSCAPE',
-    PORTRAIT: 'IMAGE_ASPECT_RATIO_PORTRAIT',
-    SQUARE: 'IMAGE_ASPECT_RATIO_SQUARE',
-  };
-
-  // STEP 1: page.evaluate ngắn (~2s) để lấy 3 thứ trong cùng 1 round-trip:
-  // - access_token (auth Bearer cho aisandbox-pa)
-  // - projectId (createProject nếu URL chưa có)
-  // - N recaptcha tokens (mỗi gen request cần 1 token riêng)
-  const tokenStart = Date.now();
-  const tokens = await page.evaluate(async ({ siteKey, recaptchaCount }) => {
-    const session = await fetch('/fx/api/auth/session', { credentials: 'include' }).then(r => r.json()).catch(() => null);
-    if (!session || !session.access_token) throw new Error('Flow session chưa đăng nhập (no access_token).');
-
-    let projectId = null;
-    const m = location.pathname.match(/project\/([a-f0-9-]+)/);
-    if (m && m[1]) projectId = m[1];
-    if (!projectId) {
-      const title = 'landscape-' + new Date().toISOString().slice(0, 19);
-      const res = await fetch('/fx/api/trpc/project.createProject', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ json: { projectTitle: title, toolName: 'PINHOLE' } }),
-      });
-      const json = await res.json().catch(() => null);
-      projectId = json && json.result && json.result.data && json.result.data.json && json.result.data.json.result && json.result.data.json.result.projectId;
-      if (!projectId) throw new Error('createProject failed: ' + JSON.stringify(json).slice(0, 300));
-    }
-
-    const ge = window.grecaptcha && window.grecaptcha.enterprise;
-    if (!ge || typeof ge.execute !== 'function') throw new Error('grecaptcha.enterprise chưa load');
-    const recaptchaTokens = [];
-    for (let i = 0; i < recaptchaCount; i++) {
-      recaptchaTokens.push(await ge.execute(siteKey, { action: 'IMAGE_GENERATION' }));
-    }
-
-    return { access_token: session.access_token, projectId, recaptchaTokens };
-  }, { siteKey: RECAPTCHA_SITE_KEY, recaptchaCount: count });
-
-  console.log(`[FLOW-API-CTXREQ] Lấy token + projectId=${tokens.projectId} + ${tokens.recaptchaTokens.length} recaptcha tokens trong ${Date.now() - tokenStart}ms (page evaluate ngắn).`);
-
-  const ctx = page.context();
-  const auth = `Bearer ${tokens.access_token}`;
-
-  // STEP 2: Upload assets parallel server-side qua context.request.
-  let baseImageId = null;
-  let refImageIds = [];
-  let workflowId = null;
-  if (validAssets.length > 0) {
-    const uploads = await Promise.allSettled(validAssets.map(async (a) => {
-      const body = { clientContext: { projectId: tokens.projectId, tool: 'PINHOLE' }, imageBytes: a.base64 };
-      const res = await ctx.request.post(GEN_HOST + '/v1/flow/uploadImage', {
-        headers: { Authorization: auth, 'Content-Type': 'text/plain;charset=UTF-8' },
-        data: JSON.stringify(body),
-        timeout: 60000,
-      });
-      if (!res.ok()) {
-        const text = await res.text().catch(() => '');
-        throw Object.assign(new Error('upload failed: ' + res.status() + ' ' + text.slice(0, 200)), { status: res.status() });
-      }
-      const json = await res.json().catch(() => null);
-      const name = json && json.media && json.media.name;
-      if (!name) throw new Error('upload response missing media.name');
-      return { mediaId: name, workflowId: json.media.workflowId };
-    }));
-    const ok = uploads.filter(u => u.status === 'fulfilled' && u.value && u.value.mediaId);
-    if (ok.length === 0) {
-      const failed = uploads.find(u => u.status === 'rejected');
-      throw new Error('All asset uploads failed: ' + ((failed && failed.reason && failed.reason.message) || 'unknown'));
-    }
-    baseImageId = ok[0].value.mediaId;
-    refImageIds = ok.slice(1).map(u => u.value.mediaId);
-    workflowId = ok.find(u => u.value.workflowId)?.value?.workflowId || null;
-  }
-
-  // STEP 3: Fire batchGenerateImages × N parallel server-side. Mỗi request 1
-  // recaptcha token đã pre-fetched. Body shape giống FLOW_CLIENT_SRC.
-  const { randomUUID } = require('crypto');
-  const batchId = (typeof randomUUID === 'function' ? randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
-  const sessionId = ';' + Date.now();
-
-  const tasks = tokens.recaptchaTokens.map(async (recaptchaToken, idx) => {
-    const recaptchaContext = { token: recaptchaToken, applicationType: 'RECAPTCHA_APPLICATION_TYPE_WEB' };
-    const imageInputs = [];
-    if (baseImageId) imageInputs.push({ imageInputType: 'IMAGE_INPUT_TYPE_BASE_IMAGE', name: baseImageId });
-    for (const id of refImageIds) imageInputs.push({ imageInputType: 'IMAGE_INPUT_TYPE_REFERENCE', name: id });
-    const clientContext = { recaptchaContext, projectId: tokens.projectId, tool: 'PINHOLE', sessionId };
-    if (workflowId) clientContext.workflowId = workflowId;
-
-    const body = {
-      clientContext,
-      mediaGenerationContext: { batchId },
-      useNewMedia: true,
-      requests: [{
-        clientContext,
-        imageModelName: 'NARWHAL',
-        imageAspectRatio: ASPECT_MAP[aspectRatio] || ASPECT_MAP.LANDSCAPE,
-        structuredPrompt: { parts: [{ text: prompt }] },
-        seed: Math.floor(Math.random() * 999999),
-        imageInputs,
-      }],
-    };
-
-    console.log(`[NET-INTERCEPT-CTXREQ] gen[${idx + 1}/${count}] → model=NARWHAL aspect=${ASPECT_MAP[aspectRatio] || ASPECT_MAP.LANDSCAPE} imageInputs=${imageInputs.length} promptLen=${prompt.length}`);
-
-    const res = await ctx.request.post(`${GEN_HOST}/v1/projects/${tokens.projectId}/flowMedia:batchGenerateImages`, {
-      headers: { Authorization: auth, 'Content-Type': 'text/plain;charset=UTF-8' },
-      data: JSON.stringify(body),
-      timeout: 180000, // 3 phút
-    });
-    if (!res.ok()) {
-      const txt = await res.text().catch(() => '');
-      let parsedBody = null;
-      try { parsedBody = JSON.parse(txt); } catch (_) {}
-      throw Object.assign(new Error('gen failed: ' + (parsedBody?.error?.message || res.status())), { status: res.status(), body: parsedBody });
-    }
-    const json = await res.json().catch(() => null);
-    const m = json && json.media && json.media[0];
-    if (!m) throw Object.assign(new Error('gen returned no media'), { body: json });
-    return {
-      mediaId: m.name,
-      workflowId: m.workflowId,
-      fifeUrl: m.image && m.image.generatedImage && m.image.generatedImage.fifeUrl,
-      width: m.image && m.image.dimensions && m.image.dimensions.width,
-      height: m.image && m.image.dimensions && m.image.dimensions.height,
-      seed: m.image && m.image.generatedImage && m.image.generatedImage.seed,
-    };
-  });
-
-  const settled = await Promise.allSettled(tasks);
-  const images = settled.filter(s => s.status === 'fulfilled').map(s => s.value);
-  const errors = settled.filter(s => s.status === 'rejected').map(s => ({
-    message: s.reason && s.reason.message,
-    status: s.reason && s.reason.status,
-    body: s.reason && s.reason.body,
-  }));
-
-  return {
-    projectId: tokens.projectId,
-    elapsedMs: Date.now() - t0,
-    requested: count,
-    received: images.length,
-    images,
-    errors,
-    uploaded: { baseImageId, refImageIds },
-  };
-}
-
 async function runFlowAutomation({ prompt, assets, onImageReady, variantCount, flowConfig }) {
-  if (process.env.FLOW_WORKER_URL) {
-    return _runFlowAutomationViaWorker({
-      prompt, assets, onImageReady,
-      flowConfig: flowConfig || (typeof variantCount === 'number' ? { variantCount } : undefined),
-    });
-  }
-  return _runFlowAutomationLocal({ prompt, assets, onImageReady, variantCount, flowConfig });
-}
-
-async function _runFlowAutomationLocal({ prompt, assets, onImageReady, variantCount, flowConfig }) {
-  const config = flowConfig && typeof flowConfig === 'object'
-    ? flowConfig
-    : { variantCount: typeof variantCount === 'number' ? variantCount : 4 };
-  const requestedCount = [1, 2, 3, 4].includes(config.variantCount) ? config.variantCount : 4;
-  // Render Free 512MB: gen >2 variants song song = OOM mid-stream → kill container.
-  // FLOW_MAX_VARIANTS env (set ở render.yaml) cap số ảnh worker sẵn sàng gen.
-  const maxVariants = parseInt(process.env.FLOW_MAX_VARIANTS || '4', 10);
-  const expectCount = Math.min(requestedCount, [1, 2, 3, 4].includes(maxVariants) ? maxVariants : 4);
-  const aspect = config.aspectRatio || '16:9';
-
   const tempDir = path.join(os.tmpdir(), `landscape-flow-${Date.now()}`);
   await ensureDirectory(tempDir);
 
-  _activeTabCount++;
-  if (_idleTimer) clearTimeout(_idleTimer);
+  // Nếu caller truyền flowConfig (mới) — dùng object đó. Nếu truyền variantCount (cũ) — wrap thành object.
+  const config = flowConfig && typeof flowConfig === 'object'
+    ? flowConfig
+    : { variantCount: typeof variantCount === 'number' ? variantCount : 4 };
+  const expectCount = [1, 2, 3, 4].includes(config.variantCount) ? config.variantCount : 4;
 
-  const t0 = Date.now();
-  // [VERIFY-PROMPT] dump tab.id + prompt head/tail/length để theo dõi runtime tab→prompt mapping.
-  const _tabIdHint = config && config._tabId ? config._tabId : '<unset>';
-  const _promptStr = typeof prompt === 'string' ? prompt : '';
-  console.log(`[VERIFY-PROMPT] tab=${_tabIdHint} expectCount=${expectCount} aspect=${aspect} promptLen=${_promptStr.length} HEAD=${JSON.stringify(_promptStr.slice(0, 200))} TAIL=${JSON.stringify(_promptStr.slice(-100))}`);
-  console.log(`[FLOW-API] Bắt đầu sinh ${expectCount} ảnh (aspect=${aspect}, assets=${(assets || []).length})...`);
+  const inputFiles = [];
 
   try {
-    // 1. Pull assets server-side (parallel) — avoids piping huge base64 strings via page.evaluate.
-    const assetPayloads = await Promise.all(
-      (assets || []).map((asset) => fetchAssetToBase64(asset).catch((err) => {
-        console.warn(`[FLOW-API] Bỏ qua asset "${asset && asset.label}": ${err.message}`);
-        return null;
-      }))
-    );
-    const validAssets = assetPayloads.filter(Boolean);
-    if ((assets || []).length > 0 && validAssets.length === 0) {
-      throw new Error('Không tải được asset nào — abort.');
+    for (let index = 0; index < assets.length; index += 1) {
+      inputFiles.push(await downloadAssetToFile(assets[index], tempDir, index));
     }
 
-    // 2. Open the shared API page (logged-in, FlowClient injected).
-    const page = await getApiPage();
+    const browser = await getSharedBrowser();
+    const page = await browser.newPage();
+    _activeTabCount++;
 
-    // 3. NEW PIPELINE: chỉ dùng page để lấy token NGẮN (~2s). Sau đó tất cả
-    // upload + gen request fire server-side qua page.context().request.
-    // Page có chết giữa chừng (Google reCAPTCHA challenge / navigate) cũng KHÔNG
-    // ảnh hưởng vì các fetch không phụ thuộc page nữa.
-    const result = await generateImagesViaContextRequest({
-      page,
-      prompt,
-      count: expectCount,
-      aspectRatio: aspect,
-      validAssets,
-      t0,
+    if (_idleTimer) clearTimeout(_idleTimer);
+
+    console.log(`[AUTO-FLOW] Mở tab mới cho Flow (đang có ${_activeTabCount} tab hoạt động)...`);
+
+    const stopWatcher = startDialogWatcher(page, 'image');
+    try {
+      const { outputPaths, chatUrl } = await runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady, config);
+      console.log(`[AUTO-FLOW] Hoàn tất. Lấy được ${outputPaths.length}/${expectCount} ảnh.`);
+      return { outputPaths, chatUrl };
+    } finally {
+      stopWatcher();
+      _activeTabCount = Math.max(0, _activeTabCount - 1);
+      console.log(`[AUTO-FLOW] Tab đã xong, còn ${_activeTabCount} tab hoạt động.`);
+      // page.close() đã được gọi trong runFlowVariantV2
+      scheduleIdleClose();
+    }
+  } finally {
+    await Promise.all(inputFiles.map(file => fs.unlink(file.filePath).catch(() => null)));
+  }
+}
+
+// ===== VIDEO AUTOMATION =====
+async function runFlowVideoAutomation({ prompt, imageUrl, onVideoReady, flowConfig }) {
+  const tempDir = path.join(os.tmpdir(), `landscape-flow-video-${Date.now()}`);
+  await ensureDirectory(tempDir);
+
+  const config = flowConfig && typeof flowConfig === 'object' ? flowConfig : {};
+
+  const inputFiles = [];
+
+  try {
+    // Download reference image
+    if (imageUrl) {
+      inputFiles.push(await downloadAssetToFile({ url: imageUrl, label: 'reference' }, tempDir, 0));
+    }
+
+    const browser = await getSharedBrowser();
+    const page = await browser.newPage();
+    _activeTabCount++;
+
+    if (_idleTimer) clearTimeout(_idleTimer);
+
+    console.log(`[AUTO-VIDEO] Mở tab mới cho Flow Video (đang có ${_activeTabCount} tab hoạt động)...`);
+
+    const stopWatcher = startDialogWatcher(page, 'video');
+    try {
+      const result = await runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideoReady, config);
+      console.log(`[AUTO-VIDEO] Hoàn tất. Video: ${result.videoPath ? 'OK' : 'KHÔNG CÓ'}`);
+      return result;
+    } finally {
+      stopWatcher();
+      _activeTabCount = Math.max(0, _activeTabCount - 1);
+      console.log(`[AUTO-VIDEO] Tab đã xong, còn ${_activeTabCount} tab hoạt động.`);
+      scheduleIdleClose();
+    }
+  } finally {
+    await Promise.all(inputFiles.map(file => fs.unlink(file.filePath).catch(() => null)));
+  }
+}
+
+async function runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideoReady, flowConfig = {}) {
+  let videoPath = null;
+  let chatUrl = 'https://labs.google/fx/vi/tools/flow';
+  const variantCount = [1, 2, 3, 4].includes(flowConfig.variantCount) ? flowConfig.variantCount : 1;
+  const aspectRatio = ['16:9', '4:3', '1:1', '3:4', '9:16'].includes(flowConfig.aspectRatio) ? flowConfig.aspectRatio : '16:9';
+  const variantLabel = `x${variantCount}`;
+  const aspectRegex = new RegExp(aspectRatio.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$');
+
+  try {
+    console.log('[FlowVideo] Truy cập trang chủ Flow...');
+    await page.goto('https://labs.google/fx/vi/tools/flow', { waitUntil: 'domcontentloaded' });
+    await delay(3000);
+    await dismissConsentDialog(page);
+
+    // Bỏ qua lỗi & tạo dự án mới
+    try {
+      const errorBackBtn = page.locator('button:has-text("Quay lại dự án"), button:has-text("Quay lai du an")');
+      if (await errorBackBtn.count() > 0) {
+        await errorBackBtn.first().click();
+        await delay(2000);
+      }
+      const newProjBtn = page.locator('button, div').filter({ hasText: /Dự án mới|Du an moi/i }).last();
+      if (await newProjBtn.count() > 0 && await newProjBtn.isVisible()) {
+        await newProjBtn.click();
+        await delay(3000);
+        await dismissConsentDialog(page);
+      }
+    } catch (e) {
+      console.log(`[FlowVideo] Bỏ qua bước tạo dự án mới: ${e.message}`);
+    }
+
+    chatUrl = page.url();
+
+    // === CẤU HÌNH: Video + aspectRatio + variantLabel ===
+    console.log(`[FlowVideo] Cấu hình chế độ Video + ${aspectRatio} + ${variantLabel}...`);
+    try {
+      const configBtn = page.locator('button').filter({ hasText: /Video.*x|Hình ảnh.*x|Nano.*x|crop/ }).first();
+      if (await configBtn.count() > 0) {
+        await configBtn.click();
+        await delay(1500);
+
+        // Click tab Video
+        const videoTab = page.locator('button.flow_tab_slider_trigger').filter({ hasText: /videocamVideo/ }).first();
+        if (await videoTab.count() > 0) {
+          const isSelected = await videoTab.getAttribute('aria-selected');
+          if (isSelected !== 'true') {
+            await videoTab.click();
+            await delay(1000);
+            console.log('[FlowVideo] Đã chuyển sang tab Video.');
+          } else {
+            console.log('[FlowVideo] Đã đang ở tab Video.');
+          }
+        }
+
+        // Chọn tab "Thành phần" (không phải Khung hình)
+        const thanhPhanTab = page.locator('button.flow_tab_slider_trigger').filter({ hasText: /chrome_extensionThành phần/ }).first();
+        if (await thanhPhanTab.count() > 0) {
+          const isSelected = await thanhPhanTab.getAttribute('aria-selected');
+          if (isSelected !== 'true') {
+            await thanhPhanTab.click();
+            await delay(800);
+            console.log('[FlowVideo] Đã chọn chế độ Thành phần.');
+          } else {
+            console.log('[FlowVideo] Đã đang ở chế độ Thành phần.');
+          }
+        }
+
+        // Chọn aspect ratio (16:9 / 4:3 / 1:1 / 3:4 / 9:16)
+        const aspectBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: aspectRegex }).first();
+        if (await aspectBtn.count() > 0) {
+          const isSelected = await aspectBtn.getAttribute('aria-selected');
+          if (isSelected !== 'true') {
+            await aspectBtn.click();
+            await delay(500);
+            console.log(`[FlowVideo] Đã chọn ${aspectRatio}.`);
+          }
+        }
+
+        // Chọn variant count (1x/x2/x3/x4)
+        // Google Flow UI: variant 1 hiển thị "1x" (đảo thứ tự), 2-4 hiển thị "x2"/"x3"/"x4".
+        const variantRegex = new RegExp(`^(${variantLabel}|${variantCount}x)$`);
+        const x1Btn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: variantRegex }).first();
+        if (await x1Btn.count() > 0) {
+          const isSelected = await x1Btn.getAttribute('aria-selected');
+          if (isSelected !== 'true') {
+            await x1Btn.click();
+            await delay(500);
+            console.log(`[FlowVideo] Đã chọn ${variantLabel}.`);
+          }
+        } else {
+          console.log(`[FlowVideo] Không tìm thấy nút variant ${variantLabel}/${variantCount}x.`);
+        }
+
+        // Đóng config panel bằng click lại config button (toggle)
+        await configBtn.click();
+        await delay(800);
+        console.log('[FlowVideo] Đã đóng config panel.');
+      }
+    } catch (e) {
+      console.log(`[FlowVideo] Lỗi cấu hình: ${e.message}`);
+    }
+
+    const promptBox = page.locator('div[role="textbox"][contenteditable="true"]').first();
+
+    // === BƯỚC 4: Upload ảnh reference (nếu có) ===
+    if (inputFiles.length > 0) {
+      console.log('[FlowVideo] Dán ảnh reference vào Flow...');
+      const clipboardFiles = await buildClipboardPayload(inputFiles);
+      await pasteAssetsIntoPrompt(page, clipboardFiles);
+      await waitForPromptAssetsReady(page, inputFiles.length);
+      await delay(1000);
+    }
+
+    // === BƯỚC 5: Nhập prompt ===
+    console.log('[FlowVideo] Nhập prompt video...');
+    await fillPromptBox(promptBox, prompt);
+    await delay(1000);
+
+    // Đảm bảo sẵn sàng gửi
+    await waitForComposerReadyToSubmit(page, inputFiles.length, prompt);
+
+    // Ghi nhớ các video/element cũ
+    const existingVideos = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('video')).map(v => v.src || v.currentSrc || '');
     });
+    console.log(`[FlowVideo] Đã ghi nhớ ${existingVideos.length} video cũ trên trang.`);
 
-    const chatUrl = result && result.projectId ? `${FLOW_URL}/project/${result.projectId}` : FLOW_URL;
-    console.log(`[FLOW-API] API trả về ${result.received}/${result.requested} ảnh trong ${result.elapsedMs}ms (uploaded base=${!!result.uploaded?.baseImageId} refs=${result.uploaded?.refImageIds?.length || 0}).`);
-    if (result.errors && result.errors.length) {
-      console.warn(`[FLOW-API] ${result.errors.length} request lỗi:`, JSON.stringify(result.errors).slice(0, 800));
+    // === BƯỚC 6: Bấm Tạo ===
+    console.log('[FlowVideo] Bấm nút Tạo...');
+    const sendBtn = page.locator('button:has-text("arrow_forward"), button[aria-label*="Gửi"], button[aria-label*="Tạo"]').first();
+    if (await sendBtn.count() > 0 && await sendBtn.isVisible()) {
+      await sendBtn.click();
+    } else {
+      await page.keyboard.press('Enter');
     }
 
-    // 4. Download fifeUrls → temp files (sequential to feed onImageReady in order).
-    const outputPaths = [];
-    for (let i = 0; i < (result.images || []).length; i++) {
-      const img = result.images[i];
-      if (!img || !img.fifeUrl) continue;
-      const outputPath = path.join(tempDir, `flow_result_${Date.now()}_${i}.png`);
+    // === BƯỚC 7: Chờ video sinh ra HOÀN TẤT (timeout 10 phút) ===
+    console.log('[FlowVideo] Đang chờ Google Flow sinh video... (có thể mất 3-10 phút)');
+    try {
+      // Chờ video xuất hiện với src chứa 'media.getMediaUrlRedirect' (dấu hiệu video đã render xong)
+      await page.waitForFunction((oldVideos) => {
+        const videos = Array.from(document.querySelectorAll('video'));
+        const ready = videos.filter(v => {
+          const src = v.src || v.currentSrc || '';
+          // Video mới, có URL API Flow, và đã load metadata (readyState >= 1)
+          return src
+            && !oldVideos.includes(src)
+            && src.includes('media.getMediaUrlRedirect');
+        });
+        return ready.length >= 1;
+      }, existingVideos, { timeout: 600000 });
+      console.log('[FlowVideo] ✅ Video URL đã xuất hiện!');
+    } catch (e) {
+      console.log(`[FlowVideo] Hết thời gian chờ video: ${e.message}`);
+    }
+
+    await delay(5000); // Chờ thêm để URL ổn định
+
+    // === BƯỚC 8: Tải video ===
+    console.log('[FlowVideo] Tìm và tải video kết quả...');
+    const newVideosInDom = await page.evaluate((oldVideos) => {
+      const videos = Array.from(document.querySelectorAll('video'));
+      return videos.filter(v => {
+        const src = v.src || v.currentSrc || '';
+        return src && !oldVideos.includes(src) && src.includes('media.getMediaUrlRedirect');
+      }).map(v => ({
+        src: v.src || v.currentSrc || '',
+        poster: v.poster || '',
+        width: v.offsetWidth,
+        height: v.offsetHeight
+      }));
+    }, existingVideos);
+
+    console.log(`[FlowVideo] Tìm thấy ${newVideosInDom.length} video mới.`);
+
+    if (newVideosInDom.length > 0) {
+      const video = newVideosInDom[0];
+      const outputPath = path.join(tempDir, `flow_video_${Date.now()}.mp4`);
+
       try {
-        await downloadFifeUrl(img.fifeUrl, outputPath);
-        outputPaths.push(outputPath);
-        console.log(`[FLOW-API] Đã tải ảnh ${i + 1}/${result.received} → ${path.basename(outputPath)} (${img.width}x${img.height})`);
-        if (typeof onImageReady === 'function') {
-          await onImageReady(outputPath);
+        if (video.src.startsWith('blob:')) {
+          // Tải blob video
+          const base64Data = await page.evaluate(async (blobUrl) => {
+            const response = await fetch(blobUrl);
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.readAsDataURL(blob);
+            });
+          }, video.src);
+          const content = String(base64Data).split('base64,')[1];
+          await fs.writeFile(outputPath, Buffer.from(content, 'base64'));
+        } else {
+          // Tải URL trực tiếp
+          const arrayBuffer = await page.evaluate(async (url) => {
+            const response = await fetch(url);
+            const buffer = await response.arrayBuffer();
+            return Array.from(new Uint8Array(buffer));
+          }, video.src);
+          await fs.writeFile(outputPath, Buffer.from(arrayBuffer));
+        }
+
+        videoPath = outputPath;
+        console.log(`[FlowVideo] Đã tải xong video: ${outputPath}`);
+
+        if (typeof onVideoReady === 'function') {
+          await onVideoReady(outputPath);
         }
       } catch (e) {
-        console.warn(`[FLOW-API] Lỗi tải ảnh ${i}: ${e.message}`);
+        console.log(`[FlowVideo] Lỗi tải video: ${e.message}`);
       }
     }
 
-    console.log(`[FLOW-API] Hoàn tất ${outputPaths.length}/${expectCount} ảnh sau ${((Date.now() - t0) / 1000).toFixed(1)}s.`);
-    return { outputPaths, chatUrl };
-  } finally {
-    _activeTabCount = Math.max(0, _activeTabCount - 1);
-    scheduleIdleClose();
-  }
-}
-
-// ===== VIDEO AUTOMATION (API-direct) =====
-// API-direct: start + poll via aisandbox-pa, then download via media.getMediaUrlRedirect.
-// See FLOW_CLIENT_SRC for the in-page client (startVideoGen / pollVideoStatus).
-async function runFlowVideoAutomation({ prompt, imageUrl, onVideoReady, flowConfig }) {
-  if (process.env.FLOW_WORKER_URL) {
-    return _runFlowVideoAutomationViaWorker({ prompt, imageUrl, onVideoReady, flowConfig });
-  }
-  const tempDir = path.join(os.tmpdir(), `landscape-flow-video-${Date.now()}`);
-  await ensureDirectory(tempDir);
-  const config = flowConfig && typeof flowConfig === 'object' ? flowConfig : {};
-  return runFlowVideoApiPath({ prompt, imageUrl, onVideoReady, flowConfig: config, tempDir });
-}
-
-async function runFlowVideoApiPath({ prompt, imageUrl, onVideoReady, flowConfig, tempDir }) {
-  if (!imageUrl) throw new Error('imageUrl is required for video gen');
-  _activeTabCount++;
-  if (_idleTimer) clearTimeout(_idleTimer);
-  const t0 = Date.now();
-  const aspect = flowConfig.aspectRatio || '16:9';
-  const videoModelKey = flowConfig.videoModelKey || null;
-  console.log(`[AUTO-VIDEO-API] Bắt đầu sinh video (aspect=${aspect}, model=${videoModelKey || '<default>'})...`);
-  try {
-    const refAsset = await fetchAssetToBase64({ url: imageUrl, label: 'reference' });
-    const page = await getApiPage();
-
-    // Phase 1 — start gen + poll until success (pure API, no UI).
-    const startResult = await page.evaluate(
-      ({ prompt, aspectRatio, referenceImageBase64s, videoModelKey }) =>
-        window.FlowClient.startAndPollVideo({ prompt, aspectRatio, referenceImageBase64s, videoModelKey }),
-      { prompt, aspectRatio: aspect, referenceImageBase64s: [refAsset.base64], videoModelKey }
-    );
-    if (!startResult || !startResult.mediaId) throw new Error('startAndPollVideo không trả về mediaId');
-    console.log(`[AUTO-VIDEO-API] Polling xong sau ${((Date.now() - t0) / 1000).toFixed(1)}s. Tải video...`);
-
-    // Phase 2 — construct the video URL directly. The endpoint is a plain REST handler
-    // (NOT tRPC despite the path), accepting `?name=<mediaId>` as a query param and
-    // returning a 302 redirect to the actual video bytes.
-    const projectUrl = `${FLOW_URL}/project/${startResult.projectId}`;
-    const videoUrl = `https://labs.google/fx/api/trpc/media.getMediaUrlRedirect?name=${encodeURIComponent(startResult.mediaId)}`;
-
-    // Phase 3 — download via context.request so session cookies are inherited.
-    const outputPath = path.join(tempDir, `flow_video_${Date.now()}.mp4`);
-    const ctx = page.context();
-    const dl = await ctx.request.get(videoUrl, { timeout: 60000 });
-    if (!dl.ok()) throw new Error(`Download video thất bại: ${dl.status()} ${dl.statusText()}`);
-    const buf = await dl.body();
-    await fs.writeFile(outputPath, buf);
-    console.log(`[AUTO-VIDEO-API] ✅ Video xuất ra ${path.basename(outputPath)} (${(buf.length / 1024 / 1024).toFixed(2)} MB) sau ${((Date.now() - t0) / 1000).toFixed(1)}s.`);
-    if (typeof onVideoReady === 'function') await onVideoReady(outputPath);
-    return { videoPath: outputPath, chatUrl: projectUrl };
-  } finally {
-    _activeTabCount = Math.max(0, _activeTabCount - 1);
-    scheduleIdleClose();
-  }
-}
-
-
-// Pre-warm Chrome trước khi nhận request thật — giảm latency lần đầu trên
-// Render. Worker entrypoint gọi hàm này sau khi Express listen.
-async function prewarmBrowser() {
-  try {
-    await getSharedBrowser();
-    console.log('[BROWSER] Pre-warmed.');
-  } catch (e) {
-    console.warn('[BROWSER] Pre-warm failed:', e.message);
+    await page.close().catch(() => null);
+    return { videoPath, chatUrl };
+  } catch (error) {
+    console.error('[FlowVideo] Lỗi nghiêm trọng:', error);
+    await page.close().catch(() => null);
+    return { videoPath, chatUrl };
   }
 }
 
 module.exports = {
   runFlowAutomation,
-  runFlowVideoAutomation,
-  prewarmBrowser
+  runFlowVideoAutomation
 };
