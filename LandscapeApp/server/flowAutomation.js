@@ -656,6 +656,173 @@ async function _runFlowVideoAutomationViaWorker({ prompt, imageUrl, onVideoReady
   return { videoPath: outputPath, chatUrl: json.chatUrl };
 }
 
+// =============================================================================
+// HYBRID PIPELINE: token-grab via page + requests via context.request
+// =============================================================================
+// Page chỉ sống ~2s đầu để lấy access_token + N recaptcha tokens + projectId.
+// Sau đó toàn bộ uploadImage + batchGenerateImages fire server-side qua
+// page.context().request — page chết cũng không sao vì requests độc lập.
+// Trade-off: cần grecaptcha tokens hợp lệ trong ~2 phút (TTL Google) cho mọi
+// gen request finish; gen ~60-80s nên OK.
+// =============================================================================
+async function generateImagesViaContextRequest({ page, prompt, count, aspectRatio, validAssets, t0 }) {
+  const RECAPTCHA_SITE_KEY = '6LdsFiUsAAAAAIjVDZcuLhaHiDn5nnHVXVRQGeMV';
+  const GEN_HOST = 'https://aisandbox-pa.googleapis.com';
+  const ASPECT_MAP = {
+    '16:9': 'IMAGE_ASPECT_RATIO_LANDSCAPE',
+    '4:3': 'IMAGE_ASPECT_RATIO_LANDSCAPE_FOUR_THREE',
+    '9:16': 'IMAGE_ASPECT_RATIO_PORTRAIT',
+    '3:4': 'IMAGE_ASPECT_RATIO_PORTRAIT_THREE_FOUR',
+    '1:1': 'IMAGE_ASPECT_RATIO_SQUARE',
+    LANDSCAPE: 'IMAGE_ASPECT_RATIO_LANDSCAPE',
+    PORTRAIT: 'IMAGE_ASPECT_RATIO_PORTRAIT',
+    SQUARE: 'IMAGE_ASPECT_RATIO_SQUARE',
+  };
+
+  // STEP 1: page.evaluate ngắn (~2s) để lấy 3 thứ trong cùng 1 round-trip:
+  // - access_token (auth Bearer cho aisandbox-pa)
+  // - projectId (createProject nếu URL chưa có)
+  // - N recaptcha tokens (mỗi gen request cần 1 token riêng)
+  const tokenStart = Date.now();
+  const tokens = await page.evaluate(async ({ siteKey, recaptchaCount }) => {
+    const session = await fetch('/fx/api/auth/session', { credentials: 'include' }).then(r => r.json()).catch(() => null);
+    if (!session || !session.access_token) throw new Error('Flow session chưa đăng nhập (no access_token).');
+
+    let projectId = null;
+    const m = location.pathname.match(/project\/([a-f0-9-]+)/);
+    if (m && m[1]) projectId = m[1];
+    if (!projectId) {
+      const title = 'landscape-' + new Date().toISOString().slice(0, 19);
+      const res = await fetch('/fx/api/trpc/project.createProject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ json: { projectTitle: title, toolName: 'PINHOLE' } }),
+      });
+      const json = await res.json().catch(() => null);
+      projectId = json && json.result && json.result.data && json.result.data.json && json.result.data.json.result && json.result.data.json.result.projectId;
+      if (!projectId) throw new Error('createProject failed: ' + JSON.stringify(json).slice(0, 300));
+    }
+
+    const ge = window.grecaptcha && window.grecaptcha.enterprise;
+    if (!ge || typeof ge.execute !== 'function') throw new Error('grecaptcha.enterprise chưa load');
+    const recaptchaTokens = [];
+    for (let i = 0; i < recaptchaCount; i++) {
+      recaptchaTokens.push(await ge.execute(siteKey, { action: 'IMAGE_GENERATION' }));
+    }
+
+    return { access_token: session.access_token, projectId, recaptchaTokens };
+  }, { siteKey: RECAPTCHA_SITE_KEY, recaptchaCount: count });
+
+  console.log(`[FLOW-API-CTXREQ] Lấy token + projectId=${tokens.projectId} + ${tokens.recaptchaTokens.length} recaptcha tokens trong ${Date.now() - tokenStart}ms (page evaluate ngắn).`);
+
+  const ctx = page.context();
+  const auth = `Bearer ${tokens.access_token}`;
+
+  // STEP 2: Upload assets parallel server-side qua context.request.
+  let baseImageId = null;
+  let refImageIds = [];
+  let workflowId = null;
+  if (validAssets.length > 0) {
+    const uploads = await Promise.allSettled(validAssets.map(async (a) => {
+      const body = { clientContext: { projectId: tokens.projectId, tool: 'PINHOLE' }, imageBytes: a.base64 };
+      const res = await ctx.request.post(GEN_HOST + '/v1/flow/uploadImage', {
+        headers: { Authorization: auth, 'Content-Type': 'text/plain;charset=UTF-8' },
+        data: JSON.stringify(body),
+        timeout: 60000,
+      });
+      if (!res.ok()) {
+        const text = await res.text().catch(() => '');
+        throw Object.assign(new Error('upload failed: ' + res.status() + ' ' + text.slice(0, 200)), { status: res.status() });
+      }
+      const json = await res.json().catch(() => null);
+      const name = json && json.media && json.media.name;
+      if (!name) throw new Error('upload response missing media.name');
+      return { mediaId: name, workflowId: json.media.workflowId };
+    }));
+    const ok = uploads.filter(u => u.status === 'fulfilled' && u.value && u.value.mediaId);
+    if (ok.length === 0) {
+      const failed = uploads.find(u => u.status === 'rejected');
+      throw new Error('All asset uploads failed: ' + ((failed && failed.reason && failed.reason.message) || 'unknown'));
+    }
+    baseImageId = ok[0].value.mediaId;
+    refImageIds = ok.slice(1).map(u => u.value.mediaId);
+    workflowId = ok.find(u => u.value.workflowId)?.value?.workflowId || null;
+  }
+
+  // STEP 3: Fire batchGenerateImages × N parallel server-side. Mỗi request 1
+  // recaptcha token đã pre-fetched. Body shape giống FLOW_CLIENT_SRC.
+  const { randomUUID } = require('crypto');
+  const batchId = (typeof randomUUID === 'function' ? randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
+  const sessionId = ';' + Date.now();
+
+  const tasks = tokens.recaptchaTokens.map(async (recaptchaToken, idx) => {
+    const recaptchaContext = { token: recaptchaToken, applicationType: 'RECAPTCHA_APPLICATION_TYPE_WEB' };
+    const imageInputs = [];
+    if (baseImageId) imageInputs.push({ imageInputType: 'IMAGE_INPUT_TYPE_BASE_IMAGE', name: baseImageId });
+    for (const id of refImageIds) imageInputs.push({ imageInputType: 'IMAGE_INPUT_TYPE_REFERENCE', name: id });
+    const clientContext = { recaptchaContext, projectId: tokens.projectId, tool: 'PINHOLE', sessionId };
+    if (workflowId) clientContext.workflowId = workflowId;
+
+    const body = {
+      clientContext,
+      mediaGenerationContext: { batchId },
+      useNewMedia: true,
+      requests: [{
+        clientContext,
+        imageModelName: 'NARWHAL',
+        imageAspectRatio: ASPECT_MAP[aspectRatio] || ASPECT_MAP.LANDSCAPE,
+        structuredPrompt: { parts: [{ text: prompt }] },
+        seed: Math.floor(Math.random() * 999999),
+        imageInputs,
+      }],
+    };
+
+    console.log(`[NET-INTERCEPT-CTXREQ] gen[${idx + 1}/${count}] → model=NARWHAL aspect=${ASPECT_MAP[aspectRatio] || ASPECT_MAP.LANDSCAPE} imageInputs=${imageInputs.length} promptLen=${prompt.length}`);
+
+    const res = await ctx.request.post(`${GEN_HOST}/v1/projects/${tokens.projectId}/flowMedia:batchGenerateImages`, {
+      headers: { Authorization: auth, 'Content-Type': 'text/plain;charset=UTF-8' },
+      data: JSON.stringify(body),
+      timeout: 180000, // 3 phút
+    });
+    if (!res.ok()) {
+      const txt = await res.text().catch(() => '');
+      let parsedBody = null;
+      try { parsedBody = JSON.parse(txt); } catch (_) {}
+      throw Object.assign(new Error('gen failed: ' + (parsedBody?.error?.message || res.status())), { status: res.status(), body: parsedBody });
+    }
+    const json = await res.json().catch(() => null);
+    const m = json && json.media && json.media[0];
+    if (!m) throw Object.assign(new Error('gen returned no media'), { body: json });
+    return {
+      mediaId: m.name,
+      workflowId: m.workflowId,
+      fifeUrl: m.image && m.image.generatedImage && m.image.generatedImage.fifeUrl,
+      width: m.image && m.image.dimensions && m.image.dimensions.width,
+      height: m.image && m.image.dimensions && m.image.dimensions.height,
+      seed: m.image && m.image.generatedImage && m.image.generatedImage.seed,
+    };
+  });
+
+  const settled = await Promise.allSettled(tasks);
+  const images = settled.filter(s => s.status === 'fulfilled').map(s => s.value);
+  const errors = settled.filter(s => s.status === 'rejected').map(s => ({
+    message: s.reason && s.reason.message,
+    status: s.reason && s.reason.status,
+    body: s.reason && s.reason.body,
+  }));
+
+  return {
+    projectId: tokens.projectId,
+    elapsedMs: Date.now() - t0,
+    requested: count,
+    received: images.length,
+    images,
+    errors,
+    uploaded: { baseImageId, refImageIds },
+  };
+}
+
 async function runFlowAutomation({ prompt, assets, onImageReady, variantCount, flowConfig }) {
   if (process.env.FLOW_WORKER_URL) {
     return _runFlowAutomationViaWorker({
@@ -706,72 +873,18 @@ async function _runFlowAutomationLocal({ prompt, assets, onImageReady, variantCo
     // 2. Open the shared API page (logged-in, FlowClient injected).
     const page = await getApiPage();
 
-    // Capture fifeUrl từ response của batchGenerateImages — fallback khi page bị
-    // destroyed mid-evaluate (Google reCAPTCHA challenge / idle redirect). Ảnh
-    // ĐÃ tạo bên Google sẽ vẫn lấy được mà không cần retry gen.
-    const interceptedImages = [];
-    let interceptedProjectId = null;
-    const responseHandler = async (resp) => {
-      try {
-        const url = resp.url();
-        if (!url.includes('flowMedia:batchGenerateImages')) return;
-        if (resp.status() !== 200) return;
-        const json = await resp.json().catch(() => null);
-        if (!json) return;
-        const arr = Array.isArray(json.media) ? json.media : [];
-        for (const m of arr) {
-          const fifeUrl = m?.image?.generatedImage?.fifeUrl;
-          if (!fifeUrl) continue;
-          interceptedImages.push({
-            mediaId: m.name,
-            fifeUrl,
-            width: m?.image?.dimensions?.width,
-            height: m?.image?.dimensions?.height,
-            seed: m?.image?.generatedImage?.seed,
-          });
-          // Project id thường nằm trong `m.name = "projects/{id}/media/..."` hoặc
-          // server header — thử extract từ URL.
-          if (!interceptedProjectId) {
-            const m2 = url.match(/\/projects\/([a-f0-9-]+)\/flowMedia/);
-            if (m2 && m2[1]) interceptedProjectId = m2[1];
-          }
-        }
-      } catch (_) {}
-    };
-    page.on('response', responseHandler);
-
-    // 3. Run gen via the in-page FlowClient.
-    let result;
-    try {
-      result = await page.evaluate(
-        ({ prompt, count, aspectRatio, assets }) => window.FlowClient.generateImages({ prompt, count, aspectRatio, assets }),
-        { prompt, count: expectCount, aspectRatio: aspect, assets: validAssets.map(a => ({ base64: a.base64, label: a.label })) }
-      );
-    } catch (evalErr) {
-      const isContextDestroyed = /Execution context was destroyed|Target closed|Page closed|frame got detached/i.test(evalErr.message || '');
-      if (isContextDestroyed && interceptedImages.length > 0) {
-        console.warn(`[FLOW-API] page.evaluate fail (${evalErr.message.slice(0, 100)}) — fallback dùng ${interceptedImages.length} fifeUrl đã capture qua response interceptor.`);
-        result = {
-          projectId: interceptedProjectId,
-          requested: expectCount,
-          received: interceptedImages.length,
-          elapsedMs: Date.now() - t0,
-          images: interceptedImages,
-          errors: [],
-          uploaded: { baseImageId: null, refImageIds: [] },
-        };
-        // Page chết — đánh dấu phải recreate cho call sau.
-        if (_apiPage) await _apiPage.close().catch(() => null);
-        _apiPage = null;
-        _apiPageReadyAt = 0;
-        _apiPagePromise = null;
-      } else {
-        page.off('response', responseHandler);
-        throw evalErr;
-      }
-    } finally {
-      page.off('response', responseHandler);
-    }
+    // 3. NEW PIPELINE: chỉ dùng page để lấy token NGẮN (~2s). Sau đó tất cả
+    // upload + gen request fire server-side qua page.context().request.
+    // Page có chết giữa chừng (Google reCAPTCHA challenge / navigate) cũng KHÔNG
+    // ảnh hưởng vì các fetch không phụ thuộc page nữa.
+    const result = await generateImagesViaContextRequest({
+      page,
+      prompt,
+      count: expectCount,
+      aspectRatio: aspect,
+      validAssets,
+      t0,
+    });
 
     const chatUrl = result && result.projectId ? `${FLOW_URL}/project/${result.projectId}` : FLOW_URL;
     console.log(`[FLOW-API] API trả về ${result.received}/${result.requested} ảnh trong ${result.elapsedMs}ms (uploaded base=${!!result.uploaded?.baseImageId} refs=${result.uploaded?.refImageIds?.length || 0}).`);
