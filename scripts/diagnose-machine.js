@@ -87,10 +87,19 @@ chromeFound ? ok(`Chrome: ${chromeFound}`) : bad(`Không thấy Chrome — insta
 // 5. Flow profile
 head(5, 'Flow profile (login Google)');
 const profileDir = path.join(ROOT, 'tooltaoanh', 'flow_profile');
-const cookiesFile = path.join(profileDir, 'Default', 'Cookies');
-if (fs.existsSync(cookiesFile)) {
-  const sz = fs.statSync(cookiesFile).size;
-  ok(`Profile có Cookies (${sz} bytes)`);
+// Chrome version mới đặt cookies ở Default/Network/Cookies (Win/Linux)
+// thay vì Default/Cookies (Mac cũ). Check cả 2 + fallback.
+const cookieCandidates = [
+  path.join(profileDir, 'Default', 'Network', 'Cookies'),
+  path.join(profileDir, 'Default', 'Cookies'),
+];
+const foundCookie = cookieCandidates.find(p => fs.existsSync(p));
+if (foundCookie) {
+  const sz = fs.statSync(foundCookie).size;
+  ok(`Profile có Cookies (${sz} bytes) tại ${path.relative(ROOT, foundCookie)}`);
+} else if (fs.existsSync(path.join(profileDir, 'Default'))) {
+  // Profile có Default folder nhưng chưa có Cookies — chắc chưa login xong
+  warn(`Có ${profileDir}/Default nhưng chưa có Cookies file. Login lại: node LandscapeApp/server/test_login.js`);
 } else {
   bad(`THIẾU profile login — chạy: node LandscapeApp/server/test_login.js`);
   console.log(`     (Chrome popup mở → đăng nhập Google → script tự đóng)`);
