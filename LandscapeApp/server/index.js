@@ -661,19 +661,32 @@ const uploadToCloudinary = async (fileStr) => {
 // ============================================================
 // HELPER: lookup tab cho project.
 // Ưu tiên match theo project.basicCategory (slug user chọn trong "Gói Cơ bản").
-// Fallback: tab đầu tiên active của branch (legacy — record cũ chưa có basicCategory).
+// FE gửi slug legacy (vd: 'ho', 'farm', 'cafe', 'tuong_cay') trong khi DB lưu
+// slug modern (vd: 'ho_co_dien', 'quy_hoach', 'cafe_san_vuon',
+// 'tuong_cay_vuon_nhiet_doi'). Map dưới đây dịch slug FE → DB trước khi lookup.
+// 4 slug khác (ho_boi, ho_hien_dai, tuong_da, advanced) FE & DB trùng, không cần map.
+// Fallback: tab đầu tiên active của branch (legacy record chưa có basicCategory).
 // ============================================================
+const LEGACY_BASIC_CATEGORY_MAP = {
+  ho: 'ho_co_dien',
+  farm: 'quy_hoach',
+  cafe: 'cafe_san_vuon',
+  tuong_cay: 'tuong_cay_vuon_nhiet_doi',
+};
+
 async function resolveTabForProject(project) {
   try {
     const branch = project?.mainBranch || 'landscape';
-    const slug = (project?.basicCategory || '').trim();
-    if (slug) {
-      const exact = await Tab.findOne({ branch, id: slug, hidden: { $ne: true } }).lean();
+    const rawSlug = (project?.basicCategory || '').trim();
+    if (rawSlug) {
+      const mappedSlug = LEGACY_BASIC_CATEGORY_MAP[rawSlug] || rawSlug;
+      const slugLabel = mappedSlug !== rawSlug ? `${mappedSlug} (mapped from "${rawSlug}")` : rawSlug;
+      const exact = await Tab.findOne({ branch, id: mappedSlug, hidden: { $ne: true } }).lean();
       if (exact) {
-        console.log(`[resolveTabForProject] project=${project?.id} branch=${branch} basicCategory=${slug} → MATCH tab id=${exact.id}`);
+        console.log(`[resolveTabForProject] project=${project?.id} branch=${branch} basicCategory=${slugLabel} → MATCH tab id=${exact.id}`);
         return exact;
       }
-      console.warn(`[resolveTabForProject] project=${project?.id} branch=${branch} basicCategory=${slug} → KHÔNG match tab nào, fallback first.`);
+      console.warn(`[resolveTabForProject] project=${project?.id} branch=${branch} basicCategory=${slugLabel} → KHÔNG match tab nào, fallback first.`);
     }
     const tab = await Tab.findOne({ branch, hidden: { $ne: true } }).sort({ order: 1 }).lean();
     if (tab) console.log(`[resolveTabForProject] project=${project?.id} branch=${branch} basicCategory=(empty) → fallback tab id=${tab.id}`);
@@ -700,14 +713,15 @@ async function runFlowSplitOrSingle({ tab, fallbackPrompt, assets, onImageReady 
   if (tasks.length === 0) {
     // Single mode (cũ)
     const finalPrompt = buildPromptWithTabOverride(tab?.prompt, fallbackPrompt);
-    return await runFlowAutomation({ prompt: finalPrompt, assets, onImageReady, flowConfig: tab?.flowConfig });
+    const cfg = { ...(tab?.flowConfig || {}), _tabId: tab?.id }; // expose tabId cho [VERIFY-PROMPT]
+    return await runFlowAutomation({ prompt: finalPrompt, assets, onImageReady, flowConfig: cfg });
   }
   // Split mode: 4 (hoặc N) task song song — mỗi task 1 Flow tab
   console.log(`[FlowSplit] Tab=${tab.id} chạy ${tasks.length} task song song.`);
   const sortedTasks = [...tasks].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const results = await Promise.allSettled(sortedTasks.map(async (task) => {
     const taskPrompt = buildPromptWithTabOverride(task.prompt, fallbackPrompt);
-    const cfg = task.flowConfig || { mode: 'image', variantCount: 1, aspectRatio: '16:9' };
+    const cfg = { ...(task.flowConfig || { mode: 'image', variantCount: 1, aspectRatio: '16:9' }), _tabId: `${tab.id}/${task.id}` };
     return await runFlowAutomation({
       prompt: taskPrompt,
       assets,

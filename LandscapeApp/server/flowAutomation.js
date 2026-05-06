@@ -509,6 +509,30 @@ async function getApiPage() {
         console.log('[BROWSER-LOG] ' + text);
       }
     });
+    // [NET-INTERCEPT] log mọi POST tới batchGenerateImages — verify request body có
+    // structuredPrompt + imageInputs đúng. Listener gắn 1 lần / page; mỗi gen sẽ fire 1+ lần.
+    page.on('request', (req) => {
+      try {
+        const url = req.url();
+        if (url.includes('flowMedia:batchGenerateImages')) {
+          const body = req.postData() || '';
+          let promptInfo = '<not-found>';
+          let imageInputsCount = 0;
+          let model = '<?>';
+          let aspect = '<?>';
+          try {
+            const parsed = JSON.parse(body);
+            const r0 = parsed?.requests?.[0];
+            const t = r0?.structuredPrompt?.parts?.[0]?.text;
+            if (typeof t === 'string') promptInfo = `${t.length} chars HEAD=${JSON.stringify(t.slice(0, 100))}`;
+            imageInputsCount = (r0?.imageInputs || []).length;
+            model = r0?.imageModelName || '<?>';
+            aspect = r0?.imageAspectRatio || '<?>';
+          } catch (_) {}
+          console.log(`[NET-INTERCEPT] batchGenerateImages → model=${model} aspect=${aspect} imageInputs=${imageInputsCount} promptInBody=${promptInfo}`);
+        }
+      } catch (_) {}
+    });
     console.log('[FLOW-API] Mở page Flow để host FlowClient...');
     await page.goto(FLOW_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await delay(2500);
@@ -660,6 +684,10 @@ async function _runFlowAutomationLocal({ prompt, assets, onImageReady, variantCo
   if (_idleTimer) clearTimeout(_idleTimer);
 
   const t0 = Date.now();
+  // [VERIFY-PROMPT] dump tab.id + prompt head/tail/length để theo dõi runtime tab→prompt mapping.
+  const _tabIdHint = config && config._tabId ? config._tabId : '<unset>';
+  const _promptStr = typeof prompt === 'string' ? prompt : '';
+  console.log(`[VERIFY-PROMPT] tab=${_tabIdHint} expectCount=${expectCount} aspect=${aspect} promptLen=${_promptStr.length} HEAD=${JSON.stringify(_promptStr.slice(0, 200))} TAIL=${JSON.stringify(_promptStr.slice(-100))}`);
   console.log(`[FLOW-API] Bắt đầu sinh ${expectCount} ảnh (aspect=${aspect}, assets=${(assets || []).length})...`);
 
   try {
@@ -678,11 +706,72 @@ async function _runFlowAutomationLocal({ prompt, assets, onImageReady, variantCo
     // 2. Open the shared API page (logged-in, FlowClient injected).
     const page = await getApiPage();
 
+    // Capture fifeUrl từ response của batchGenerateImages — fallback khi page bị
+    // destroyed mid-evaluate (Google reCAPTCHA challenge / idle redirect). Ảnh
+    // ĐÃ tạo bên Google sẽ vẫn lấy được mà không cần retry gen.
+    const interceptedImages = [];
+    let interceptedProjectId = null;
+    const responseHandler = async (resp) => {
+      try {
+        const url = resp.url();
+        if (!url.includes('flowMedia:batchGenerateImages')) return;
+        if (resp.status() !== 200) return;
+        const json = await resp.json().catch(() => null);
+        if (!json) return;
+        const arr = Array.isArray(json.media) ? json.media : [];
+        for (const m of arr) {
+          const fifeUrl = m?.image?.generatedImage?.fifeUrl;
+          if (!fifeUrl) continue;
+          interceptedImages.push({
+            mediaId: m.name,
+            fifeUrl,
+            width: m?.image?.dimensions?.width,
+            height: m?.image?.dimensions?.height,
+            seed: m?.image?.generatedImage?.seed,
+          });
+          // Project id thường nằm trong `m.name = "projects/{id}/media/..."` hoặc
+          // server header — thử extract từ URL.
+          if (!interceptedProjectId) {
+            const m2 = url.match(/\/projects\/([a-f0-9-]+)\/flowMedia/);
+            if (m2 && m2[1]) interceptedProjectId = m2[1];
+          }
+        }
+      } catch (_) {}
+    };
+    page.on('response', responseHandler);
+
     // 3. Run gen via the in-page FlowClient.
-    const result = await page.evaluate(
-      ({ prompt, count, aspectRatio, assets }) => window.FlowClient.generateImages({ prompt, count, aspectRatio, assets }),
-      { prompt, count: expectCount, aspectRatio: aspect, assets: validAssets.map(a => ({ base64: a.base64, label: a.label })) }
-    );
+    let result;
+    try {
+      result = await page.evaluate(
+        ({ prompt, count, aspectRatio, assets }) => window.FlowClient.generateImages({ prompt, count, aspectRatio, assets }),
+        { prompt, count: expectCount, aspectRatio: aspect, assets: validAssets.map(a => ({ base64: a.base64, label: a.label })) }
+      );
+    } catch (evalErr) {
+      const isContextDestroyed = /Execution context was destroyed|Target closed|Page closed|frame got detached/i.test(evalErr.message || '');
+      if (isContextDestroyed && interceptedImages.length > 0) {
+        console.warn(`[FLOW-API] page.evaluate fail (${evalErr.message.slice(0, 100)}) — fallback dùng ${interceptedImages.length} fifeUrl đã capture qua response interceptor.`);
+        result = {
+          projectId: interceptedProjectId,
+          requested: expectCount,
+          received: interceptedImages.length,
+          elapsedMs: Date.now() - t0,
+          images: interceptedImages,
+          errors: [],
+          uploaded: { baseImageId: null, refImageIds: [] },
+        };
+        // Page chết — đánh dấu phải recreate cho call sau.
+        if (_apiPage) await _apiPage.close().catch(() => null);
+        _apiPage = null;
+        _apiPageReadyAt = 0;
+        _apiPagePromise = null;
+      } else {
+        page.off('response', responseHandler);
+        throw evalErr;
+      }
+    } finally {
+      page.off('response', responseHandler);
+    }
 
     const chatUrl = result && result.projectId ? `${FLOW_URL}/project/${result.projectId}` : FLOW_URL;
     console.log(`[FLOW-API] API trả về ${result.received}/${result.requested} ảnh trong ${result.elapsedMs}ms (uploaded base=${!!result.uploaded?.baseImageId} refs=${result.uploaded?.refImageIds?.length || 0}).`);
