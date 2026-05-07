@@ -8302,7 +8302,7 @@ function AdminView({
                       >
                         <div className="as-card-row">
                           <span className="as-card-time">{new Date(project.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}</span>
-                          <span className="as-card-id">#{project.id.slice(-8).toUpperCase()}</span>
+                          <span className="as-card-id">#{(project.id || (project as any)._id || 'NOID').slice(-8).toUpperCase()}</span>
                         </div>
                         <div>
                           <div className="as-card-name">{project.customerName}</div>
