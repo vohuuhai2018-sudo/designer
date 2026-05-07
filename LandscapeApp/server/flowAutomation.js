@@ -942,6 +942,24 @@ async function detectFlowRateLimit(page) {
   }
 }
 
+// Detect Flow's generic project error UI ("Đã xảy ra lỗi" + nut "Quay lại dự án").
+// Xuat hien khi project URL hong / het han / Flow gap loi noi bo. Khac voi rate-limit:
+// loi nay khong tu phuc hoi, can quay ve project mot va tao moi.
+async function detectFlowProjectError(page) {
+  try {
+    return await page.evaluate(() => {
+      const t = document.body.innerText || '';
+      // "Đã xảy ra lỗi" + nut "Quay lại dự án" la signature cua Flow project-error page.
+      // KHONG match "Đã xảy ra lỗi" don le vi co the la toast tam thoi.
+      const hasErr = /Đã xảy ra lỗi|Da xay ra loi|Something went wrong/i.test(t);
+      const hasBackBtn = /Quay lại dự án|Quay lai du an|Back to project/i.test(t);
+      return hasErr && hasBackBtn;
+    });
+  } catch (_) {
+    return false;
+  }
+}
+
 async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady, flowConfig = {}) {
   const outputPaths = [];
   let chatUrl = 'https://labs.google/fx/vi/tools/flow';
@@ -1023,9 +1041,12 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
       console.log(`[FlowV2] Bo qua loi cau hinh: ${error.message}`);
     }
 
-    // Detect early rate-limit error tu Flow ("Bạn đang yêu cầu tạo quá nhanh")
+    // Detect early errors: rate-limit OR generic project-error ("Đã xảy ra lỗi")
     if (await detectFlowRateLimit(page)) {
       throw new Error('FLOW_RATE_LIMIT: Google Flow rate-limit ngay sau cau hinh.');
+    }
+    if (await detectFlowProjectError(page)) {
+      throw new Error('FLOW_PROJECT_ERROR: Flow hien "Đã xảy ra lỗi" — project URL hong hoac Flow loi noi bo, can retry.');
     }
 
     console.log(`[FlowV2] Dan cung luc ${inputFiles.length} anh vao Flow...`);
@@ -1054,8 +1075,7 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
     }
 
     console.log(`[FlowV2] Dang cho Google Flow sinh ket qua ${targetCount} anh (timeout 6 phut)...`);
-    // Race waitForFunction (image generation) vs polling rate-limit detection (every 4s).
-    let rateLimitDetected = false;
+    // Race waitForFunction (image generation) vs polling errors (every 4s).
     const generationPromise = page.waitForFunction(({ oldSources, need }) => {
       const currentImages = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
       const newImages = currentImages.filter(img => !oldSources.includes(img.src));
@@ -1063,24 +1083,26 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
     }, { oldSources: existingImgSources, need: targetCount }, { timeout: 360000 })
       .then(() => 'images')
       .catch((e) => { return { type: 'timeout', err: e }; });
-    const rateLimitPromise = (async () => {
+    const errorPollPromise = (async () => {
       const start = Date.now();
       while (Date.now() - start < 360000) {
         await delay(4000);
         if (await detectFlowRateLimit(page)) return 'rate_limit';
+        if (await detectFlowProjectError(page)) return 'project_error';
       }
       return 'rl_timeout';
     })();
 
-    const winner = await Promise.race([generationPromise, rateLimitPromise]);
+    const winner = await Promise.race([generationPromise, errorPollPromise]);
     if (winner === 'rate_limit') {
-      rateLimitDetected = true;
       console.log('[FlowV2] Flow tra ve loi rate-limit — abort som de retry o cap cao hon.');
       throw new Error('FLOW_RATE_LIMIT: Bạn đang yêu cầu tạo quá nhanh.');
+    } else if (winner === 'project_error') {
+      console.log('[FlowV2] Flow tra ve "Đã xảy ra lỗi" — abort som de retry o cap cao hon.');
+      throw new Error('FLOW_PROJECT_ERROR: Flow project loi giua chung, can retry.');
     } else if (winner && winner.type === 'timeout') {
       console.log(`[FlowV2] Het thoi gian cho ${targetCount} anh moi, se xu ly nhung anh da co: ${winner.err?.message || ''}`);
     }
-    void rateLimitDetected;
 
     await delay(20000);
 

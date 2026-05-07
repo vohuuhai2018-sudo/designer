@@ -162,12 +162,14 @@ async function runSinglePass2Task({
       } catch (innerErr) {
         const msg = innerErr?.message || String(innerErr);
         rateLimitHit = /FLOW_RATE_LIMIT|tao qua nhanh|tạo quá nhanh|too many requests|rate.?limit/i.test(msg);
+        const projectErr = /FLOW_PROJECT_ERROR|Đã xảy ra lỗi|Da xay ra loi/i.test(msg);
         lastError = `Attempt ${attempt}: ${msg}`;
-        console.error(`[Pass2][${task.id}] ${lastError}${rateLimitHit ? ' [RATE_LIMIT]' : ''}`);
+        const errTag = rateLimitHit ? ' [RATE_LIMIT]' : (projectErr ? ' [PROJECT_ERROR]' : '');
+        console.error(`[Pass2][${task.id}] ${lastError}${errTag}`);
       }
       if (attempt < maxAttempts) {
-        // Backoff: rate-limit can wait longer cho Google reset quota.
-        const backoffMs = rateLimitHit ? 45000 + Math.floor(Math.random() * 15000) : 3000;
+        // Backoff: rate-limit can wait lau cho Google reset quota; project-error retry nhanh hon.
+        const backoffMs = rateLimitHit ? 45000 + Math.floor(Math.random() * 15000) : 5000;
         console.log(`[Pass2][${task.id}] Tự động retry lần ${attempt + 1}/${maxAttempts} sau ${Math.round(backoffMs/1000)}s${rateLimitHit ? ' (rate-limit backoff)' : ''}...`);
         await new Promise(r => setTimeout(r, backoffMs));
         rateLimitHit = false;

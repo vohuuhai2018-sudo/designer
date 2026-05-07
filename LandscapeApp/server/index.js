@@ -1289,10 +1289,13 @@ app.post('/api/projects', async (req, res) => {
               } catch (err) {
                 const msg = err?.message || String(err);
                 const isRateLimit = /FLOW_RATE_LIMIT|tao qua nhanh|tạo quá nhanh|too many requests|rate.?limit/i.test(msg);
-                console.error(`[AUTO] Lỗi Google Flow (attempt ${attempt}/${maxAutoAttempts}): ${msg}${isRateLimit ? ' [RATE_LIMIT]' : ''}`);
-                if (!isRateLimit || attempt >= maxAutoAttempts) break;
-                const backoffMs = 45000 + Math.floor(Math.random() * 15000);
-                console.log(`[AUTO] Cho ${Math.round(backoffMs/1000)}s roi retry (rate-limit backoff)...`);
+                const isProjectErr = /FLOW_PROJECT_ERROR|Đã xảy ra lỗi|Da xay ra loi/i.test(msg);
+                const isRetriable = isRateLimit || isProjectErr;
+                const tag = isRateLimit ? ' [RATE_LIMIT]' : (isProjectErr ? ' [PROJECT_ERROR]' : '');
+                console.error(`[AUTO] Lỗi Google Flow (attempt ${attempt}/${maxAutoAttempts}): ${msg}${tag}`);
+                if (!isRetriable || attempt >= maxAutoAttempts) break;
+                const backoffMs = isRateLimit ? 45000 + Math.floor(Math.random() * 15000) : 8000;
+                console.log(`[AUTO] Cho ${Math.round(backoffMs/1000)}s roi retry${tag}...`);
                 await new Promise(r => setTimeout(r, backoffMs));
               }
             }
