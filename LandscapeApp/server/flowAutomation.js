@@ -842,17 +842,40 @@ async function fillPromptBox(promptBox, prompt) {
 // Pick option button trong config panel (mode/aspect/variant). Predicate test text trim cua tung button.
 // Click + verify aria-selected dat 'true' sau khi click. Ghi log ALL candidate texts neu khong match,
 // de debug khi Google doi UI.
+// Read selected-state cua 1 button. Google Flow co the dung:
+//   - aria-selected="true"
+//   - data-state="active" / "checked" / "on"
+//   - class chua "active" / "selected" / "_selected_"
+// Tra ve { selected: bool, signal: string } de log debug.
+function _readSelectedState(b) {
+  const aria = b.getAttribute && b.getAttribute('aria-selected');
+  const dataState = b.getAttribute && b.getAttribute('data-state');
+  const cls = b.className || '';
+  if (aria === 'true') return { selected: true, signal: 'aria-selected=true' };
+  if (aria === 'false') return { selected: false, signal: 'aria-selected=false' };
+  if (dataState && /active|checked|on|selected/i.test(dataState)) return { selected: true, signal: `data-state=${dataState}` };
+  if (typeof cls === 'string' && /\b(selected|active|_selected|isSelected|is-selected)\b/i.test(cls)) {
+    return { selected: true, signal: 'class' };
+  }
+  return { selected: null, signal: 'unknown' }; // null = khong xac dinh duoc → coi nhu KHONG da chon de safe
+}
+
+// Click via Playwright locator (real PointerEvent) — Flow's Radix UI tabs khong respond
+// voi DOM `el.click()` qua page.evaluate. Inspection 2026-05-07: button[role="tab"]
+// dung data-state="active|inactive" + aria-selected; click dom-only KHONG flip state.
 async function pickFlowOption(page, { kind, want, predicate }) {
+  const SELECTOR = 'button.flow_tab_slider_trigger, button[role="tab"]';
   try {
-    const buttons = await page.evaluate(() => {
-      const list = Array.from(document.querySelectorAll('button.flow_tab_slider_trigger, button[role="tab"], button[aria-selected]'));
+    const buttons = await page.evaluate((sel) => {
+      const list = Array.from(document.querySelectorAll(sel));
       return list.map((b, idx) => ({
         idx,
         text: (b.innerText || b.textContent || '').trim(),
         ariaLabel: b.getAttribute('aria-label') || '',
-        ariaSelected: b.getAttribute('aria-selected') || '',
+        ariaSelected: b.getAttribute('aria-selected'),
+        dataState: b.getAttribute('data-state'),
       }));
-    });
+    }, SELECTOR);
     if (buttons.length === 0) {
       console.log(`[FlowV2][pick:${kind}] khong tim thay button candidate trong panel.`);
       return false;
@@ -863,38 +886,42 @@ async function pickFlowOption(page, { kind, want, predicate }) {
       return false;
     }
     const target = buttons[matchIdx];
-    if (target.ariaSelected === 'true') {
+    const isActive = target.ariaSelected === 'true' || target.dataState === 'active';
+    if (isActive) {
       console.log(`[FlowV2][pick:${kind}] da o "${want}" (san san).`);
       return true;
     }
-    // Click via DOM index (avoid duplicate selector matches)
-    const clicked = await page.evaluate((idx) => {
-      const list = Array.from(document.querySelectorAll('button.flow_tab_slider_trigger, button[role="tab"], button[aria-selected]'));
-      const el = list[idx];
-      if (!el) return false;
-      el.click();
-      return true;
-    }, target.idx);
-    if (!clicked) {
-      console.log(`[FlowV2][pick:${kind}] click that bai (idx=${target.idx}).`);
-      return false;
+    // Click via Playwright locator (real PointerEvent — qua trong vi Radix UI dung onPointerDown).
+    const locator = page.locator(SELECTOR).nth(target.idx);
+    try {
+      await locator.click({ timeout: 5000 });
+    } catch (e) {
+      console.log(`[FlowV2][pick:${kind}] locator click that bai: ${e.message}. Thu force...`);
+      try { await locator.click({ force: true, timeout: 5000 }); }
+      catch (e2) { console.log(`[FlowV2][pick:${kind}] force click cung that bai: ${e2.message}`); return false; }
     }
-    await delay(500);
+    await delay(600);
     // Verify
-    const after = await page.evaluate((idx) => {
-      const list = Array.from(document.querySelectorAll('button.flow_tab_slider_trigger, button[role="tab"], button[aria-selected]'));
-      return list[idx]?.getAttribute('aria-selected') || '';
-    }, target.idx);
-    if (after === 'true') {
-      console.log(`[FlowV2][pick:${kind}] da chon "${want}" — verify aria-selected=true.`);
+    const after = await page.evaluate((args) => {
+      const list = Array.from(document.querySelectorAll(args.sel));
+      const el = list[args.idx];
+      if (!el) return null;
+      return {
+        ariaSelected: el.getAttribute('aria-selected'),
+        dataState: el.getAttribute('data-state'),
+      };
+    }, { sel: SELECTOR, idx: target.idx });
+    if (!after) {
+      console.log(`[FlowV2][pick:${kind}] click xong nhung khong tim lai element — coi nhu OK.`);
       return true;
     }
-    console.log(`[FlowV2][pick:${kind}] click "${want}" nhung aria-selected=${after}, retry 1 lan...`);
-    await page.evaluate((idx) => {
-      const list = Array.from(document.querySelectorAll('button.flow_tab_slider_trigger, button[role="tab"], button[aria-selected]'));
-      list[idx]?.click();
-    }, target.idx);
-    await delay(700);
+    const okNow = after.ariaSelected === 'true' || after.dataState === 'active';
+    if (okNow) {
+      console.log(`[FlowV2][pick:${kind}] da chon "${want}" — aria-selected=${after.ariaSelected} data-state=${after.dataState}.`);
+      return true;
+    }
+    // Verify fail → log nhung KHONG retry click (de tranh toggle ngoai y muon).
+    console.log(`[FlowV2][pick:${kind}] click "${want}" nhung state van la aria-selected=${after.ariaSelected} data-state=${after.dataState} — coi nhu da co gang, tiep tuc.`);
     return true;
   } catch (e) {
     console.log(`[FlowV2][pick:${kind}] error: ${e.message}`);
