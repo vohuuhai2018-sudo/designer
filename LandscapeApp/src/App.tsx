@@ -12,6 +12,7 @@ import {
   Undo2,
   Trash2,
   ChevronLeft,
+  ChevronRight,
   Camera,
   Layers,
   X,
@@ -121,6 +122,110 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
     </div>
   );
 };
+
+// Vuốt so sánh Trước/Sau trên 1 khung ảnh.
+// Cả before/after dùng plain <img> để bảo toàn aspect ratio + clip-path. Watermark
+// (nếu cần) áp vào URL after qua canvas overlay khac, không phá kéo thả.
+function BeforeAfterSlider({
+  before,
+  after,
+  alt,
+  aspectRatio = '16/10',
+  className,
+  beforeLabel = 'Trước',
+  afterLabel = 'Sau',
+}: {
+  before: string;
+  after: string;
+  alt?: string;
+  aspectRatio?: string;
+  className?: string;
+  beforeLabel?: string;
+  afterLabel?: string;
+}) {
+  const [pos, setPos] = useState(50);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
+
+  const moveTo = (clientX: number) => {
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const next = ((clientX - rect.left) / rect.width) * 100;
+    setPos(Math.max(0, Math.min(100, next)));
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    draggingRef.current = true;
+    try { (e.currentTarget as Element).setPointerCapture(e.pointerId); } catch (_) {}
+    moveTo(e.clientX);
+  };
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (draggingRef.current) moveTo(e.clientX);
+  };
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    draggingRef.current = false;
+    try { (e.currentTarget as Element).releasePointerCapture(e.pointerId); } catch (_) {}
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className={`ba-slider ${className || ''}`}
+      style={{
+        position: 'relative',
+        width: '100%',
+        aspectRatio,
+        overflow: 'hidden',
+        borderRadius: 10,
+        userSelect: 'none',
+        touchAction: 'none',
+        cursor: 'ew-resize',
+        background: '#000',
+      }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      <img src={after} alt={alt || 'Sau'} draggable={false}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', inset: 0, clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
+        <img src={before} alt={alt ? `${alt} (trước)` : 'Trước'} draggable={false}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
+      </div>
+      {/* Vạch chia */}
+      <div style={{
+        position: 'absolute', top: 0, bottom: 0, left: `${pos}%`,
+        width: 2, background: '#fff', boxShadow: '0 0 8px rgba(0,0,0,0.55)',
+        transform: 'translateX(-1px)', pointerEvents: 'none',
+      }} />
+      {/* Tay cầm */}
+      <div style={{
+        position: 'absolute', top: '50%', left: `${pos}%`, transform: 'translate(-50%, -50%)',
+        width: 36, height: 36, borderRadius: '50%',
+        background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: '#111', pointerEvents: 'none',
+      }}>
+        <ChevronLeft size={14} strokeWidth={3} style={{ marginRight: -3 }} />
+        <ChevronRight size={14} strokeWidth={3} style={{ marginLeft: -3 }} />
+      </div>
+      {/* Nhãn */}
+      <span style={{
+        position: 'absolute', bottom: 8, left: 8, padding: '3px 10px', borderRadius: 4,
+        background: 'rgba(255,255,255,0.92)', color: '#111',
+        fontWeight: 700, fontSize: 11, letterSpacing: '0.04em', pointerEvents: 'none',
+      }}>{beforeLabel}</span>
+      <span style={{
+        position: 'absolute', top: 8, right: 8, padding: '3px 10px', borderRadius: 4,
+        background: '#dc2626', color: '#fff',
+        fontWeight: 700, fontSize: 11, letterSpacing: '0.04em', pointerEvents: 'none',
+      }}>{afterLabel}</span>
+    </div>
+  );
+}
 
 function apiFetch(path: string, options?: RequestInit): Promise<Response> {
   const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
@@ -3807,14 +3912,17 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                <>
                  <p style={{ fontSize: '0.85rem', color: '#888', marginTop: '1rem', textAlign: 'center', fontWeight: 600 }}>Kết quả lần 1:</p>
                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '8px', width: '100%' }}>
-                   {previousImages.map((url, i) => (
-                     <div key={`prev-${i}`} onClick={() => setPreviewImage(url)} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', aspectRatio: '16/10', cursor: 'pointer' }}>
-                       <ProtectedImage src={url} alt={`Lần 1 - ${i+1}`} />
-                       <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.7)', padding: '4px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.7rem' }}>
+                   {previousImages.map((url, i) => {
+                     const beforeUrl = project?.rawImage || url;
+                     return (
+                     <div key={`prev-${i}`} style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                       <BeforeAfterSlider before={beforeUrl} after={url} alt={`Lần 1 - ${i+1}`} aspectRatio="16/10" />
+                       <div onClick={() => setPreviewImage(url)} style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.7)', padding: '4px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.7rem', color: '#fff', cursor: 'pointer' }}>
                          Lần 1 - PA{i + 1}
                        </div>
                      </div>
-                   ))}
+                     );
+                   })}
                  </div>
                </>
              )}
@@ -3836,10 +3944,11 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                const label = retryCount > 0
                  ? (isOld ? `Lần 1 - PA${i + 1}` : `Lần 2 - PA${i - previousImages.length + 1}`)
                  : `Phương án ${i + 1}`;
+               const beforeUrl = project?.rawImage || url;
                return (
-                 <div key={i} onClick={() => setPreviewImage(url)} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.25)', aspectRatio: '16/10', cursor: 'pointer' }}>
-                   <ProtectedImage src={url} alt={label} />
-                   <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: isOld ? 'rgba(0,0,0,0.7)' : 'rgba(226,177,112,0.85)', padding: '5px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.75rem', color: isOld ? '#fff' : '#000' }}>
+                 <div key={i} style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}>
+                   <BeforeAfterSlider before={beforeUrl} after={url} alt={label} aspectRatio="16/10" />
+                   <div onClick={() => setPreviewImage(url)} style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: isOld ? 'rgba(0,0,0,0.7)' : 'rgba(226,177,112,0.85)', padding: '5px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.75rem', color: isOld ? '#fff' : '#000', cursor: 'pointer' }}>
                      {label}
                    </div>
                  </div>
@@ -3850,14 +3959,17 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
 
 {!isDone && images.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '1rem', width: '100%' }}>
-            {images.map((url, i) => (
-              <div key={i} onClick={() => setPreviewImage(url)} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', aspectRatio: '16/10', cursor: 'pointer' }}>
-                <ProtectedImage src={url} alt={`Phương án ${i+1}`} />
-                <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.7)', padding: '5px', textAlign: 'center', fontWeight: 'bold', fontSize: '1rem' }}>
+            {images.map((url, i) => {
+              const beforeUrl = project?.rawImage || url;
+              return (
+              <div key={i} style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <BeforeAfterSlider before={beforeUrl} after={url} alt={`Phương án ${i+1}`} aspectRatio="16/10" />
+                <div onClick={() => setPreviewImage(url)} style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.7)', padding: '5px', textAlign: 'center', fontWeight: 'bold', fontSize: '1rem', color: '#fff', cursor: 'pointer' }}>
                   Phương án {i + 1}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -6166,11 +6278,11 @@ function ProjectDetailFlow(props: any) {
                 <div className="as-ai-empty">Chưa có phương án AI. Mở Trạm AI để tạo.</div>
               ) : (
                 <div>
-                  <div className="as-subhead">Ảnh phương án · {photoResults.length}</div>
+                  <div className="as-subhead">Ảnh phương án · {photoResults.length} <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--as-text-2)' }}>· vuốt để so trước/sau</span></div>
                   <div className="as-ai-grid">
                     {photoResults.map((url: string, i: number) => (
                       <div key={i} className="as-ai-card">
-                        <img decoding="async" loading="lazy" src={url} alt={`PA ${i+1}`} />
+                        <BeforeAfterSlider before={project.rawImage} after={url} alt={`PA ${i+1}`} aspectRatio="16/10" />
                         <div className="meta">
                           <span className="nm">PA-{String(i+1).padStart(2, '0')}</span>
                           <button className="as-btn sm ghost" onClick={() => copyText(url, 'Đã copy link ảnh.')}><Copy size={10} /></button>
@@ -6510,8 +6622,8 @@ function ProjectDetailFlow(props: any) {
             <div className="as-step-body">
               {project.finalImage && (
                 <div className="as-media-card" style={{ maxWidth: 540 }}>
-                  <div className="head"><span className="lbl">Bản vẽ đã giao</span><span className="num">FINAL</span></div>
-                  <img decoding="async" loading="lazy" src={project.finalImage} alt="Bản vẽ" />
+                  <div className="head"><span className="lbl">Bản vẽ đã giao · vuốt để so trước/sau</span><span className="num">FINAL</span></div>
+                  <BeforeAfterSlider before={project.rawImage} after={project.finalImage} alt="Bản vẽ" aspectRatio="16/10" />
                 </div>
               )}
               <div className="as-actions-row">

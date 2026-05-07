@@ -1048,15 +1048,20 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
 // Cho phép xử lý nhiều project song song mà không conflict persistent context.
 let _sharedBrowser = null;
 let _sharedBrowserPromise = null;
+let _closingPromise = null; // theo doi close dang dien ra → relaunch phai cho close xong (de release profile lock)
 let _activeTabCount = 0;
-const IDLE_CLOSE_MS = 30000; // Đóng browser sau 30s không có tab nào hoạt động
+const IDLE_CLOSE_MS = 5 * 60 * 1000; // Đóng browser sau 5 phút không có tab nào hoạt động (giam fluke khi traffic thua)
 let _idleTimer = null;
 
 async function getSharedBrowser() {
-  // Nếu đang có browser mở và chưa bị đóng, dùng lại
-  if (_sharedBrowser && _sharedBrowser.pages) {
+  // Neu dang close → cho close xong de Chrome release profile dir lock truoc khi launch fresh
+  if (_closingPromise) {
+    try { await _closingPromise; } catch (_) {}
+  }
+
+  if (_sharedBrowser) {
     try {
-      _sharedBrowser.pages(); // test nếu browser còn sống
+      _sharedBrowser.pages(); // alive check
       return _sharedBrowser;
     } catch (_) {
       _sharedBrowser = null;
@@ -1064,21 +1069,26 @@ async function getSharedBrowser() {
     }
   }
 
-  // Nếu đang trong quá trình mở, chờ
   if (_sharedBrowserPromise) return _sharedBrowserPromise;
 
   _sharedBrowserPromise = (async () => {
     console.log('[BROWSER] Khởi tạo shared browser (persistent context)...');
-    _sharedBrowser = await chromium.launchPersistentContext(FLOW_PROFILE_DIR, {
-      executablePath: resolveBrowserExecutable(),
-      headless: false,
-      viewport: { width: 1440, height: 900 },
-      acceptDownloads: true,
-      permissions: ['clipboard-read', 'clipboard-write'],
-      args: ['--disable-blink-features=AutomationControlled']
-    });
-    console.log('[BROWSER] Shared browser đã sẵn sàng.');
-    return _sharedBrowser;
+    try {
+      const ctx = await chromium.launchPersistentContext(FLOW_PROFILE_DIR, {
+        executablePath: resolveBrowserExecutable(),
+        headless: false,
+        viewport: { width: 1440, height: 900 },
+        acceptDownloads: true,
+        permissions: ['clipboard-read', 'clipboard-write'],
+        args: ['--disable-blink-features=AutomationControlled']
+      });
+      _sharedBrowser = ctx;
+      console.log('[BROWSER] Shared browser đã sẵn sàng.');
+      return ctx;
+    } catch (e) {
+      _sharedBrowserPromise = null; // de lan goi sau co the retry
+      throw e;
+    }
   })();
 
   return _sharedBrowserPromise;
@@ -1086,14 +1096,17 @@ async function getSharedBrowser() {
 
 function scheduleIdleClose() {
   if (_idleTimer) clearTimeout(_idleTimer);
-  _idleTimer = setTimeout(async () => {
-    if (_activeTabCount <= 0 && _sharedBrowser) {
-      console.log('[BROWSER] Không còn tab nào hoạt động, đóng browser để tiết kiệm tài nguyên.');
-      await _sharedBrowser.close().catch(() => null);
-      _sharedBrowser = null;
-      _sharedBrowserPromise = null;
-      _activeTabCount = 0;
-    }
+  _idleTimer = setTimeout(() => {
+    if (_activeTabCount > 0 || !_sharedBrowser) return;
+    // Atomic swap: nullify state TRUOC khi await close → mọi getSharedBrowser() sau day se launch fresh,
+    // va wait cho _closingPromise hoan tat (de tranh profile lock conflict).
+    const browserToClose = _sharedBrowser;
+    _sharedBrowser = null;
+    _sharedBrowserPromise = null;
+    console.log('[BROWSER] Không còn tab nào hoạt động, đóng browser để tiết kiệm tài nguyên.');
+    _closingPromise = browserToClose.close()
+      .catch(() => null)
+      .finally(() => { _closingPromise = null; });
   }, IDLE_CLOSE_MS);
 }
 
@@ -1114,11 +1127,25 @@ async function runFlowAutomation({ prompt, assets, onImageReady, variantCount, f
       inputFiles.push(await downloadAssetToFile(assets[index], tempDir, index));
     }
 
-    const browser = await getSharedBrowser();
-    const page = await browser.newPage();
-    _activeTabCount++;
-
     if (_idleTimer) clearTimeout(_idleTimer);
+    let browser = await getSharedBrowser();
+    let page;
+    try {
+      page = await browser.newPage();
+    } catch (e) {
+      const msg = e && e.message ? e.message : String(e);
+      if (/has been closed|Target page, context or browser/i.test(msg)) {
+        console.log('[BROWSER] Shared context da dong giua chung — relaunch browser moi.');
+        try { await _sharedBrowser?.close().catch(() => null); } catch (_) {}
+        _sharedBrowser = null;
+        _sharedBrowserPromise = null;
+        browser = await getSharedBrowser();
+        page = await browser.newPage();
+      } else {
+        throw e;
+      }
+    }
+    _activeTabCount++;
 
     console.log(`[AUTO-FLOW] Mở tab mới cho Flow (đang có ${_activeTabCount} tab hoạt động)...`);
 
@@ -1154,11 +1181,25 @@ async function runFlowVideoAutomation({ prompt, imageUrl, onVideoReady, flowConf
       inputFiles.push(await downloadAssetToFile({ url: imageUrl, label: 'reference' }, tempDir, 0));
     }
 
-    const browser = await getSharedBrowser();
-    const page = await browser.newPage();
-    _activeTabCount++;
-
     if (_idleTimer) clearTimeout(_idleTimer);
+    let browser = await getSharedBrowser();
+    let page;
+    try {
+      page = await browser.newPage();
+    } catch (e) {
+      const msg = e && e.message ? e.message : String(e);
+      if (/has been closed|Target page, context or browser/i.test(msg)) {
+        console.log('[BROWSER] Shared context da dong giua chung — relaunch browser moi (video).');
+        try { await _sharedBrowser?.close().catch(() => null); } catch (_) {}
+        _sharedBrowser = null;
+        _sharedBrowserPromise = null;
+        browser = await getSharedBrowser();
+        page = await browser.newPage();
+      } else {
+        throw e;
+      }
+    }
+    _activeTabCount++;
 
     console.log(`[AUTO-VIDEO] Mở tab mới cho Flow Video (đang có ${_activeTabCount} tab hoạt động)...`);
 
