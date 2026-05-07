@@ -1364,6 +1364,8 @@ async function runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideo
     chatUrl = page.url();
 
     // === CẤU HÌNH: Video + aspectRatio + variantLabel ===
+    // Dung pickFlowOption (locator.click, real PointerEvent) thay vi DOM el.click —
+    // Flow's Radix UI tabs khong respond voi DOM click qua page.evaluate.
     console.log(`[FlowVideo] Cấu hình chế độ Video + ${aspectRatio} + ${variantLabel}...`);
     try {
       const configBtn = page.locator('button').filter({ hasText: /Video.*x|Hình ảnh.*x|Nano.*x|crop/ }).first();
@@ -1371,59 +1373,41 @@ async function runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideo
         await configBtn.click();
         await delay(1500);
 
-        // Click tab Video
-        const videoTab = page.locator('button.flow_tab_slider_trigger').filter({ hasText: /videocamVideo/ }).first();
-        if (await videoTab.count() > 0) {
-          const isSelected = await videoTab.getAttribute('aria-selected');
-          if (isSelected !== 'true') {
-            await videoTab.click();
-            await delay(1000);
-            console.log('[FlowVideo] Đã chuyển sang tab Video.');
-          } else {
-            console.log('[FlowVideo] Đã đang ở tab Video.');
-          }
-        }
+        // 1. Tab Video (vs Hinh anh)
+        await pickFlowOption(page, {
+          kind: 'mode',
+          want: 'video',
+          predicate: (txt) => /video/i.test(txt),
+        });
+        await delay(800);
 
-        // Chọn tab "Thành phần" (không phải Khung hình)
-        const thanhPhanTab = page.locator('button.flow_tab_slider_trigger').filter({ hasText: /chrome_extensionThành phần/ }).first();
-        if (await thanhPhanTab.count() > 0) {
-          const isSelected = await thanhPhanTab.getAttribute('aria-selected');
-          if (isSelected !== 'true') {
-            await thanhPhanTab.click();
-            await delay(800);
-            console.log('[FlowVideo] Đã chọn chế độ Thành phần.');
-          } else {
-            console.log('[FlowVideo] Đã đang ở chế độ Thành phần.');
-          }
-        }
+        // 2. Sub-mode "Thành phần" (vs "Khung hình") — chi xuat hien khi o tab Video
+        await pickFlowOption(page, {
+          kind: 'video-mode',
+          want: 'Thành phần',
+          predicate: (txt) => /th[àa]nh\s*ph[ầa]n/i.test(txt),
+        });
+        await delay(500);
 
-        // Chọn aspect ratio (16:9 / 4:3 / 1:1 / 3:4 / 9:16)
-        const aspectBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: aspectRegex }).first();
-        if (await aspectBtn.count() > 0) {
-          const isSelected = await aspectBtn.getAttribute('aria-selected');
-          if (isSelected !== 'true') {
-            await aspectBtn.click();
-            await delay(500);
-            console.log(`[FlowVideo] Đã chọn ${aspectRatio}.`);
-          }
-        }
+        // 3. Aspect ratio
+        await pickFlowOption(page, {
+          kind: 'aspect',
+          want: aspectRatio,
+          predicate: (txt) => txt.replace(/\s+/g, '').endsWith(aspectRatio),
+        });
 
-        // Chọn variant count (1x/x2/x3/x4)
-        // Google Flow UI: variant 1 hiển thị "1x" (đảo thứ tự), 2-4 hiển thị "x2"/"x3"/"x4".
-        const variantRegex = new RegExp(`^(${variantLabel}|${variantCount}x)$`);
-        const x1Btn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: variantRegex }).first();
-        if (await x1Btn.count() > 0) {
-          const isSelected = await x1Btn.getAttribute('aria-selected');
-          if (isSelected !== 'true') {
-            await x1Btn.click();
-            await delay(500);
-            console.log(`[FlowVideo] Đã chọn ${variantLabel}.`);
-          }
-        } else {
-          console.log(`[FlowVideo] Không tìm thấy nút variant ${variantLabel}/${variantCount}x.`);
-        }
+        // 4. Variant count: button "1x" cho 1, "x2"/"x3"/"x4" cho 2-4
+        const variantStrings = [variantLabel, `${variantCount}x`];
+        await pickFlowOption(page, {
+          kind: 'variant',
+          want: variantLabel,
+          predicate: (txt) => {
+            const t = txt.replace(/\s+/g, '').toLowerCase();
+            return variantStrings.some(v => t === v.toLowerCase());
+          },
+        });
 
-        // Đóng config panel bằng click lại config button (toggle)
+        // 5. Đóng config panel
         await configBtn.click();
         await delay(800);
         console.log('[FlowVideo] Đã đóng config panel.');
