@@ -149,6 +149,7 @@ async function runSinglePass2Task({
     const prompt = await resolveTaskPrompt(task, { WIDTH: width, LENGTH: length });
 
     let lastError = null;
+    let rateLimitHit = false;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         const r = await _runAttempt(task, prompt, referenceImageUrl, onImageReady, onVideoReady);
@@ -159,12 +160,17 @@ async function runSinglePass2Task({
         lastError = `Attempt ${attempt}: Flow không tạo được kết quả (outputCount=${r.outputCount}, uploaded=${r.uploadedCount}).`;
         console.warn(`[Pass2][${task.id}] ${lastError}`);
       } catch (innerErr) {
-        lastError = `Attempt ${attempt}: ${innerErr?.message || innerErr}`;
-        console.error(`[Pass2][${task.id}] ${lastError}`);
+        const msg = innerErr?.message || String(innerErr);
+        rateLimitHit = /FLOW_RATE_LIMIT|tao qua nhanh|tạo quá nhanh|too many requests|rate.?limit/i.test(msg);
+        lastError = `Attempt ${attempt}: ${msg}`;
+        console.error(`[Pass2][${task.id}] ${lastError}${rateLimitHit ? ' [RATE_LIMIT]' : ''}`);
       }
       if (attempt < maxAttempts) {
-        console.log(`[Pass2][${task.id}] Tự động retry lần ${attempt + 1}/${maxAttempts}...`);
-        await new Promise(r => setTimeout(r, 3000));
+        // Backoff: rate-limit can wait longer cho Google reset quota.
+        const backoffMs = rateLimitHit ? 45000 + Math.floor(Math.random() * 15000) : 3000;
+        console.log(`[Pass2][${task.id}] Tự động retry lần ${attempt + 1}/${maxAttempts} sau ${Math.round(backoffMs/1000)}s${rateLimitHit ? ' (rate-limit backoff)' : ''}...`);
+        await new Promise(r => setTimeout(r, backoffMs));
+        rateLimitHit = false;
       }
     }
 

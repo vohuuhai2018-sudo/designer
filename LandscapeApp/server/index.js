@@ -1278,9 +1278,24 @@ app.post('/api/projects', async (req, res) => {
             });
           } else {
             const tab = await resolveTabForProject(newProject);
-            await runFlowSplitOrSingle({ tab, fallbackPrompt: resolvedPrompt, assets, onImageReady }).catch(err => {
-                console.error('[AUTO] Lỗi Google Flow:', err.message);
-            });
+            // Retry-on-rate-limit: 1 retry sau khi cho 45-60s neu Flow tra ve "tao qua nhanh".
+            let attempt = 0;
+            const maxAutoAttempts = 2;
+            while (attempt < maxAutoAttempts) {
+              attempt++;
+              try {
+                await runFlowSplitOrSingle({ tab, fallbackPrompt: resolvedPrompt, assets, onImageReady });
+                break;
+              } catch (err) {
+                const msg = err?.message || String(err);
+                const isRateLimit = /FLOW_RATE_LIMIT|tao qua nhanh|tạo quá nhanh|too many requests|rate.?limit/i.test(msg);
+                console.error(`[AUTO] Lỗi Google Flow (attempt ${attempt}/${maxAutoAttempts}): ${msg}${isRateLimit ? ' [RATE_LIMIT]' : ''}`);
+                if (!isRateLimit || attempt >= maxAutoAttempts) break;
+                const backoffMs = 45000 + Math.floor(Math.random() * 15000);
+                console.log(`[AUTO] Cho ${Math.round(backoffMs/1000)}s roi retry (rate-limit backoff)...`);
+                await new Promise(r => setTimeout(r, backoffMs));
+              }
+            }
           }
 
           if (autoCount > 0) {

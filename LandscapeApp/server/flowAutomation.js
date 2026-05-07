@@ -839,6 +839,82 @@ async function fillPromptBox(promptBox, prompt) {
   console.log(`[FlowV2] Prompt da vao o chat (${currentValue.trim().length} ky tu).`);
 }
 
+// Pick option button trong config panel (mode/aspect/variant). Predicate test text trim cua tung button.
+// Click + verify aria-selected dat 'true' sau khi click. Ghi log ALL candidate texts neu khong match,
+// de debug khi Google doi UI.
+async function pickFlowOption(page, { kind, want, predicate }) {
+  try {
+    const buttons = await page.evaluate(() => {
+      const list = Array.from(document.querySelectorAll('button.flow_tab_slider_trigger, button[role="tab"], button[aria-selected]'));
+      return list.map((b, idx) => ({
+        idx,
+        text: (b.innerText || b.textContent || '').trim(),
+        ariaLabel: b.getAttribute('aria-label') || '',
+        ariaSelected: b.getAttribute('aria-selected') || '',
+      }));
+    });
+    if (buttons.length === 0) {
+      console.log(`[FlowV2][pick:${kind}] khong tim thay button candidate trong panel.`);
+      return false;
+    }
+    const matchIdx = buttons.findIndex(b => predicate(b.text) || predicate(b.ariaLabel));
+    if (matchIdx < 0) {
+      console.log(`[FlowV2][pick:${kind}] khong match "${want}". Candidates: ${JSON.stringify(buttons.map(b => b.text || b.ariaLabel)).slice(0, 400)}`);
+      return false;
+    }
+    const target = buttons[matchIdx];
+    if (target.ariaSelected === 'true') {
+      console.log(`[FlowV2][pick:${kind}] da o "${want}" (san san).`);
+      return true;
+    }
+    // Click via DOM index (avoid duplicate selector matches)
+    const clicked = await page.evaluate((idx) => {
+      const list = Array.from(document.querySelectorAll('button.flow_tab_slider_trigger, button[role="tab"], button[aria-selected]'));
+      const el = list[idx];
+      if (!el) return false;
+      el.click();
+      return true;
+    }, target.idx);
+    if (!clicked) {
+      console.log(`[FlowV2][pick:${kind}] click that bai (idx=${target.idx}).`);
+      return false;
+    }
+    await delay(500);
+    // Verify
+    const after = await page.evaluate((idx) => {
+      const list = Array.from(document.querySelectorAll('button.flow_tab_slider_trigger, button[role="tab"], button[aria-selected]'));
+      return list[idx]?.getAttribute('aria-selected') || '';
+    }, target.idx);
+    if (after === 'true') {
+      console.log(`[FlowV2][pick:${kind}] da chon "${want}" — verify aria-selected=true.`);
+      return true;
+    }
+    console.log(`[FlowV2][pick:${kind}] click "${want}" nhung aria-selected=${after}, retry 1 lan...`);
+    await page.evaluate((idx) => {
+      const list = Array.from(document.querySelectorAll('button.flow_tab_slider_trigger, button[role="tab"], button[aria-selected]'));
+      list[idx]?.click();
+    }, target.idx);
+    await delay(700);
+    return true;
+  } catch (e) {
+    console.log(`[FlowV2][pick:${kind}] error: ${e.message}`);
+    return false;
+  }
+}
+
+// Detect Flow showing rate-limit error in DOM ("Bạn đang yêu cầu tạo quá nhanh" or similar).
+// Quick scan body text. Tra ve true neu match.
+async function detectFlowRateLimit(page) {
+  try {
+    return await page.evaluate(() => {
+      const t = document.body.innerText || '';
+      return /Bạn đang yêu cầu tạo quá nhanh|requesting too fast|too many requests|rate.?limit|Vui lòng đợi.*thử lại/i.test(t);
+    });
+  } catch (_) {
+    return false;
+  }
+}
+
 async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady, flowConfig = {}) {
   const outputPaths = [];
   let chatUrl = 'https://labs.google/fx/vi/tools/flow';
@@ -886,45 +962,30 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
         await configBtn.click();
         await delay(1500);
 
-        // 1. Tab mode (Hình ảnh / Video)
-        const modeTabBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: modeTabRegex }).first();
-        if (await modeTabBtn.count() > 0) {
-          const isSelected = await modeTabBtn.getAttribute('aria-selected');
-          if (isSelected !== 'true') {
-            await modeTabBtn.click();
-            await delay(1000);
-            console.log(`[FlowV2] Da chuyen sang tab ${mode}.`);
-          } else {
-            console.log(`[FlowV2] Da dang o tab ${mode}.`);
-          }
-        }
+        // 1. Tab mode (Hình ảnh / Video). Match by aria-label or trimmed innerText.
+        await pickFlowOption(page, {
+          kind: 'mode',
+          want: mode,
+          predicate: (txt) => mode === 'video' ? /video/i.test(txt) : /h[ìi]nh\s*[ảa]nh|image\b/i.test(txt),
+        });
 
-        // 2. Aspect ratio (16:9 / 4:3 / 1:1 / 3:4 / 9:16) — match suffix of button text
-        const aspectBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: aspectRegex }).first();
-        if (await aspectBtn.count() > 0) {
-          const isSelected = await aspectBtn.getAttribute('aria-selected');
-          if (isSelected !== 'true') {
-            await aspectBtn.click();
-            await delay(500);
-            console.log(`[FlowV2] Da chon aspect ${aspectRatio}.`);
-          }
-        }
+        // 2. Aspect ratio (16:9 / 4:3 / 1:1 / 3:4 / 9:16)
+        await pickFlowOption(page, {
+          kind: 'aspect',
+          want: aspectRatio,
+          predicate: (txt) => txt.replace(/\s+/g, '').endsWith(aspectRatio),
+        });
 
-        // 3. Variant count (1x / x2 / x3 / x4)
-        // Google Flow UI: variant 1 hiển thị "1x" (đảo thứ tự), 2-4 hiển thị "x2"/"x3"/"x4".
-        // Match cả 2 chiều "x{N}" và "{N}x" để tương thích nếu Google đổi UI.
-        const variantRegex = new RegExp(`^(${variantLabel}|${targetCount}x)$`);
-        const variantBtn = page.locator('button.flow_tab_slider_trigger').filter({ hasText: variantRegex }).first();
-        if (await variantBtn.count() > 0) {
-          const isSelected = await variantBtn.getAttribute('aria-selected');
-          if (isSelected !== 'true') {
-            await variantBtn.click();
-            await delay(500);
-            console.log(`[FlowV2] Da chon ${variantLabel}.`);
-          }
-        } else {
-          console.log(`[FlowV2] Khong tim thay nut variant ${variantLabel}/${targetCount}x.`);
-        }
+        // 3. Variant count: button hiển thị "1x" (variant 1) hoặc "x2"/"x3"/"x4"
+        const variantStrings = [variantLabel, `${targetCount}x`];
+        await pickFlowOption(page, {
+          kind: 'variant',
+          want: variantLabel,
+          predicate: (txt) => {
+            const t = txt.replace(/\s+/g, '').toLowerCase();
+            return variantStrings.some(v => t === v.toLowerCase());
+          },
+        });
 
         // 4. Đóng config panel bằng click lại config button (toggle)
         await configBtn.click();
@@ -933,6 +994,11 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
       }
     } catch (error) {
       console.log(`[FlowV2] Bo qua loi cau hinh: ${error.message}`);
+    }
+
+    // Detect early rate-limit error tu Flow ("Bạn đang yêu cầu tạo quá nhanh")
+    if (await detectFlowRateLimit(page)) {
+      throw new Error('FLOW_RATE_LIMIT: Google Flow rate-limit ngay sau cau hinh.');
     }
 
     console.log(`[FlowV2] Dan cung luc ${inputFiles.length} anh vao Flow...`);
@@ -961,15 +1027,33 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
     }
 
     console.log(`[FlowV2] Dang cho Google Flow sinh ket qua ${targetCount} anh (timeout 6 phut)...`);
-    try {
-      await page.waitForFunction(({ oldSources, need }) => {
-        const currentImages = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
-        const newImages = currentImages.filter(img => !oldSources.includes(img.src));
-        return newImages.length >= need;
-      }, { oldSources: existingImgSources, need: targetCount }, { timeout: 360000 });
-    } catch (error) {
-      console.log(`[FlowV2] Het thoi gian cho ${targetCount} anh moi, se xu ly nhung anh da co: ${error.message}`);
+    // Race waitForFunction (image generation) vs polling rate-limit detection (every 4s).
+    let rateLimitDetected = false;
+    const generationPromise = page.waitForFunction(({ oldSources, need }) => {
+      const currentImages = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
+      const newImages = currentImages.filter(img => !oldSources.includes(img.src));
+      return newImages.length >= need;
+    }, { oldSources: existingImgSources, need: targetCount }, { timeout: 360000 })
+      .then(() => 'images')
+      .catch((e) => { return { type: 'timeout', err: e }; });
+    const rateLimitPromise = (async () => {
+      const start = Date.now();
+      while (Date.now() - start < 360000) {
+        await delay(4000);
+        if (await detectFlowRateLimit(page)) return 'rate_limit';
+      }
+      return 'rl_timeout';
+    })();
+
+    const winner = await Promise.race([generationPromise, rateLimitPromise]);
+    if (winner === 'rate_limit') {
+      rateLimitDetected = true;
+      console.log('[FlowV2] Flow tra ve loi rate-limit — abort som de retry o cap cao hon.');
+      throw new Error('FLOW_RATE_LIMIT: Bạn đang yêu cầu tạo quá nhanh.');
+    } else if (winner && winner.type === 'timeout') {
+      console.log(`[FlowV2] Het thoi gian cho ${targetCount} anh moi, se xu ly nhung anh da co: ${winner.err?.message || ''}`);
     }
+    void rateLimitDetected;
 
     await delay(20000);
 
