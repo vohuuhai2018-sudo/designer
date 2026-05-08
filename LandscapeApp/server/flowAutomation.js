@@ -1209,6 +1209,12 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
   } catch (error) {
     console.error('[FlowV2] Loi nghiem trong:', error);
     await page.close().catch(() => null);
+    // Retriable errors (FLOW_RATE_LIMIT/FLOW_PROJECT_ERROR/FLOW_ACCOUNT_BLOCKED) PHAI propagate
+    // de outer retry loop biet va trigger switch profile. Cac loi khac swallow + return partial.
+    const msg = error?.message || String(error);
+    if (/FLOW_RATE_LIMIT|FLOW_PROJECT_ERROR|FLOW_ACCOUNT_BLOCKED/.test(msg)) {
+      throw error;
+    }
     return { outputPaths, chatUrl };
   }
 }
@@ -1650,6 +1656,10 @@ async function runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideo
   } catch (error) {
     console.error('[FlowVideo] Lỗi nghiêm trọng:', error);
     await page.close().catch(() => null);
+    const msg = error?.message || String(error);
+    if (/FLOW_RATE_LIMIT|FLOW_PROJECT_ERROR|FLOW_ACCOUNT_BLOCKED/.test(msg)) {
+      throw error;
+    }
     return { videoPath, chatUrl };
   }
 }
