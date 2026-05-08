@@ -10,8 +10,9 @@ flow-worker/env.local.bat
 # Node modules (any depth)
 **/node_modules/
 
-# Browser profiles & cookies (large + sensitive)
+# Browser profiles & cookies (large + sensitive). Match ca pool profile_2/_3/...
 **/flow_profile/
+**/flow_profile_*/
 **/chatgpt_profile/
 
 # Build outputs
