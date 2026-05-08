@@ -939,50 +939,50 @@ async function pickFlowOption(page, { kind, want, predicate }) {
   }
 }
 
-// Detect Flow showing rate-limit error in DOM ("Bạn đang yêu cầu tạo quá nhanh" or similar).
-// Quick scan body text. Tra ve true neu match.
-async function detectFlowRateLimit(page) {
+// Helper chung: scan text trong DOM CHIN. Dung ca document.body.innerText (truyen thong)
+// VA Playwright text locator (xuyen shadow DOM neu Flow render error trong shadow tree).
+async function _scanPageText(page, regex) {
   try {
-    return await page.evaluate(() => {
-      const t = document.body.innerText || '';
-      return /Bạn đang yêu cầu tạo quá nhanh|requesting too fast|too many requests|rate.?limit|Vui lòng đợi.*thử lại/i.test(t);
-    });
+    // Method 1: body innerText (nhanh + bat duoc DOM thuong)
+    const bodyHit = await page.evaluate((re) => {
+      const t = document.body?.innerText || '';
+      return new RegExp(re.source, re.flags).test(t);
+    }, { source: regex.source, flags: regex.flags });
+    if (bodyHit) return true;
+    // Method 2: Playwright locator (xuyen shadow DOM, xuyen iframe trong tree)
+    const loc = page.locator(`text=${regex}`);
+    return (await loc.count()) > 0;
   } catch (_) {
     return false;
   }
+}
+
+// Detect Flow showing rate-limit error in DOM ("Bạn đang yêu cầu tạo quá nhanh" or similar).
+async function detectFlowRateLimit(page) {
+  return _scanPageText(page, /Bạn đang yêu cầu tạo quá nhanh|requesting too fast|too many requests|Vui lòng đợi.*thử lại/i);
 }
 
 // Detect Flow's generic project error UI ("Đã xảy ra lỗi" + nut "Quay lại dự án").
-// Xuat hien khi project URL hong / het han / Flow gap loi noi bo. Khac voi rate-limit:
-// loi nay khong tu phuc hoi, can quay ve project mot va tao moi.
 async function detectFlowProjectError(page) {
   try {
-    return await page.evaluate(() => {
-      const t = document.body.innerText || '';
-      // "Đã xảy ra lỗi" + nut "Quay lại dự án" la signature cua Flow project-error page.
-      // KHONG match "Đã xảy ra lỗi" don le vi co the la toast tam thoi.
-      const hasErr = /Đã xảy ra lỗi|Da xay ra loi|Something went wrong/i.test(t);
-      const hasBackBtn = /Quay lại dự án|Quay lai du an|Back to project/i.test(t);
-      return hasErr && hasBackBtn;
-    });
+    const hasErr = await _scanPageText(page, /Đã xảy ra lỗi|Da xay ra loi|Something went wrong/i);
+    if (!hasErr) return false;
+    const hasBackBtn = await _scanPageText(page, /Quay lại dự án|Quay lai du an|Back to project/i);
+    return hasBackBtn;
   } catch (_) {
     return false;
   }
 }
 
-// Detect "unusual activity" account block — Flow chan tam tai khoan (thuong do nhieu
-// request lien tiep tu cung account, hoac IP bi flag). Khac voi rate-limit ("tao qua nhanh"):
-// loi nay PER-IMAGE-CARD trong project, error card khong tao IMG element →
-// waitForFunction "newImages >= need" KHONG bao gio thoat → cho 6 phut moi timeout.
-// Phai detect som + switch profile NGAY.
+// Detect "unusual activity" account block. Flow render error cards co "Không thành công"
+// + "We noticed some unusual activity" — co the trong shadow DOM tuy version. Dung ket hop
+// _scanPageText (body + locator) de safe.
 async function detectFlowAccountBlocked(page) {
   try {
-    return await page.evaluate(() => {
-      const t = document.body.innerText || '';
-      const hasFailLabel = /Không thành công|Khong thanh cong|Generation failed/i.test(t);
-      const hasUnusual = /unusual activity|We noticed some|hoạt động bất thường/i.test(t);
-      return hasFailLabel && hasUnusual;
-    });
+    const hasFailLabel = await _scanPageText(page, /Không thành công|Khong thanh cong|Generation failed|Generation unsuccessful/i);
+    if (!hasFailLabel) return false;
+    const hasUnusual = await _scanPageText(page, /unusual activity|We noticed some|hoạt động bất thường|Help Center/i);
+    return hasUnusual;
   } catch (_) {
     return false;
   }
@@ -1116,11 +1116,12 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
       .catch((e) => { return { type: 'timeout', err: e }; });
     const errorPollPromise = (async () => {
       const start = Date.now();
+      // Poll moi 2s (tu 4s) cho detect nhanh hon. Cac scan da co fast-path.
       while (Date.now() - start < 360000) {
-        await delay(4000);
+        await delay(2000);
+        if (await detectFlowAccountBlocked(page)) return 'account_blocked';
         if (await detectFlowRateLimit(page)) return 'rate_limit';
         if (await detectFlowProjectError(page)) return 'project_error';
-        if (await detectFlowAccountBlocked(page)) return 'account_blocked';
       }
       return 'rl_timeout';
     })();
