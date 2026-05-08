@@ -1292,19 +1292,21 @@ app.post('/api/projects', async (req, res) => {
                 const msg = err?.message || String(err);
                 const isRateLimit = /FLOW_RATE_LIMIT|tao qua nhanh|tạo quá nhanh|too many requests|rate.?limit/i.test(msg);
                 const isProjectErr = /FLOW_PROJECT_ERROR|Đã xảy ra lỗi|Da xay ra loi/i.test(msg);
-                const isRetriable = isRateLimit || isProjectErr;
-                const tag = isRateLimit ? ' [RATE_LIMIT]' : (isProjectErr ? ' [PROJECT_ERROR]' : '');
+                const isAccountBlocked = /FLOW_ACCOUNT_BLOCKED|unusual activity|Không thành công|hoạt động bất thường/i.test(msg);
+                const isRetriable = isRateLimit || isProjectErr || isAccountBlocked;
+                const tag = isAccountBlocked ? ' [ACCOUNT_BLOCKED]' : (isRateLimit ? ' [RATE_LIMIT]' : (isProjectErr ? ' [PROJECT_ERROR]' : ''));
                 console.error(`[AUTO] Lỗi Google Flow (attempt ${attempt}/${maxAutoAttempts}): ${msg}${tag}`);
                 if (!isRetriable || attempt >= maxAutoAttempts) break;
                 if (FLOW_PROFILES_COUNT > 1) {
-                  const sw = await markProfileCooldownAndSwitch(isRateLimit ? 'rate-limit' : 'project-error');
+                  const reason = isAccountBlocked ? 'account-blocked' : (isRateLimit ? 'rate-limit' : 'project-error');
+                  const sw = await markProfileCooldownAndSwitch(reason);
                   if (sw.switched) {
                     console.log(`[AUTO] Da switch profile, retry NGAY${tag}...`);
                     continue;
                   }
                 }
                 // Single profile hoac het profile available → backoff truyen thong
-                const backoffMs = isRateLimit ? 45000 + Math.floor(Math.random() * 15000) : 8000;
+                const backoffMs = (isRateLimit || isAccountBlocked) ? 45000 + Math.floor(Math.random() * 15000) : 8000;
                 console.log(`[AUTO] Cho ${Math.round(backoffMs/1000)}s roi retry${tag}...`);
                 await new Promise(r => setTimeout(r, backoffMs));
               }

@@ -970,6 +970,24 @@ async function detectFlowProjectError(page) {
   }
 }
 
+// Detect "unusual activity" account block — Flow chan tam tai khoan (thuong do nhieu
+// request lien tiep tu cung account, hoac IP bi flag). Khac voi rate-limit ("tao qua nhanh"):
+// loi nay PER-IMAGE-CARD trong project, error card khong tao IMG element →
+// waitForFunction "newImages >= need" KHONG bao gio thoat → cho 6 phut moi timeout.
+// Phai detect som + switch profile NGAY.
+async function detectFlowAccountBlocked(page) {
+  try {
+    return await page.evaluate(() => {
+      const t = document.body.innerText || '';
+      const hasFailLabel = /Không thành công|Khong thanh cong|Generation failed/i.test(t);
+      const hasUnusual = /unusual activity|We noticed some|hoạt động bất thường/i.test(t);
+      return hasFailLabel && hasUnusual;
+    });
+  } catch (_) {
+    return false;
+  }
+}
+
 async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady, flowConfig = {}) {
   const outputPaths = [];
   let chatUrl = 'https://labs.google/fx/vi/tools/flow';
@@ -1051,12 +1069,15 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
       console.log(`[FlowV2] Bo qua loi cau hinh: ${error.message}`);
     }
 
-    // Detect early errors: rate-limit OR generic project-error ("Đã xảy ra lỗi")
+    // Detect early errors: rate-limit, project-error, account-blocked
     if (await detectFlowRateLimit(page)) {
       throw new Error('FLOW_RATE_LIMIT: Google Flow rate-limit ngay sau cau hinh.');
     }
     if (await detectFlowProjectError(page)) {
       throw new Error('FLOW_PROJECT_ERROR: Flow hien "Đã xảy ra lỗi" — project URL hong hoac Flow loi noi bo, can retry.');
+    }
+    if (await detectFlowAccountBlocked(page)) {
+      throw new Error('FLOW_ACCOUNT_BLOCKED: Flow chan account ("unusual activity") — can switch profile.');
     }
 
     console.log(`[FlowV2] Dan cung luc ${inputFiles.length} anh vao Flow...`);
@@ -1099,6 +1120,7 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
         await delay(4000);
         if (await detectFlowRateLimit(page)) return 'rate_limit';
         if (await detectFlowProjectError(page)) return 'project_error';
+        if (await detectFlowAccountBlocked(page)) return 'account_blocked';
       }
       return 'rl_timeout';
     })();
@@ -1110,6 +1132,9 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
     } else if (winner === 'project_error') {
       console.log('[FlowV2] Flow tra ve "Đã xảy ra lỗi" — abort som de retry o cap cao hon.');
       throw new Error('FLOW_PROJECT_ERROR: Flow project loi giua chung, can retry.');
+    } else if (winner === 'account_blocked') {
+      console.log('[FlowV2] Flow tra ve "Không thành công · unusual activity" — account bi chan, switch profile NGAY.');
+      throw new Error('FLOW_ACCOUNT_BLOCKED: We noticed some unusual activity.');
     } else if (winner && winner.type === 'timeout') {
       console.log(`[FlowV2] Het thoi gian cho ${targetCount} anh moi, se xu ly nhung anh da co: ${winner.err?.message || ''}`);
     }

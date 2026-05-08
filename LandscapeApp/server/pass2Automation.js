@@ -166,25 +166,28 @@ async function runSinglePass2Task({
         const msg = innerErr?.message || String(innerErr);
         rateLimitHit = /FLOW_RATE_LIMIT|tao qua nhanh|tạo quá nhanh|too many requests|rate.?limit/i.test(msg);
         projectErrHit = /FLOW_PROJECT_ERROR|Đã xảy ra lỗi|Da xay ra loi/i.test(msg);
+        var accountBlockedHit = /FLOW_ACCOUNT_BLOCKED|unusual activity|Không thành công|hoạt động bất thường/i.test(msg);
         lastError = `Attempt ${attempt}: ${msg}`;
-        const errTag = rateLimitHit ? ' [RATE_LIMIT]' : (projectErrHit ? ' [PROJECT_ERROR]' : '');
+        const errTag = accountBlockedHit ? ' [ACCOUNT_BLOCKED]' : (rateLimitHit ? ' [RATE_LIMIT]' : (projectErrHit ? ' [PROJECT_ERROR]' : ''));
         console.error(`[Pass2][${task.id}] ${lastError}${errTag}`);
       }
       if (attempt < effMax) {
         // Multi-profile: switch ngay sang account khac va retry → khong cho long.
-        if ((rateLimitHit || projectErrHit) && FLOW_PROFILES_COUNT > 1) {
-          const sw = await markProfileCooldownAndSwitch(rateLimitHit ? 'rate-limit' : 'project-error');
+        const isSwitchable = rateLimitHit || projectErrHit || accountBlockedHit;
+        if (isSwitchable && FLOW_PROFILES_COUNT > 1) {
+          const reason = accountBlockedHit ? 'account-blocked' : (rateLimitHit ? 'rate-limit' : 'project-error');
+          const sw = await markProfileCooldownAndSwitch(reason);
           if (sw.switched) {
             console.log(`[Pass2][${task.id}] Da switch profile #${sw.fromIdx} → #${sw.toIdx}, retry ${attempt + 1}/${effMax} NGAY...`);
-            rateLimitHit = false; projectErrHit = false;
+            rateLimitHit = false; projectErrHit = false; accountBlockedHit = false;
             continue;
           }
         }
         // Single profile hoac het profile → backoff truyen thong
-        const backoffMs = rateLimitHit ? 45000 + Math.floor(Math.random() * 15000) : 5000;
-        console.log(`[Pass2][${task.id}] Tự động retry lần ${attempt + 1}/${effMax} sau ${Math.round(backoffMs/1000)}s${rateLimitHit ? ' (rate-limit backoff)' : ''}...`);
+        const backoffMs = (rateLimitHit || accountBlockedHit) ? 45000 + Math.floor(Math.random() * 15000) : 5000;
+        console.log(`[Pass2][${task.id}] Tự động retry lần ${attempt + 1}/${effMax} sau ${Math.round(backoffMs/1000)}s${(rateLimitHit || accountBlockedHit) ? ' (account/quota backoff)' : ''}...`);
         await new Promise(r => setTimeout(r, backoffMs));
-        rateLimitHit = false; projectErrHit = false;
+        rateLimitHit = false; projectErrHit = false; accountBlockedHit = false;
       }
     }
 
