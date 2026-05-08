@@ -109,6 +109,34 @@ function buildProjectAiAssets(project) {
 }
 
 function buildBasicProjectFlowPrompt(project) {
+  const branch = project.mainBranch || 'landscape';
+  // Architecture / Interior: dung fallback generic, KHONG inject landscape-specific
+  // (waterfall, koi pond, stone hills...) vi tab.prompt da co full huong dan rieng cho
+  // tung tab (nha_vuon, nha_pho, biet_thu, hien_dai, ...) trong DB.
+  if (branch === 'architecture' || branch === 'interior') {
+    return buildBasicNonLandscapePrompt(project);
+  }
+  return buildBasicLandscapePrompt(project);
+}
+
+function buildBasicNonLandscapePrompt(project) {
+  const modelUrl = getProjectReferenceModelUrl(project);
+  const customNote = project.note?.replace(/\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?/i, '').trim();
+  const branchLabel = project.mainBranch === 'interior' ? 'INTERIOR' : 'ARCHITECTURE';
+  const assetLines = buildProjectAiAssets(project).map((asset, i) => `- File ${i + 1}: ${asset.label}. ${asset.role}`);
+  return [
+    `ROLE: ${branchLabel} visualization expert (STRICT image-to-image transformation)`,
+    '',
+    `PROJECT DATA — ${project.customerName} | ${project.service} | ${branchLabel.toLowerCase()}`,
+    '',
+    ...(customNote ? ['CUSTOMER REQUEST / NOTE:', `"${customNote}"`, ''] : []),
+    ...(modelUrl ? [`REFERENCE MODEL (Image 2): ${modelUrl}`, ''] : []),
+    'ATTACHED FILES',
+    ...assetLines,
+  ].join('\n');
+}
+
+function buildBasicLandscapePrompt(project) {
   const modelUrl = getProjectReferenceModelUrl(project);
   const customNote = project.note?.replace(/\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?/i, '').trim();
   const noteContent = (project.note || '').toLowerCase();
