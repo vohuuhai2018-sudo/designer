@@ -3,7 +3,17 @@ const path = require('path');
 const os = require('os');
 const { chromium } = require('playwright-core');
 
+// Profile mac dinh + pool fallback. FLOW_PROFILES env (csv) cho phep nhieu tai khoan
+// Google Flow → khi 1 account bi rate-limit/project-error, switch ngay sang account
+// khac. Path tuong doi giai theo cwd cua server. Vi du:
+//   FLOW_PROFILES=tooltaoanh/flow_profile,tooltaoanh/flow_profile_2,tooltaoanh/flow_profile_3
 const FLOW_PROFILE_DIR = path.resolve(__dirname, '..', '..', 'tooltaoanh', 'flow_profile');
+const FLOW_PROFILES = (() => {
+  const env = (process.env.FLOW_PROFILES || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (env.length === 0) return [FLOW_PROFILE_DIR];
+  return env.map(p => path.isAbsolute(p) ? p : path.resolve(__dirname, '..', '..', p));
+})();
+console.log(`[BROWSER] FLOW_PROFILES pool: ${FLOW_PROFILES.length} profile(s) — ${FLOW_PROFILES.map(p => path.basename(p)).join(', ')}`);
 const CHROME_CANDIDATES = [
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
@@ -1177,14 +1187,72 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
   }
 }
 
-// ===== SHARED BROWSER: 1 browser duy nhất, mỗi project mở 1 tab mới =====
-// Cho phép xử lý nhiều project song song mà không conflict persistent context.
+// ===== SHARED BROWSER + PROFILE POOL =====
+// Multi-account: FLOW_PROFILES env (csv) → khi 1 profile bi rate-limit hoac
+// project-error, mark cooldown va switch ngay sang profile khac.
 let _sharedBrowser = null;
 let _sharedBrowserPromise = null;
 let _closingPromise = null; // theo doi close dang dien ra → relaunch phai cho close xong (de release profile lock)
 let _activeTabCount = 0;
 const IDLE_CLOSE_MS = 5 * 60 * 1000; // Đóng browser sau 5 phút không có tab nào hoạt động (giam fluke khi traffic thua)
 let _idleTimer = null;
+let _currentProfileIdx = 0; // index trong FLOW_PROFILES dang dung
+const _profileCooldowns = new Map(); // profilePath -> unlockAt (ms epoch)
+const PROFILE_COOLDOWN_MS = 8 * 60 * 1000; // 8 phut sau khi profile bi rate-limit
+
+function getCurrentProfileDir() {
+  return FLOW_PROFILES[_currentProfileIdx] || FLOW_PROFILE_DIR;
+}
+
+// Pick profile khong bi cooldown. Neu tat ca dang cooldown → pick cai sap unlock som nhat.
+function pickAvailableProfileIdx() {
+  const now = Date.now();
+  // Try profiles theo round-robin tu current+1
+  for (let offset = 0; offset < FLOW_PROFILES.length; offset++) {
+    const idx = (_currentProfileIdx + offset) % FLOW_PROFILES.length;
+    const unlockAt = _profileCooldowns.get(FLOW_PROFILES[idx]) || 0;
+    if (unlockAt <= now) return idx;
+  }
+  // Tat ca cooldown → pick cai sap unlock nhat
+  let bestIdx = 0;
+  let bestUnlock = Infinity;
+  for (let i = 0; i < FLOW_PROFILES.length; i++) {
+    const u = _profileCooldowns.get(FLOW_PROFILES[i]) || 0;
+    if (u < bestUnlock) { bestUnlock = u; bestIdx = i; }
+  }
+  return bestIdx;
+}
+
+// Mark profile vao cooldown va switch sang profile khac. Goi khi gap loi
+// FLOW_RATE_LIMIT/FLOW_PROJECT_ERROR. Tra ve {switched: bool, fromIdx, toIdx, waitMs}.
+async function markProfileCooldownAndSwitch(reason) {
+  const fromIdx = _currentProfileIdx;
+  const fromProfile = FLOW_PROFILES[fromIdx];
+  _profileCooldowns.set(fromProfile, Date.now() + PROFILE_COOLDOWN_MS);
+  console.log(`[BROWSER] Profile #${fromIdx} (${path.basename(fromProfile)}) cooldown ${PROFILE_COOLDOWN_MS/1000}s vi ${reason}.`);
+
+  // Close current shared browser (force relaunch with new profile)
+  if (_sharedBrowser) {
+    const browserToClose = _sharedBrowser;
+    _sharedBrowser = null;
+    _sharedBrowserPromise = null;
+    _closingPromise = browserToClose.close().catch(() => null).finally(() => { _closingPromise = null; });
+    try { await _closingPromise; } catch (_) {}
+  }
+
+  const toIdx = pickAvailableProfileIdx();
+  if (FLOW_PROFILES.length === 1) {
+    console.log(`[BROWSER] Chi co 1 profile — khong the switch, se retry tren cung profile.`);
+    return { switched: false, fromIdx, toIdx };
+  }
+  const toProfile = FLOW_PROFILES[toIdx];
+  const unlockAt = _profileCooldowns.get(toProfile) || 0;
+  const waitMs = Math.max(0, unlockAt - Date.now());
+  _currentProfileIdx = toIdx;
+  console.log(`[BROWSER] Switch profile #${fromIdx} → #${toIdx} (${path.basename(toProfile)})${waitMs > 0 ? ` — phai cho ${Math.round(waitMs/1000)}s vi tat ca dang cooldown` : ''}.`);
+  if (waitMs > 0) await delay(waitMs);
+  return { switched: true, fromIdx, toIdx, waitMs };
+}
 
 async function getSharedBrowser() {
   // Neu dang close → cho close xong de Chrome release profile dir lock truoc khi launch fresh
@@ -1204,10 +1272,11 @@ async function getSharedBrowser() {
 
   if (_sharedBrowserPromise) return _sharedBrowserPromise;
 
+  const profileDir = getCurrentProfileDir();
   _sharedBrowserPromise = (async () => {
-    console.log('[BROWSER] Khởi tạo shared browser (persistent context)...');
+    console.log(`[BROWSER] Khởi tạo shared browser — profile #${_currentProfileIdx} (${path.basename(profileDir)})...`);
     try {
-      const ctx = await chromium.launchPersistentContext(FLOW_PROFILE_DIR, {
+      const ctx = await chromium.launchPersistentContext(profileDir, {
         executablePath: resolveBrowserExecutable(),
         headless: false,
         viewport: { width: 1440, height: 900 },
@@ -1561,5 +1630,7 @@ async function runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideo
 
 module.exports = {
   runFlowAutomation,
-  runFlowVideoAutomation
+  runFlowVideoAutomation,
+  markProfileCooldownAndSwitch,
+  FLOW_PROFILES_COUNT: FLOW_PROFILES.length
 };

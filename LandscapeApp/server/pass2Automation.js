@@ -1,7 +1,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 const mongoose = require('mongoose');
-const { runFlowAutomation, runFlowVideoAutomation } = require('./flowAutomation');
+const { runFlowAutomation, runFlowVideoAutomation, markProfileCooldownAndSwitch, FLOW_PROFILES_COUNT } = require('./flowAutomation');
 
 const PROMPTS_DIR = path.join(__dirname, 'prompts', 'pass2');
 // Fallback file lookup nếu DB task có prompt rỗng (tránh chạy với prompt trống).
@@ -150,7 +150,10 @@ async function runSinglePass2Task({
 
     let lastError = null;
     let rateLimitHit = false;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let projectErrHit = false;
+    // Tang attempts khi co backup profiles
+    const effMax = Math.max(maxAttempts, FLOW_PROFILES_COUNT > 1 ? FLOW_PROFILES_COUNT + 1 : maxAttempts);
+    for (let attempt = 1; attempt <= effMax; attempt++) {
       try {
         const r = await _runAttempt(task, prompt, referenceImageUrl, onImageReady, onVideoReady);
         if (r.success) {
@@ -162,17 +165,26 @@ async function runSinglePass2Task({
       } catch (innerErr) {
         const msg = innerErr?.message || String(innerErr);
         rateLimitHit = /FLOW_RATE_LIMIT|tao qua nhanh|tạo quá nhanh|too many requests|rate.?limit/i.test(msg);
-        const projectErr = /FLOW_PROJECT_ERROR|Đã xảy ra lỗi|Da xay ra loi/i.test(msg);
+        projectErrHit = /FLOW_PROJECT_ERROR|Đã xảy ra lỗi|Da xay ra loi/i.test(msg);
         lastError = `Attempt ${attempt}: ${msg}`;
-        const errTag = rateLimitHit ? ' [RATE_LIMIT]' : (projectErr ? ' [PROJECT_ERROR]' : '');
+        const errTag = rateLimitHit ? ' [RATE_LIMIT]' : (projectErrHit ? ' [PROJECT_ERROR]' : '');
         console.error(`[Pass2][${task.id}] ${lastError}${errTag}`);
       }
-      if (attempt < maxAttempts) {
-        // Backoff: rate-limit can wait lau cho Google reset quota; project-error retry nhanh hon.
+      if (attempt < effMax) {
+        // Multi-profile: switch ngay sang account khac va retry → khong cho long.
+        if ((rateLimitHit || projectErrHit) && FLOW_PROFILES_COUNT > 1) {
+          const sw = await markProfileCooldownAndSwitch(rateLimitHit ? 'rate-limit' : 'project-error');
+          if (sw.switched) {
+            console.log(`[Pass2][${task.id}] Da switch profile #${sw.fromIdx} → #${sw.toIdx}, retry ${attempt + 1}/${effMax} NGAY...`);
+            rateLimitHit = false; projectErrHit = false;
+            continue;
+          }
+        }
+        // Single profile hoac het profile → backoff truyen thong
         const backoffMs = rateLimitHit ? 45000 + Math.floor(Math.random() * 15000) : 5000;
-        console.log(`[Pass2][${task.id}] Tự động retry lần ${attempt + 1}/${maxAttempts} sau ${Math.round(backoffMs/1000)}s${rateLimitHit ? ' (rate-limit backoff)' : ''}...`);
+        console.log(`[Pass2][${task.id}] Tự động retry lần ${attempt + 1}/${effMax} sau ${Math.round(backoffMs/1000)}s${rateLimitHit ? ' (rate-limit backoff)' : ''}...`);
         await new Promise(r => setTimeout(r, backoffMs));
-        rateLimitHit = false;
+        rateLimitHit = false; projectErrHit = false;
       }
     }
 

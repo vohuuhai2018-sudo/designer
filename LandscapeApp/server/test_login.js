@@ -4,7 +4,14 @@ const { chromium } = require('playwright-core');
 const path = require('path');
 const fs = require('fs');
 
-const FLOW_PROFILE_DIR = path.resolve(__dirname, '..', '..', 'tooltaoanh', 'flow_profile');
+// Mac dinh login profile chinh. Override bang env de login profile khac:
+//   PROFILE=flow_profile_2 node test_login.js
+//   PROFILE=tooltaoanh/flow_profile_3 node test_login.js
+const PROFILE_ARG = process.env.PROFILE || 'tooltaoanh/flow_profile';
+const FLOW_PROFILE_DIR = path.isAbsolute(PROFILE_ARG)
+  ? PROFILE_ARG
+  : path.resolve(__dirname, '..', '..', PROFILE_ARG.startsWith('tooltaoanh/') ? PROFILE_ARG : `tooltaoanh/${PROFILE_ARG}`);
+console.log(`[LOGIN] Profile dir: ${FLOW_PROFILE_DIR}`);
 const CHROME_CANDIDATES = [
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',

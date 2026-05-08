@@ -6,7 +6,7 @@ const cloudinary = require('cloudinary').v2;
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { runChatGptAutomation, runChatGptAutomationBatch } = require('./chatgptAutomation');
-const { runFlowAutomation, runFlowVideoAutomation } = require('./flowAutomation');
+const { runFlowAutomation, runFlowVideoAutomation, markProfileCooldownAndSwitch, FLOW_PROFILES_COUNT } = require('./flowAutomation');
 const { generateLandscapePrompt } = require('./geminiPromptService');
 const { runPass2Tasks, runSinglePass2Task, initPass2State, getTaskById: getPass2TaskById } = require('./pass2Automation');
 // Vercel serverless kill function ngay sau response → setImmediate KHÔNG kịp
@@ -1278,9 +1278,10 @@ app.post('/api/projects', async (req, res) => {
             });
           } else {
             const tab = await resolveTabForProject(newProject);
-            // Retry-on-rate-limit: 1 retry sau khi cho 45-60s neu Flow tra ve "tao qua nhanh".
+            // Retry voi profile-switch: khi rate-limit/project-error → switch sang
+            // account khac va retry NGAY (khong cho 45s) neu co backup profile.
             let attempt = 0;
-            const maxAutoAttempts = 2;
+            const maxAutoAttempts = Math.max(2, FLOW_PROFILES_COUNT + 1);
             while (attempt < maxAutoAttempts) {
               attempt++;
               try {
@@ -1294,6 +1295,14 @@ app.post('/api/projects', async (req, res) => {
                 const tag = isRateLimit ? ' [RATE_LIMIT]' : (isProjectErr ? ' [PROJECT_ERROR]' : '');
                 console.error(`[AUTO] Lỗi Google Flow (attempt ${attempt}/${maxAutoAttempts}): ${msg}${tag}`);
                 if (!isRetriable || attempt >= maxAutoAttempts) break;
+                if (FLOW_PROFILES_COUNT > 1) {
+                  const sw = await markProfileCooldownAndSwitch(isRateLimit ? 'rate-limit' : 'project-error');
+                  if (sw.switched) {
+                    console.log(`[AUTO] Da switch profile, retry NGAY${tag}...`);
+                    continue;
+                  }
+                }
+                // Single profile hoac het profile available → backoff truyen thong
                 const backoffMs = isRateLimit ? 45000 + Math.floor(Math.random() * 15000) : 8000;
                 console.log(`[AUTO] Cho ${Math.round(backoffMs/1000)}s roi retry${tag}...`);
                 await new Promise(r => setTimeout(r, backoffMs));
