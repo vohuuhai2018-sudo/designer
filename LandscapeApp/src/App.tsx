@@ -2029,20 +2029,34 @@ export default function App() {
               setRetryCount(prev => prev + 1);
               setIsSubmitting(true);
               try {
+                let origProj: any = null;
+                if (submittedProjectId) {
+                  try {
+                    const origRes = await apiFetch(`/api/projects/${submittedProjectId}`);
+                    if (origRes.ok) origProj = await origRes.json();
+                  } catch (_) { /* ignore — fall back to current form state */ }
+                }
+                const effBasicCategory = origProj?.basicCategory ?? basicCategory;
+                const effMainBranch = origProj?.mainBranch ?? mainBranch;
+                const effService = origProj?.service ?? service;
+                const isBasicService = effService === 'Gói Cơ bản' || effService === 'Gói Cơ Bản';
                 const projectData = {
                   id: Date.now().toString(36) + Math.random().toString(36).slice(2),
                   timestamp: new Date().toISOString(),
                   deviceId: getDeviceId(),
                   customerName,
                   customerPhone,
-                  rawImage,
-                  annotatedImage,
-                  referenceModelUrl: referenceModelUrl || extractSelectedModelUrl(note) || undefined,
-                  selections,
-                  service,
-                  note,
-                  extraAssets,
-                  status: 'pending' as const
+                  rawImage: origProj?.rawImage ?? rawImage,
+                  annotatedImage: origProj?.annotatedImage ?? annotatedImage,
+                  referenceModelUrl: origProj?.referenceModelUrl ?? (referenceModelUrl || extractSelectedModelUrl(note) || undefined),
+                  selections: origProj?.selections ?? selections,
+                  service: effService,
+                  note: origProj?.note ?? note,
+                  extraAssets: origProj?.extraAssets ?? extraAssets,
+                  basicCategory: isBasicService ? effBasicCategory : undefined,
+                  mainBranch: effMainBranch,
+                  status: 'pending' as const,
+                  interiorPairs: origProj?.interiorPairs ?? (interiorComboImages.length > 0 ? interiorSiteImages.map((site, i) => ({ siteImage: site, referenceImage: interiorComboImages[i] })).filter(p => p.siteImage) : undefined)
                 };
                 const response = await apiFetch('/api/projects', {
                   method: 'POST',
