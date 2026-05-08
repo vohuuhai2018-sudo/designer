@@ -6,7 +6,8 @@ const cloudinary = require('cloudinary').v2;
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { runChatGptAutomation, runChatGptAutomationBatch } = require('./chatgptAutomation');
-const { runFlowAutomation, runFlowVideoAutomation, markProfileCooldownAndSwitch, FLOW_PROFILES_COUNT } = require('./flowAutomation');
+const { runFlowAutomation, runFlowVideoAutomation, markProfileCooldownAndSwitch, FLOW_PROFILES_COUNT, FLOW_PROFILES, getPoolStatus, clearAllCooldowns } = require('./flowAutomation');
+const { spawn } = require('child_process');
 const { generateLandscapePrompt } = require('./geminiPromptService');
 const { runPass2Tasks, runSinglePass2Task, initPass2State, getTaskById: getPass2TaskById } = require('./pass2Automation');
 // Vercel serverless kill function ngay sau response → setImmediate KHÔNG kịp
@@ -2233,6 +2234,89 @@ app.post('/api/projects/:id/payment/cancel', async (req, res) => {
     console.error('[Admin][cancel] error:', err);
     res.status(500).json({ error: err.message || 'Internal error' });
   }
+});
+
+// === FLOW POOL ADMIN ===
+// Snapshot pool: profile list + cooldown + current
+app.get('/api/admin/flow-pool', (_req, res) => {
+  try { res.json(getPoolStatus()); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Reset toan bo cooldown
+app.post('/api/admin/flow-pool/clear-cooldowns', (_req, res) => {
+  try { res.json({ cleared: clearAllCooldowns() }); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// List flow_profile* directories ton tai tren disk (de UI gợi ý add/login)
+app.get('/api/admin/flow-profiles-on-disk', async (_req, res) => {
+  try {
+    const fsPromises = require('fs/promises');
+    const tooltaoanhDir = path.resolve(__dirname, '..', '..', 'tooltaoanh');
+    const entries = await fsPromises.readdir(tooltaoanhDir, { withFileTypes: true });
+    const profileDirs = entries
+      .filter(e => e.isDirectory() && e.name.startsWith('flow_profile'))
+      .map(e => e.name);
+    res.json({
+      tooltaoanhDir,
+      profileDirs,
+      configuredProfiles: FLOW_PROFILES.map(p => path.relative(path.resolve(__dirname, '..', '..'), p)),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Spawn login cho profile moi. Yeu cau user phai o ngay may chu de hoan thanh login Google.
+// Body: { profileName: 'flow_profile_2' }  → spawn `PROFILE=tooltaoanh/flow_profile_2 node test_login.js`
+const _loginProcs = new Map(); // profileName → { pid, startedAt, status }
+app.post('/api/admin/flow-pool/login', (req, res) => {
+  try {
+    const profileName = String(req.body?.profileName || '').trim();
+    if (!profileName) return res.status(400).json({ error: 'Thieu profileName' });
+    if (!/^[a-zA-Z0-9_-]+$/.test(profileName)) return res.status(400).json({ error: 'profileName chi cho phep [a-zA-Z0-9_-]' });
+    const existing = _loginProcs.get(profileName);
+    if (existing && existing.status === 'running') {
+      return res.status(409).json({ error: `Login cho ${profileName} dang chay (PID ${existing.pid})` });
+    }
+    const env = { ...process.env, PROFILE: `tooltaoanh/${profileName}` };
+    const child = spawn('node', ['test_login.js'], {
+      cwd: __dirname,
+      env,
+      detached: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    const log = [];
+    child.stdout.on('data', d => log.push(d.toString()));
+    child.stderr.on('data', d => log.push('[err] ' + d.toString()));
+    const info = { pid: child.pid, startedAt: Date.now(), status: 'running', log };
+    _loginProcs.set(profileName, info);
+    child.on('exit', (code) => {
+      info.status = code === 0 ? 'success' : 'failed';
+      info.exitCode = code;
+      info.endedAt = Date.now();
+      console.log(`[FlowPool] Login ${profileName} ket thuc, code=${code}`);
+    });
+    child.unref();
+    res.json({ pid: child.pid, profileName, status: 'spawned', message: 'Login process dang chay tren may chu — user phai o tai may de hoan thanh dang nhap Google.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Status login process (tail log)
+app.get('/api/admin/flow-pool/login/:profileName', (req, res) => {
+  const info = _loginProcs.get(req.params.profileName);
+  if (!info) return res.status(404).json({ error: 'Khong co login process cho profile nay' });
+  res.json({
+    pid: info.pid,
+    startedAt: info.startedAt,
+    endedAt: info.endedAt || null,
+    status: info.status,
+    exitCode: info.exitCode ?? null,
+    logTail: (info.log || []).join('').slice(-2000),
+  });
 });
 
 // E. Revenue report

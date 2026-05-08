@@ -5944,6 +5944,197 @@ function RevenueDashboard() {
   );
 }
 
+// --- FLOW POOL VIEW (admin) -----------------------------------
+// UI quan ly profile pool: xem trang thai cooldown, login profile moi, clear cooldown.
+function FlowPoolView({ onFeedback }: { onFeedback: (msg: string) => void }) {
+  const [pool, setPool] = useState<any>(null);
+  const [onDisk, setOnDisk] = useState<any>(null);
+  const [loginProfileName, setLoginProfileName] = useState('flow_profile_2');
+  const [loginStatus, setLoginStatus] = useState<any>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const [r1, r2] = await Promise.all([
+          apiFetch('/api/admin/flow-pool').then(r => r.json()),
+          apiFetch('/api/admin/flow-profiles-on-disk').then(r => r.json()),
+        ]);
+        if (cancelled) return;
+        setPool(r1);
+        setOnDisk(r2);
+      } catch (e: any) {
+        onFeedback(`Lỗi load pool: ${e.message}`);
+      }
+    };
+    load();
+    const t = setInterval(load, 5000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [refreshKey, onFeedback]);
+
+  const pollLoginStatus = async (profileName: string) => {
+    try {
+      const r = await apiFetch(`/api/admin/flow-pool/login/${profileName}`);
+      if (r.ok) setLoginStatus(await r.json());
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    if (!loginStatus || loginStatus.status !== 'running') return;
+    const t = setInterval(() => pollLoginStatus(loginProfileName), 3000);
+    return () => clearInterval(t);
+  }, [loginStatus, loginProfileName]);
+
+  const onClearCooldowns = async () => {
+    try {
+      const r = await apiFetch('/api/admin/flow-pool/clear-cooldowns', { method: 'POST' });
+      const data = await r.json();
+      onFeedback(`Đã clear ${data.cleared} cooldown(s).`);
+      setRefreshKey(k => k + 1);
+    } catch (e: any) {
+      onFeedback(`Lỗi: ${e.message}`);
+    }
+  };
+
+  const onLogin = async () => {
+    if (!loginProfileName.trim()) return;
+    try {
+      const r = await apiFetch('/api/admin/flow-pool/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileName: loginProfileName.trim() }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        onFeedback(`Lỗi login: ${data.error || r.status}`);
+        return;
+      }
+      onFeedback(`Đã spawn login (PID ${data.pid}). Anh phải ở máy chạy server để hoàn thành đăng nhập Google.`);
+      setLoginStatus({ status: 'running', pid: data.pid });
+      setTimeout(() => pollLoginStatus(loginProfileName.trim()), 2000);
+    } catch (e: any) {
+      onFeedback(`Lỗi: ${e.message}`);
+    }
+  };
+
+  if (!pool) return <div className="as-step-body">Đang tải pool status...</div>;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <section className="as-step">
+        <div className="as-step-head">
+          <span className="as-step-num">[ 01 ]</span>
+          <h3 className="as-step-title">Pool đang dùng · {pool.count} profile{pool.count > 1 ? 's' : ''}</h3>
+          <span className={`as-step-status ${pool.sharedBrowserAlive ? 'ok' : 'gray'}`}>
+            {pool.sharedBrowserAlive ? `Active · ${pool.activeTabCount} tab` : 'Idle'}
+          </span>
+        </div>
+        <div className="as-step-body">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10 }}>
+            {pool.profiles.map((p: any) => (
+              <div key={p.idx} style={{
+                padding: 12, borderRadius: 8,
+                border: p.isCurrent ? '1.5px solid var(--as-gold, #d4a373)' : '1px solid var(--as-line)',
+                background: p.cooldownRemainMs > 0 ? 'rgba(220,38,38,0.06)' : 'var(--as-bg-1)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <span style={{ fontFamily: 'var(--as-mono)', fontSize: 11, color: 'var(--as-text-2)' }}>#{p.idx}</span>
+                  {p.isCurrent && <span className="as-chip gold" style={{ fontSize: 10 }}>ACTIVE</span>}
+                  {p.cooldownRemainMs > 0 && <span className="as-chip warn" style={{ fontSize: 10 }}>COOLDOWN</span>}
+                </div>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{p.basename}</div>
+                <div style={{ fontSize: 11, color: 'var(--as-text-2)', wordBreak: 'break-all' }}>{p.path}</div>
+                {p.cooldownRemainMs > 0 && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: '#dc2626', fontWeight: 600 }}>
+                    Cooldown còn {Math.round(p.cooldownRemainMs / 1000)}s
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+            <button className="as-btn ghost" onClick={() => setRefreshKey(k => k + 1)}>
+              <RefreshCw size={12} /> Refresh
+            </button>
+            <button className="as-btn warn" onClick={onClearCooldowns} disabled={pool.profiles.every((p: any) => p.cooldownRemainMs === 0)}>
+              <Zap size={12} /> Clear toàn bộ cooldown
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="as-step">
+        <div className="as-step-head">
+          <span className="as-step-num">[ 02 ]</span>
+          <h3 className="as-step-title">Profile có sẵn trên đĩa</h3>
+          <span className="as-step-status info">{onDisk?.profileDirs?.length || 0} folder</span>
+        </div>
+        <div className="as-step-body">
+          <div style={{ fontSize: 12, color: 'var(--as-text-2)', marginBottom: 8 }}>
+            Path: <code>{onDisk?.tooltaoanhDir}</code>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {(onDisk?.profileDirs || []).map((d: string) => {
+              const inUse = (onDisk?.configuredProfiles || []).some((p: string) => p.includes(d));
+              return (
+                <span key={d} className={`as-chip ${inUse ? 'ok' : 'muted'}`} style={{ fontSize: 11 }}>
+                  {d} {inUse ? '✓ pool' : '(off)'}
+                </span>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: 12, fontSize: 12, color: 'var(--as-text-2)', lineHeight: 1.6 }}>
+            <strong>Cách bật profile vào pool</strong>: thêm vào <code>LandscapeApp/server/.env</code>:
+            <pre style={{ background: 'var(--as-bg-2)', padding: 8, borderRadius: 6, marginTop: 6, fontSize: 11, overflow: 'auto' }}>
+{`FLOW_PROFILES=${(onDisk?.profileDirs || []).map((d: string) => `tooltaoanh/${d}`).join(',')}`}
+            </pre>
+            Sau đó restart server.
+          </div>
+        </div>
+      </section>
+
+      <section className="as-step">
+        <div className="as-step-head">
+          <span className="as-step-num">[ 03 ]</span>
+          <h3 className="as-step-title">Login tài khoản Google mới</h3>
+          <span className={`as-step-status ${loginStatus?.status === 'running' ? 'info' : loginStatus?.status === 'success' ? 'ok' : 'gray'}`}>
+            {loginStatus?.status === 'running' ? 'Đang chạy' : loginStatus?.status === 'success' ? 'Xong' : loginStatus?.status === 'failed' ? 'Lỗi' : 'Sẵn sàng'}
+          </span>
+        </div>
+        <div className="as-step-body">
+          <div style={{ fontSize: 12, color: 'var(--as-text-2)', marginBottom: 12, lineHeight: 1.6 }}>
+            <strong>Lưu ý</strong>: spawn process trên máy chạy server. Anh phải <strong>ngồi trực tiếp tại máy server</strong> để click vào popup Chrome đăng nhập Google. Sau khi vào trang Flow thành công, script tự đóng.
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ fontSize: 12, color: 'var(--as-text-2)', fontWeight: 600 }}>Profile name:</span>
+            <input
+              type="text"
+              value={loginProfileName}
+              onChange={(e) => setLoginProfileName(e.target.value)}
+              placeholder="flow_profile_2"
+              style={{ flex: 1, padding: '8px 10px', borderRadius: 6, border: '1px solid var(--as-line)', background: 'var(--as-bg-1)', color: 'var(--as-text-1)', fontFamily: 'var(--as-mono)' }}
+            />
+            <button className="as-btn primary" onClick={onLogin} disabled={loginStatus?.status === 'running'}>
+              <User size={12} /> {loginStatus?.status === 'running' ? `Đang chạy (PID ${loginStatus.pid})` : 'Spawn login'}
+            </button>
+          </div>
+          {loginStatus?.logTail && (
+            <pre style={{ background: 'var(--as-bg-2)', padding: 10, borderRadius: 6, fontSize: 10, maxHeight: 200, overflow: 'auto', whiteSpace: 'pre-wrap' }}>
+              {loginStatus.logTail}
+            </pre>
+          )}
+          {loginStatus?.status === 'success' && (
+            <div style={{ marginTop: 8, padding: 10, background: 'rgba(34,197,94,0.1)', borderRadius: 6, color: '#15803d', fontSize: 12 }}>
+              ✅ Login OK. Giờ thêm <code>tooltaoanh/{loginProfileName}</code> vào <code>FLOW_PROFILES</code> trong .env và restart server.
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 // --- PROJECT DETAIL FLOW (admin) -----------------------------------
 // Vertical step-flow panel reflecting the operator's actual workflow.
 // Each step has a status dot (gray=todo, info=running, ok=done, err=failed).
@@ -6667,7 +6858,7 @@ function AdminView({
   onGenerateAiImage: (id: string, payload: any) => Promise<Project>;
   onRefreshConfig: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<'projects' | 'resources' | 'prompt' | 'pass2' | 'config' | 'revenue'>('projects');
+  const [activeTab, setActiveTab] = useState<'projects' | 'resources' | 'prompt' | 'pass2' | 'config' | 'revenue' | 'flow_pool'>('projects');
   const [adminBranch, setAdminBranch] = useState<MainBranch>('landscape');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [actionFeedback, setActionFeedback] = useState('');
@@ -8059,6 +8250,7 @@ function AdminView({
             <button className={activeTab === 'prompt' ? 'active' : ''} onClick={() => setActiveTab('prompt')}><Bot size={13} /> Prompt AI</button>
             <button className={activeTab === 'pass2' ? 'active' : ''} onClick={() => setActiveTab('pass2')}><Layers size={13} /> Pass 2</button>
             <button className={activeTab === 'revenue' ? 'active' : ''} onClick={() => setActiveTab('revenue')}><CircleDollarSign size={13} /> Doanh thu</button>
+            <button className={activeTab === 'flow_pool' ? 'active' : ''} onClick={() => setActiveTab('flow_pool')}><Bot size={13} /> Flow Accounts</button>
             <button className={activeTab === 'config' ? 'active' : ''} onClick={() => setActiveTab('config')}><Settings size={13} /> Cấu hình</button>
           </nav>
           <div className="as-meta">
@@ -8094,6 +8286,19 @@ function AdminView({
 
         {activeTab === 'pass2' && (
           <Pass2ManagerView onFeedback={setActionFeedback} adminBranch={adminBranch} onBranchChange={setAdminBranch} />
+        )}
+
+        {activeTab === 'flow_pool' && (
+          <>
+            <div className="as-context">
+              <div>
+                <span className="as-eyebrow">Quản lý tài khoản Flow</span>
+                <h1 className="as-title">Flow <em>Account Pool</em></h1>
+                <p className="as-sub">Nhiều tài khoản Google Flow → khi 1 cái bị rate-limit hoặc lỗi, hệ thống tự switch sang account khác và retry ngay.</p>
+              </div>
+            </div>
+            <FlowPoolView onFeedback={setActionFeedback} />
+          </>
         )}
 
         {activeTab === 'config' && (

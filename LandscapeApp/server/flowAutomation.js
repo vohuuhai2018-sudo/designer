@@ -1628,9 +1628,41 @@ async function runFlowVideoGeneration(page, prompt, inputFiles, tempDir, onVideo
   }
 }
 
+// Snapshot pool state cho UI admin.
+function getPoolStatus() {
+  const now = Date.now();
+  return {
+    count: FLOW_PROFILES.length,
+    currentIdx: _currentProfileIdx,
+    profiles: FLOW_PROFILES.map((p, idx) => {
+      const unlockAt = _profileCooldowns.get(p) || 0;
+      return {
+        idx,
+        path: p,
+        basename: path.basename(p),
+        isCurrent: idx === _currentProfileIdx,
+        cooldownUntilMs: unlockAt > now ? unlockAt : 0,
+        cooldownRemainMs: Math.max(0, unlockAt - now),
+      };
+    }),
+    activeTabCount: _activeTabCount,
+    sharedBrowserAlive: !!_sharedBrowser,
+  };
+}
+
+function clearAllCooldowns() {
+  const cleared = _profileCooldowns.size;
+  _profileCooldowns.clear();
+  console.log(`[BROWSER] Cleared ${cleared} profile cooldown(s).`);
+  return cleared;
+}
+
 module.exports = {
   runFlowAutomation,
   runFlowVideoAutomation,
   markProfileCooldownAndSwitch,
-  FLOW_PROFILES_COUNT: FLOW_PROFILES.length
+  FLOW_PROFILES_COUNT: FLOW_PROFILES.length,
+  FLOW_PROFILES,
+  getPoolStatus,
+  clearAllCooldowns,
 };
