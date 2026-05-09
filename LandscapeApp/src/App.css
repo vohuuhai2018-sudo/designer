@@ -3868,12 +3868,42 @@ canvas {
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  background-color: #ececef;
+  isolation: isolate;
+}
+
+/* Pro shimmer skeleton: transform-only animation → GPU-accelerated, không
+   trigger paint → không jank dù 12 cards visible cùng lúc. Khi <img> load
+   xong, ảnh có background opaque sẽ che pseudo-element này. */
+.cat-img::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 25%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 75%
+  );
+  transform: translateX(-100%);
+  animation: cat-img-shimmer 1.6s ease-in-out infinite;
+  z-index: 0;
+  pointer-events: none;
+}
+@keyframes cat-img-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 .cat-img img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  position: relative;
+  z-index: 1;
+  /* không bg-color → khi loading, img transparent → user thấy shimmer skeleton
+     ở pseudo-element bên dưới. Khi loaded, image content opaque → che shimmer. */
 }
 
 .variant-reveal {
@@ -5074,7 +5104,37 @@ canvas {
   display: block;
   user-select: none;
   -webkit-user-drag: none;
+  background-color: #ececef;
+  isolation: isolate;
 }
+
+/* Pro shimmer skeleton cho gallery (canvas-based với watermark).
+   Dùng transform-only animation → GPU-accelerated, không jank.
+   Khi canvas đã vẽ xong ảnh, canvas opaque sẽ che pseudo-element này. */
+.image-watermark-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 25%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 75%
+  );
+  transform: translateX(-100%);
+  animation: gallery-shimmer 1.6s ease-in-out infinite;
+  z-index: 1;
+  pointer-events: none;
+}
+.image-watermark-wrapper canvas { z-index: 2; position: relative; }
+.image-watermark-wrapper .security-overlay { z-index: 3; }
+@keyframes gallery-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+/* Khi canvas có data (đã vẽ ảnh) → không cần shimmer nữa.
+   Detect: canvas đã có pixel chứ không trống. JS sẽ add class `.is-loaded` */
+.image-watermark-wrapper.is-loaded::before { display: none; }
 
 /* Tấm khiên tàng hình chặn click trực tiếp vào ảnh */
 .security-overlay {

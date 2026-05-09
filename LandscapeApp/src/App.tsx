@@ -66,8 +66,10 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 // Tự động thêm header ngrok-skip-browser-warning để bỏ qua trang cảnh báo ngrok free tier
 const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: string, style?: any, className?: string }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    setLoaded(false);
     const canvas = canvasRef.current;
     if (!canvas || !src) return;
 
@@ -76,7 +78,7 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
 
     const img = new Image();
     const watermark = new Image();
-    
+
     img.crossOrigin = "anonymous";
     watermark.crossOrigin = "anonymous";
 
@@ -105,18 +107,21 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
         ctx.shadowOffsetY = 5;
         
         ctx.drawImage(watermark, x, y, wmWidth, wmHeight);
+        setLoaded(true);
       }
     };
 
     img.onload = onLoaded;
     watermark.onload = onLoaded;
-    
+    // Image fail (rate-limit/network) → bỏ shimmer, hiển thị bg xám trống.
+    img.onerror = () => setLoaded(true);
+
     img.src = src;
     watermark.src = '/assets/CHU KY _ HAI VO.png';
   }, [src]);
 
   return (
-    <div className={`image-watermark-wrapper ${className || ''}`} style={style} onContextMenu={(e) => e.preventDefault()}>
+    <div className={`image-watermark-wrapper ${className || ''} ${loaded ? 'is-loaded' : ''}`} style={style} onContextMenu={(e) => e.preventDefault()}>
       <canvas ref={canvasRef} title={alt} />
       <div className="security-overlay" />
     </div>

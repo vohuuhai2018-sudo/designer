@@ -28,11 +28,8 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Image placeholder: bg light grey rất nhẹ, KHÔNG animation (animation 80x
-   ảnh = CPU jank). Khi ảnh load xong sẽ tự che bg này. */
-img {
-  background-color: #f3f4f6;
-}
+/* Image skeleton (non-gallery): bg xám tĩnh. Gallery (.cat-img) dùng
+   shimmer GPU-only — xem App.css. */
 
 /* Performance: chỉ render section khi gần viewport. Browser skip layout +
    paint + image-fetch cho section off-screen → 80+ ảnh không request đồng
