@@ -34,8 +34,13 @@ img {
   background-color: #f3f4f6;
 }
 
-/* Performance: contain layout/style cho từng grid → giúp browser optimize
-   reflow. Không dùng content-visibility: auto vì gây nhảy layout khi scroll. */
+/* Performance: chỉ render section khi gần viewport. Browser skip layout +
+   paint + image-fetch cho section off-screen → 80+ ảnh không request đồng
+   loạt nữa, mỗi section tải dần khi scroll tới. Pattern Twitter/Pinterest. */
+.asset-group {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1200px;
+}
 .category-grid {
   contain: layout style;
 }
