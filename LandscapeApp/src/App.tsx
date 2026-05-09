@@ -1605,6 +1605,48 @@ export default function App() {
     fetchSystemContent();
   }, []);
 
+  // === Eager prefetch ảnh seed library vào Service Worker cache (idle time).
+  // Throttled: max 4 concurrent, prefetch top 30 trước → tránh flood R2.dev.
+  useEffect(() => {
+    if (!systemContent?.library) return;
+    const urls: string[] = [];
+    const walk = (o: any) => {
+      if (typeof o === 'string') {
+        if (o.includes('.r2.dev/')) urls.push(o);
+      } else if (Array.isArray(o)) o.forEach(walk);
+      else if (o && typeof o === 'object') Object.values(o).forEach(walk);
+    };
+    walk(systemContent.library);
+    if (urls.length === 0) return;
+
+    const unique = Array.from(new Set(urls));
+    const TARGET = unique.slice(0, 30);
+
+    const warm = async () => {
+      // Đợi SW active để fetch đi qua interceptor (không hit network trực tiếp).
+      try { await navigator.serviceWorker?.ready; } catch (_) { /* ignore */ }
+      const CONCURRENCY = 4;
+      let i = 0;
+      const worker = async () => {
+        while (i < TARGET.length) {
+          const idx = i++;
+          try {
+            const img = new Image();
+            await new Promise<void>((resolve) => {
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+              img.src = TARGET[idx];
+            });
+          } catch (_) { /* ignore */ }
+        }
+      };
+      await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+    };
+    const ric = (window as any).requestIdleCallback;
+    if (ric) ric(warm, { timeout: 4000 });
+    else setTimeout(warm, 2000);
+  }, [systemContent?.library]);
+
   const [mainBranch, setMainBranch] = useState<MainBranch>('landscape');
 
 

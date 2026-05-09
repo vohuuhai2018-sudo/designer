@@ -3,6 +3,8 @@ const fs = require('fs/promises');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const cloudinary = require('cloudinary').v2;
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const crypto = require('crypto');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { runChatGptAutomation, runChatGptAutomationBatch } = require('./chatgptAutomation');
@@ -374,12 +376,39 @@ function buildServerPrompt(project, assets) {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Cloudinary Config
+// Cloudinary Config (legacy — chỉ giữ cho migration script đọc seed library cũ;
+// app upload mới đã chuyển sang R2)
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
+// === Cloudflare R2 ===
+const r2Client = new S3Client({
+  region: 'auto',
+  endpoint: process.env.R2_ENDPOINT,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+  },
+});
+const R2_BUCKET = process.env.R2_BUCKET;
+const R2_PUBLIC_BASE = process.env.R2_PUBLIC_DOMAIN
+  ? (process.env.R2_PUBLIC_DOMAIN.startsWith('http') ? process.env.R2_PUBLIC_DOMAIN : `https://${process.env.R2_PUBLIC_DOMAIN}`)
+  : '';
+const MIME_BY_EXT = {
+  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+  '.webp': 'image/webp', '.gif': 'image/gif',
+  '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
+};
+function _extFromMime(mime) {
+  for (const [ext, m] of Object.entries(MIME_BY_EXT)) if (m === mime) return ext;
+  return '.bin';
+}
+function _mimeFromPath(p) {
+  return MIME_BY_EXT[path.extname(p).toLowerCase()] || 'application/octet-stream';
+}
 
 // Middleware — CORS cho phép FE Vercel + local dev gọi tới BE
 const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -662,30 +691,56 @@ async function sweepStuckPass2() {
   }
 }
 
-// Helper: Upload to Cloudinary
-const uploadToCloudinary = async (fileStr) => {
-  if (!fileStr || fileStr.startsWith('http')) return fileStr;
+// Helper: Upload asset (image/video) sang Cloudflare R2.
+// Input chấp nhận: URL http(s) (passthrough), data URL (base64) hoặc local file path.
+// Folder mặc định 'landscape_app/' giữ giống Cloudinary cũ để URL pattern nhất quán.
+const uploadToR2 = async (fileStr, opts = {}) => {
+  if (!fileStr) return fileStr;
+  if (typeof fileStr !== 'string') return fileStr;
+  if (fileStr.startsWith('http://') || fileStr.startsWith('https://')) return fileStr;
 
-  const opts = {
-    folder: 'landscape_app',
-    resource_type: 'auto',  // Cloudinary tự detect image/video
-    timeout: 600000          // 10 min — video có thể lâu do upload + encoding
-  };
+  let body, contentType, ext;
+  if (fileStr.startsWith('data:')) {
+    const m = /^data:([^;]+);base64,(.+)$/.exec(fileStr);
+    if (!m) { console.error('R2: invalid data URL'); return fileStr; }
+    contentType = m[1];
+    body = Buffer.from(m[2], 'base64');
+    ext = _extFromMime(contentType);
+  } else {
+    try {
+      body = await fs.readFile(fileStr);
+    } catch (e) {
+      console.error('R2: không đọc được file', fileStr, '-', e.message);
+      return fileStr;
+    }
+    contentType = _mimeFromPath(fileStr);
+    ext = path.extname(fileStr).toLowerCase() || _extFromMime(contentType);
+  }
+
+  const folder = opts.folder || 'landscape_app';
+  const key = `${folder}/${crypto.randomBytes(12).toString('hex')}${ext}`;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const res = await cloudinary.uploader.upload(fileStr, opts);
-      if (res?.secure_url) return res.secure_url;
-      console.error(`Cloudinary upload attempt ${attempt}: response missing secure_url`, res);
+      await r2Client.send(new PutObjectCommand({
+        Bucket: R2_BUCKET,
+        Key: key,
+        Body: body,
+        ContentType: contentType,
+        CacheControl: 'public, max-age=31536000, immutable',
+      }));
+      return `${R2_PUBLIC_BASE}/${key}`;
     } catch (err) {
-      const isTimeout = err?.http_code === 499 || err?.name === 'TimeoutError';
-      console.error(`Cloudinary upload attempt ${attempt} failed${isTimeout ? ' (timeout)' : ''}:`, err?.message || err);
+      console.error(`R2 upload attempt ${attempt} failed:`, err?.message || err);
     }
     if (attempt < 3) await new Promise(r => setTimeout(r, 2000));
   }
-  console.error(`Cloudinary: bỏ cuộc sau 3 lần với file ${fileStr}`);
+  console.error(`R2: bỏ cuộc sau 3 lần với input length=${fileStr.length}`);
   return fileStr;
 };
+
+// Backwards-compat: gọi cũ uploadToCloudinary vẫn chạy, nhưng đẩy lên R2.
+const uploadToCloudinary = uploadToR2;
 
 // ============================================================
 // HELPER: lookup tab cho project.

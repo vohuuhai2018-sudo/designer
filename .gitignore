@@ -54,3 +54,7 @@ flow-api/test-result.json
 /flow-result.png
 *.local.png
 .vercel
+
+# Server scratch / one-off migration scripts
+LandscapeApp/server/_*.js
+

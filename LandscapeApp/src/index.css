@@ -28,6 +28,31 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Image skeleton: hiển thị bg xám mềm trong khi ảnh đang tải/decode → tránh
+   trắng-flash khi navigate vào gallery. Nếu ảnh failed (alt text show) bg vẫn
+   tự nhiên. */
+img {
+  background-color: rgba(120, 120, 120, 0.08);
+  background-image: linear-gradient(110deg, rgba(120,120,120,0.06) 30%, rgba(120,120,120,0.10) 50%, rgba(120,120,120,0.06) 70%);
+  background-size: 200% 100%;
+  animation: img-skeleton-shimmer 1.6s ease-in-out infinite;
+}
+img[src^="data:"], img[loading="eager"], img[fetchpriority="high"] {
+  animation: none;
+  background: none;
+}
+img.loaded, img:not([src=""]):not([data-loading]) {
+  /* CSS-only fallback: nếu naturalWidth>0 thì coi như đã load. Trình duyệt
+     không expose naturalWidth qua CSS, nên dùng JS gắn class .loaded sau. */
+}
+@keyframes img-skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+/* Khi ảnh đã load xong, browser native sẽ paint full → background skeleton
+   bị che. Animation vẫn chạy ngầm nhưng không thấy. Để tiết kiệm CPU hơn,
+   add JS handler set img.complete → remove animation. (Optional) */
+
 /* Ẩn thanh cuộn hoàn toàn để tăng tính thẩm mỹ cao cấp */
 ::-webkit-scrollbar {
   display: none;
