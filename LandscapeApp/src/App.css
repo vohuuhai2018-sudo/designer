@@ -57,7 +57,7 @@ img {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  animation: fadeIn 0.4s ease-out;
+  /* Bo fadeIn animation 0.4s — gay cam giac cham khi navigate vao mục. */
 }
 
 /* Welcome View */

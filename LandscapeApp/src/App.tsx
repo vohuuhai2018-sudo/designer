@@ -54,7 +54,7 @@ import {
   EyeOff,
   Eye
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import './App.css';
 import { PaymentModal } from './PaymentModal';
@@ -1895,6 +1895,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+    <MotionConfig transition={{ duration: 0 }}>
     <>
       {showGlobalNav && (
         <div className={`global-nav-premium ${view === 'plan' ? 'wider' : ''}`}>
@@ -2184,6 +2185,7 @@ export default function App() {
         </AnimatePresence>
       </div>
     </>
+    </MotionConfig>
     </ErrorBoundary>
   );
 }
