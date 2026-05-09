@@ -2347,16 +2347,16 @@ function WelcomeView({ onStart, onAdmin, onMyProjects }: { onStart: (branch: Mai
               <strong>Thiết kế cảnh quan</strong>
               <span>Hồ koi, sân vườn, farm, hồ bơi</span>
             </div>
-            <img decoding="async" loading="lazy" src="/assets/mui ten.png" alt="Arrow" className="arrow-float custom-arrow" />
+            <span className="arrow-circle" aria-hidden><ArrowRight size={18} strokeWidth={2.5} /></span>
           </button>
-          
+
           <button className="btn-v2-main" onClick={() => onStart('architecture')}>
             <div className="btn-v2-icon"><img decoding="async" loading="lazy" src="/assets/LUỒNG THIẾT KẾ/2. THIET KE KIEN TRUC.png" alt="Kiến trúc" className="full-width-icon" /></div>
             <div className="btn-v2-text">
               <strong>Thiết kế kiến trúc</strong>
               <span>Nhà phố, biệt thự, nhà tiền chế</span>
             </div>
-            <img decoding="async" loading="lazy" src="/assets/mui ten.png" alt="Arrow" className="arrow-float custom-arrow" />
+            <span className="arrow-circle" aria-hidden><ArrowRight size={18} strokeWidth={2.5} /></span>
           </button>
 
           <button className="btn-v2-main" onClick={() => onStart('interior')}>
@@ -2365,7 +2365,7 @@ function WelcomeView({ onStart, onAdmin, onMyProjects }: { onStart: (branch: Mai
               <strong>Thiết kế nội thất</strong>
               <span>Hiện đại, tân cổ điển, indochine</span>
             </div>
-            <img decoding="async" loading="lazy" src="/assets/mui ten.png" alt="Arrow" className="arrow-float custom-arrow" />
+            <span className="arrow-circle" aria-hidden><ArrowRight size={18} strokeWidth={2.5} /></span>
           </button>
         </div>
 
@@ -2381,12 +2381,12 @@ function WelcomeView({ onStart, onAdmin, onMyProjects }: { onStart: (branch: Mai
             <div className="step-icon"><img decoding="async" loading="lazy" src="/assets/ICON TRANG CHU/1. CHON MAU.png" alt="Chọn mẫu đẹp" className="full-width-icon" /></div>
             <span>Chọn mẫu đẹp</span>
           </div>
-          <div className="step-arrow"><img decoding="async" loading="lazy" src="/assets/mui ten.png" alt="->" className="custom-arrow-small" /></div>
+          <div className="step-arrow" aria-hidden><span className="dashed-connector" /></div>
           <div className="process-step">
             <div className="step-icon"><img decoding="async" loading="lazy" src="/assets/ICON TRANG CHU/2. CHUP HIEN TRANG.png" alt="Chụp hiện trạng" className="full-width-icon" /></div>
             <span>Chụp hiện trạng</span>
           </div>
-          <div className="step-arrow"><img decoding="async" loading="lazy" src="/assets/mui ten.png" alt="->" className="custom-arrow-small" /></div>
+          <div className="step-arrow" aria-hidden><span className="dashed-connector" /></div>
           <div className="process-step">
             <div className="step-icon"><img decoding="async" loading="lazy" src="/assets/ICON TRANG CHU/3. NHAN BAN VE.png" alt="Nhận bản vẽ" className="full-width-icon" /></div>
             <span>Nhận bản vẽ</span>
