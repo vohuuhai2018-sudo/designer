@@ -3790,14 +3790,14 @@ function PlanSelectionView({ service, onServiceChange, systemContent, mainBranch
   const t = (key: string, defaultVal: string) => systemContent.uiText?.[key] || defaultVal;
   const services = (mainBranch === 'landscape')
     ? [
-        { id: 'basic', name: 'Gói Cơ bản', img: '/assets/GOI CANH QUAN/1. CO BAN.png', color: '#5eb44b' },
-        { id: 'advanced', name: 'Gói Nâng cao', img: '/assets/GOI CANH QUAN/2. NANG CAO.png', color: '#2a7fff' },
-        { id: 'premium', name: 'Gói Premium', img: '/assets/GOI CANH QUAN/3. CAO CAP.png', color: '#9146ff' }
+        { id: 'basic', name: 'Gói Cơ bản', img: '/assets/GOI CANH QUAN/1. CO BAN.webp', color: '#5eb44b' },
+        { id: 'advanced', name: 'Gói Nâng cao', img: '/assets/GOI CANH QUAN/2. NANG CAO.webp', color: '#2a7fff' },
+        { id: 'premium', name: 'Gói Premium', img: '/assets/GOI CANH QUAN/3. CAO CAP.webp', color: '#9146ff' }
       ]
     : [
-        { id: 'basic', name: 'Gói Cơ bản', img: '/assets/GOI KIEN TRUC - NOI THAT/1. CO BAN.png', color: '#5eb44b' },
-        { id: 'advanced', name: 'Gói Nâng cao', img: '/assets/GOI KIEN TRUC - NOI THAT/2. NANG CAO.png', color: '#2a7fff' },
-        { id: 'premium', name: 'Gói Premium', img: '/assets/GOI KIEN TRUC - NOI THAT/3. CAO CAP.png', color: '#9146ff' }
+        { id: 'basic', name: 'Gói Cơ bản', img: '/assets/GOI KIEN TRUC - NOI THAT/1. CO BAN.webp', color: '#5eb44b' },
+        { id: 'advanced', name: 'Gói Nâng cao', img: '/assets/GOI KIEN TRUC - NOI THAT/2. NANG CAO.webp', color: '#2a7fff' },
+        { id: 'premium', name: 'Gói Premium', img: '/assets/GOI KIEN TRUC - NOI THAT/3. CAO CAP.webp', color: '#9146ff' }
       ];
 
   return (
