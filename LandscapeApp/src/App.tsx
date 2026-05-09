@@ -4047,6 +4047,8 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
   const [project, setProject] = useState<Project | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
+  const [elapsed, setElapsed] = useState(0);
+  const startRef = useRef<number>(Date.now());
   const presetPay = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('pay') : null;
   const [paymentOpen, setPaymentOpen] = useState(!!presetPay);
   const isPaid = (project as any)?.payment?.status === 'paid';
@@ -4080,12 +4082,42 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
     }
   }, [retryCount, project]);
 
+  // Reset bộ đếm khi đổi project / retry. Dùng ref để interval không cuốn theo state-update.
+  useEffect(() => {
+    startRef.current = Date.now();
+    setElapsed(0);
+  }, [projectId, retryCount]);
+
+  // Tick mỗi giây trong lúc loading; tự dừng khi component unmount.
+  useEffect(() => {
+    const isAuto = service === 'Gói Cơ Bản' || service === 'Gói Cơ bản' || service === 'Gói Nâng cao';
+    if (!isAuto) return;
+    const id = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [service]);
+
   const isAutoPlan = service === 'Gói Cơ Bản' || service === 'Gói Cơ bản' || service === 'Gói Nâng cao';
 
   if (isAutoPlan) {
     const isDone = project?.status === 'done';
     const images = project?.aiResults || [];
     const allImages = retryCount > 0 && isDone ? [...previousImages, ...images] : images;
+
+    const TOTAL_SLOTS = 4;
+    const ESTIMATED_DURATION = 300; // ~5 phút
+    const slotProgress = (i: number): number => {
+      if (images[i]) return 100;
+      // Mỗi slot expected hoàn tất ở mốc (i+1)/TOTAL_SLOTS của tổng thời lượng.
+      const targetTime = ((i + 1) / TOTAL_SLOTS) * ESTIMATED_DURATION;
+      const ratio = Math.min(elapsed / targetTime, 0.95);
+      return Math.max(5, Math.round(ratio * 100));
+    };
+    const overallProgress = Math.round(
+      Array.from({ length: TOTAL_SLOTS }).reduce<number>((acc, _v, i) => acc + slotProgress(i), 0) / TOTAL_SLOTS
+    );
+    const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
     return (
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="view success-view" style={{ position: 'relative', width: '100%', maxWidth: '700px', margin: '0 auto', paddingTop: '3rem' }}>
@@ -4096,28 +4128,86 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
          )}
          {!isDone ? (
            <>
-               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
-                 <div style={{ width: '64px', height: '64px', borderRadius: '50%', border: '4px solid rgba(226,177,112,0.2)', borderTopColor: '#e2b170', animation: 'spin 1s linear infinite' }} />
-                 <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#111', letterSpacing: '0.05em' }}>ĐANG XỬ LÝ</span>
+             <div className="processing-stage">
+               <div className="processing-video-frame">
+                 <video
+                   className="processing-video"
+                   src="/loading-bird.mp4"
+                   autoPlay
+                   loop
+                   muted
+                   playsInline
+                   preload="auto"
+                 />
                </div>
-             <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111', textAlign: 'center', whiteSpace: 'nowrap' }}>Hệ thống đang tạo phương án thiết kế (~5 phút).</h2>
-             <p className="hint" style={{ fontSize: '1rem', color: '#555', lineHeight: '1.6', textAlign: 'center' }}>
-               Bạn có thể theo dõi trực tiếp tại đây hoặc xem trong mục <strong style={{color: 'var(--accent)'}}>“Dự án của bạn”</strong> khi hoàn tất.
-             </p>
-             {images.length > 0 && <p style={{color: '#e2b170', fontWeight: 'bold', fontSize: '1.1rem', marginTop: '1rem', textAlign: 'center'}}>Đã hoàn thiện {images.length}/2 phương án...</p>}
+               <div className="processing-headline">
+                 <span className="processing-pill">
+                   <span className="processing-pill-dot" />
+                   ĐANG TẠO PHƯƠNG ÁN AI
+                 </span>
+                 <h2 className="processing-title">
+                   AI đang dựng <span className="accent">{TOTAL_SLOTS} phương án thiết kế</span>
+                 </h2>
+                 <p className="processing-sub">
+                   Quá trình mất khoảng 5 phút. Bạn có thể giữ trang hoặc xem lại trong mục{' '}
+                   <strong style={{ color: 'var(--accent)' }}>"Dự án của bạn"</strong>.
+                 </p>
+               </div>
+               <div className="processing-progress-bar-wrap">
+                 <div className="processing-progress-bar-track">
+                   <div className="processing-progress-bar-fill" style={{ width: `${overallProgress}%` }} />
+                 </div>
+                 <div className="processing-progress-meta">
+                   <span>{images.length}/{TOTAL_SLOTS} phương án — {overallProgress}%</span>
+                   <span>{formatTime(elapsed)} / ~5:00</span>
+                 </div>
+               </div>
+             </div>
+
+             <div className="processing-slots">
+               {Array.from({ length: TOTAL_SLOTS }).map((_, i) => {
+                 const url = images[i];
+                 const isReady = !!url;
+                 const progress = slotProgress(i);
+                 return (
+                   <div key={i} className={`processing-slot ${isReady ? 'is-ready' : ''}`}>
+                     {isReady ? (
+                       <>
+                         <img
+                           src={url}
+                           alt={`Phương án ${i + 1}`}
+                           className="processing-slot-image"
+                           decoding="async"
+                         />
+                         <div className="processing-slot-banner" onClick={() => setPreviewImage(url)}>
+                           Phương án {i + 1}
+                         </div>
+                       </>
+                     ) : (
+                       <div className="processing-slot-placeholder">
+                         <ImageIcon size={30} className="processing-slot-icon" />
+                         <div className="processing-slot-percent">{progress}%</div>
+                         <div className="processing-slot-label">Mẫu {i + 1}</div>
+                       </div>
+                     )}
+                   </div>
+                 );
+               })}
+             </div>
+
              {previousImages.length > 0 && (
                <>
-                 <p style={{ fontSize: '0.85rem', color: '#888', marginTop: '1rem', textAlign: 'center', fontWeight: 600 }}>Kết quả lần 1:</p>
+                 <p style={{ fontSize: '0.85rem', color: '#888', marginTop: '1.25rem', textAlign: 'center', fontWeight: 600 }}>Kết quả lần 1:</p>
                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '8px', width: '100%' }}>
                    {previousImages.map((url, i) => {
                      const beforeUrl = project?.rawImage || url;
                      return (
-                     <div key={`prev-${i}`} style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
-                       <BeforeAfterSlider before={beforeUrl} after={url} alt={`Lần 1 - ${i+1}`} aspectRatio="16/10" />
-                       <div onClick={() => setPreviewImage(url)} style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.7)', padding: '4px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.7rem', color: '#fff', cursor: 'pointer' }}>
-                         Lần 1 - PA{i + 1}
+                       <div key={`prev-${i}`} style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                         <BeforeAfterSlider before={beforeUrl} after={url} alt={`Lần 1 - ${i + 1}`} aspectRatio="16/10" />
+                         <div onClick={() => setPreviewImage(url)} style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.7)', padding: '4px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.7rem', color: '#fff', cursor: 'pointer' }}>
+                           Lần 1 - PA{i + 1}
+                         </div>
                        </div>
-                     </div>
                      );
                    })}
                  </div>
@@ -4153,22 +4243,6 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
              })}
            </div>
          )}
-
-{!isDone && images.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '1rem', width: '100%' }}>
-            {images.map((url, i) => {
-              const beforeUrl = project?.rawImage || url;
-              return (
-              <div key={i} style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <BeforeAfterSlider before={beforeUrl} after={url} alt={`Phương án ${i+1}`} aspectRatio="16/10" />
-                <div onClick={() => setPreviewImage(url)} style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.7)', padding: '5px', textAlign: 'center', fontWeight: 'bold', fontSize: '1rem', color: '#fff', cursor: 'pointer' }}>
-                  Phương án {i + 1}
-                </div>
-              </div>
-              );
-            })}
-          </div>
-        )}
 
          {isDone && (
            <div style={{ marginTop: '1.5rem', width: '100%', textAlign: 'center' }}>
