@@ -67,14 +67,19 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: string, style?: any, className?: string }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     setLoaded(false);
+    setFailed(false);
     const canvas = canvasRef.current;
     if (!canvas || !src) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    let cancelled = false;
+    let retryTimer: any = null;
 
     const img = new Image();
     const watermark = new Image();
@@ -84,6 +89,7 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
 
     let loadedCount = 0;
     const onLoaded = () => {
+      if (cancelled) return;
       loadedCount++;
       if (loadedCount === 2) {
         // Cấu hình kích thước canvas theo ảnh gốc để không mất nét
@@ -111,19 +117,73 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
       }
     };
 
+    let attempt = 0;
+    const MAX_ATTEMPTS = 4;
+    const tryLoad = () => {
+      if (cancelled) return;
+      attempt++;
+      // Cache-buster trong query string KHÔNG ảnh hưởng SW (URL khác → SW
+      // sẽ fetch lại; rate-limit thường reset trong 1-3s).
+      img.src = attempt === 1 ? src : `${src}${src.includes('?') ? '&' : '?'}r=${attempt}`;
+    };
+
     img.onload = onLoaded;
     watermark.onload = onLoaded;
-    // Image fail (rate-limit/network) → bỏ shimmer, hiển thị bg xám trống.
-    img.onerror = () => setLoaded(true);
+    img.onerror = () => {
+      if (cancelled) return;
+      if (attempt < MAX_ATTEMPTS) {
+        // Backoff tăng dần: 1s, 2.5s, 5s.
+        const delay = [1000, 2500, 5000][attempt - 1] || 5000;
+        retryTimer = setTimeout(tryLoad, delay);
+      } else {
+        // Hết retry → hiện fallback state.
+        setFailed(true);
+        setLoaded(true);
+      }
+    };
 
-    img.src = src;
     watermark.src = '/assets/CHU KY _ HAI VO.png';
+    tryLoad();
+
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, [src]);
+
+  const handleManualRetry = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    // Trigger remount via key change — forces useEffect to re-run with same src.
+    // Simpler: just toggle failed state and let component re-trigger.
+    setFailed(false);
+    setLoaded(false);
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+        ctx.drawImage(img, 0, 0);
+        setLoaded(true);
+      };
+      img.onerror = () => { setFailed(true); setLoaded(true); };
+      img.src = `${src}${src.includes('?') ? '&' : '?'}m=${Date.now()}`;
+    }
+  };
 
   return (
     <div className={`image-watermark-wrapper ${className || ''} ${loaded ? 'is-loaded' : ''}`} style={style} onContextMenu={(e) => e.preventDefault()}>
       <canvas ref={canvasRef} title={alt} />
       <div className="security-overlay" />
+      {failed && (
+        <button onClick={handleManualRetry} className="img-retry-overlay" title="Tải lại ảnh">
+          <RefreshCcw size={20} />
+          <span>Tải lại</span>
+        </button>
+      )}
     </div>
   );
 };
