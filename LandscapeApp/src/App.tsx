@@ -3671,9 +3671,6 @@ function BasicSelectionView({
                       style={{ width: loadProgress.total > 0 ? `${(loadProgress.done / loadProgress.total) * 100}%` : '0%' }}
                     />
                   </div>
-                  <div className="gallery-loading-counter">
-                    {loadProgress.done}/{loadProgress.total} ảnh
-                  </div>
                 </div>
               </motion.div>
             ) : (
