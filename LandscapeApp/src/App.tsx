@@ -1620,12 +1620,14 @@ export default function App() {
     if (urls.length === 0) return;
 
     const unique = Array.from(new Set(urls));
-    const TARGET = unique.slice(0, 30);
+    // Chỉ prefetch 10 ảnh đầu (cover của các category) — nhiều hơn sẽ bị
+    // R2.dev pub-XXX rate-limit khi gallery cũng đang load song song.
+    const TARGET = unique.slice(0, 10);
 
     const warm = async () => {
       // Đợi SW active để fetch đi qua interceptor (không hit network trực tiếp).
       try { await navigator.serviceWorker?.ready; } catch (_) { /* ignore */ }
-      const CONCURRENCY = 4;
+      const CONCURRENCY = 2;
       let i = 0;
       const worker = async () => {
         while (i < TARGET.length) {
