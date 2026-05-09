@@ -13,7 +13,8 @@ self.addEventListener('fetch', (event) => {
   let url;
   try { url = new URL(req.url); } catch (_) { return; }
 
-  if (!url.hostname.endsWith('.r2.dev')) return;
+  // Intercept Worker proxy CDN + giữ tương thích với pub-xxx.r2.dev cũ.
+  if (!(url.hostname.endsWith('.workers.dev') || url.hostname.endsWith('.r2.dev'))) return;
 
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);

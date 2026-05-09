@@ -1,0 +1,16 @@
+name = "landscape-cdn"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# Worker subdomain mặc định: <name>.<account-subdomain>.workers.dev
+# (Cloudflare cấp tự động khi deploy lần đầu)
+workers_dev = true
+
+# Bind R2 bucket "landscape-app" qua biến `BUCKET` trong worker code.
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "landscape-app"
+
+# Tắt observability để giảm cost (free tier có giới hạn logs).
+[observability]
+enabled = false

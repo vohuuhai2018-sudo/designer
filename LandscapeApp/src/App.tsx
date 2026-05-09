@@ -1679,33 +1679,32 @@ export default function App() {
     const covers: string[] = [];
     const variants: string[] = [];
     const walkCat = (cat: any) => {
-      if (typeof cat?.url === 'string' && cat.url.includes('.r2.dev/')) covers.push(cat.url);
+      const isCDN = (u: string) => /\.workers\.dev\/|\.r2\.dev\//.test(u);
+      if (typeof cat?.url === 'string' && isCDN(cat.url)) covers.push(cat.url);
       if (Array.isArray(cat?.variants)) {
         for (const v of cat.variants) {
-          if (typeof v?.url === 'string' && v.url.includes('.r2.dev/')) variants.push(v.url);
+          if (typeof v?.url === 'string' && isCDN(v.url)) variants.push(v.url);
         }
       }
     };
     for (const items of Object.values(systemContent.library)) {
       if (Array.isArray(items)) (items as any[]).forEach(walkCat);
     }
-    // Covers trước, variants sau → ảnh visible đầu tiên của mỗi section
-    // được cache sớm nhất. Chỉ lấy covers (~30) → tránh pub-xxx.r2.dev
-    // rate-limit khi prefetch quá nhiều. Variants sẽ load on-demand khi
-    // user click vào category, vẫn được cache 1 năm cho lần sau.
-    const ordered = Array.from(new Set(covers));
+    // Covers trước, variants sau → ảnh visible đầu tiên cache sớm nhất.
+    // Worker URL không có rate-limit → prefetch full ~439 URLs.
+    const ordered = Array.from(new Set([...covers, ...variants]));
     if (ordered.length === 0) return;
 
     const warm = async () => {
       try { await navigator.serviceWorker?.ready; } catch (_) { /* ignore */ }
-      // Stagger 4 concurrent, 200ms giữa batch → an toàn với rate-limit.
-      const BATCH = 4;
+      // Worker không rate-limit → batch 8 concurrent, gap 50ms.
+      const BATCH = 8;
       for (let i = 0; i < ordered.length; i += BATCH) {
         const chunk = ordered.slice(i, i + BATCH);
         await Promise.all(chunk.map((url) =>
           fetch(url, { mode: 'cors', priority: 'low' as any }).catch(() => undefined)
         ));
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 50));
       }
     };
     // setTimeout 2s sau load → đủ để main render + SW activate.
