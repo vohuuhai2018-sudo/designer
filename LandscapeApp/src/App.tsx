@@ -1630,32 +1630,28 @@ export default function App() {
       if (Array.isArray(items)) (items as any[]).forEach(walkCat);
     }
     // Covers trước, variants sau → ảnh visible đầu tiên của mỗi section
-    // được cache sớm nhất.
-    const ordered = Array.from(new Set([...covers, ...variants]));
+    // được cache sớm nhất. Chỉ lấy covers (~30) → tránh pub-xxx.r2.dev
+    // rate-limit khi prefetch quá nhiều. Variants sẽ load on-demand khi
+    // user click vào category, vẫn được cache 1 năm cho lần sau.
+    const ordered = Array.from(new Set(covers));
     if (ordered.length === 0) return;
 
     const warm = async () => {
-      // Đợi SW active để mọi request đi qua interceptor (queue + cache).
       try { await navigator.serviceWorker?.ready; } catch (_) { /* ignore */ }
-      // Stagger: max 6 fire đồng thời, đợi xong mới fire tiếp 6 → tránh
-      // R2.dev rate-limit khi flood 400+ requests đồng loạt.
-      const BATCH = 6;
+      // Stagger 4 concurrent, 200ms giữa batch → an toàn với rate-limit.
+      const BATCH = 4;
       for (let i = 0; i < ordered.length; i += BATCH) {
         const chunk = ordered.slice(i, i + BATCH);
-        await Promise.all(chunk.map((url) => new Promise<void>((resolve) => {
-          const img = new Image();
-          img.decoding = 'async';
-          img.onload = () => resolve();
-          img.onerror = () => resolve();
-          img.src = url;
-        })));
-        // Yield CPU + nhường network 100ms giữa batch.
-        await new Promise(r => setTimeout(r, 100));
+        await Promise.all(chunk.map((url) =>
+          fetch(url, { mode: 'cors', priority: 'low' as any }).catch(() => undefined)
+        ));
+        await new Promise(r => setTimeout(r, 200));
       }
     };
-    const ric = (window as any).requestIdleCallback;
-    if (ric) ric(warm, { timeout: 5000 });
-    else setTimeout(warm, 2000);
+    // setTimeout 2s sau load → đủ để main render + SW activate.
+    // requestIdleCallback flaky trong dev/Playwright nên không dùng.
+    const t = setTimeout(warm, 2000);
+    return () => clearTimeout(t);
   }, [systemContent?.library]);
 
   const [mainBranch, setMainBranch] = useState<MainBranch>('landscape');

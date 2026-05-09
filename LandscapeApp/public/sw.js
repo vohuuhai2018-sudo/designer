@@ -27,16 +27,15 @@ self.addEventListener('fetch', (event) => {
       }
       return resp;
     } catch (e) {
-      // Retry 1 lần sau 800ms (rate-limit thường reset nhanh).
-      await new Promise(r => setTimeout(r, 800));
+      // Retry 1 lần sau 1.5s.
       try {
+        await new Promise(r => setTimeout(r, 1500));
         const retry = await fetch(req);
         if (retry.ok && retry.status === 200) {
           cache.put(req, retry.clone()).catch(() => {});
         }
         return retry;
       } catch (e2) {
-        // Cuối cùng vẫn fail → trả response error để <img> onerror trigger
         return Response.error();
       }
     }
