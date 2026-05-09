@@ -3552,6 +3552,60 @@ function BasicSelectionView({
     }
   });
 
+  // === Pre-decode tất cả ảnh trước khi render gallery (TGDD pattern).
+  // User click "Quy hoạch farm" → loading overlay → decode hết → render instant.
+  const [galleryReady, setGalleryReady] = useState(false);
+  const [loadProgress, setLoadProgress] = useState({ done: 0, total: 0 });
+  // Stable hash key cho gallery URLs (đổi → re-decode).
+  const galleryHash = galleryImages.map(g => g.url).join('|');
+
+  useEffect(() => {
+    if (subStep !== 'gallery') {
+      setGalleryReady(false);
+      return;
+    }
+    // Lấy URL từ FE hiện tại + watermark logo (cần load để vẽ canvas).
+    const urls: string[] = [];
+    galleryImages.forEach((g) => {
+      if (g?.url && typeof g.url === 'string') urls.push(g.url);
+      if (Array.isArray(g?.images)) g.images.forEach((u: string) => { if (typeof u === 'string') urls.push(u); });
+    });
+    if (urls.length === 0) {
+      setGalleryReady(true);
+      return;
+    }
+
+    let cancelled = false;
+    setGalleryReady(false);
+    setLoadProgress({ done: 0, total: urls.length });
+
+    const decode = (url: string) => {
+      return new Promise<void>((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        const finish = () => { if (!cancelled) setLoadProgress(p => ({ ...p, done: p.done + 1 })); resolve(); };
+        img.onload = () => { (img.decode ? img.decode().then(finish, finish) : finish()); };
+        img.onerror = finish;  // skip fail, không block toàn bộ
+        img.src = url;
+      });
+    };
+
+    // Concurrency 8 (Worker proxy không rate-limit).
+    (async () => {
+      const queue = [...urls];
+      const workers = Array.from({ length: 8 }, async () => {
+        while (queue.length > 0 && !cancelled) {
+          const u = queue.shift()!;
+          await decode(u);
+        }
+      });
+      await Promise.all(workers);
+      if (!cancelled) setGalleryReady(true);
+    })();
+
+    return () => { cancelled = true; };
+  }, [subStep, galleryHash]);
+
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="view basic-selection-view nav-offset" style={{ alignItems: 'flex-start' }}>
@@ -3600,16 +3654,38 @@ function BasicSelectionView({
                   </button>
                 ))}
               </motion.div>
+            ) : !galleryReady ? (
+              <motion.div
+                key="loading"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="gallery-loading-overlay"
+              >
+                <div className="gallery-loading-inner">
+                  <div className="gallery-loading-spinner" />
+                  <div className="gallery-loading-text">Đang chuẩn bị mẫu thiết kế</div>
+                  <div className="gallery-loading-progress-bar">
+                    <div
+                      className="gallery-loading-progress-fill"
+                      style={{ width: loadProgress.total > 0 ? `${(loadProgress.done / loadProgress.total) * 100}%` : '0%' }}
+                    />
+                  </div>
+                  <div className="gallery-loading-counter">
+                    {loadProgress.done}/{loadProgress.total} ảnh
+                  </div>
+                </div>
+              </motion.div>
             ) : (
-              <motion.div 
+              <motion.div
                 key="gallery"
-                initial={{ opacity: 0, x: 50 }} 
-                animate={{ opacity: 1, x: 0 }} 
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -50 }}
                 className="basic-gallery-container"
               >
                 {/* Nút quay lại đã được tích hợp vào global-nav bên trên */}
-                
+
                 <div className={mainBranch === 'interior' ? "interior-full-stack-gallery" : "full-width-gallery"}>
                    {galleryImages.map((img, idx) => {
                      const isInterior = mainBranch === 'interior';
