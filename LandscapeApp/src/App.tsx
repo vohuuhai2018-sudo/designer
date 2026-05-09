@@ -1610,47 +1610,51 @@ export default function App() {
     fetchSystemContent();
   }, []);
 
-  // === Eager prefetch ảnh seed library vào Service Worker cache (idle time).
-  // Throttled: max 4 concurrent, prefetch top 30 trước → tránh flood R2.dev.
+  // === Eager prefetch TOÀN BỘ seed library vào Service Worker cache.
+  // SW có queue concurrent-limit 4 + retry backoff → throttle tự nhiên,
+  // không bị R2.dev rate-limit. Sau warm-up (~30-60s background), navigate
+  // giữa các category gần như instant. Pattern thegioididong.com.
   useEffect(() => {
     if (!systemContent?.library) return;
-    const urls: string[] = [];
-    const walk = (o: any) => {
-      if (typeof o === 'string') {
-        if (o.includes('.r2.dev/')) urls.push(o);
-      } else if (Array.isArray(o)) o.forEach(walk);
-      else if (o && typeof o === 'object') Object.values(o).forEach(walk);
+    const covers: string[] = [];
+    const variants: string[] = [];
+    const walkCat = (cat: any) => {
+      if (typeof cat?.url === 'string' && cat.url.includes('.r2.dev/')) covers.push(cat.url);
+      if (Array.isArray(cat?.variants)) {
+        for (const v of cat.variants) {
+          if (typeof v?.url === 'string' && v.url.includes('.r2.dev/')) variants.push(v.url);
+        }
+      }
     };
-    walk(systemContent.library);
-    if (urls.length === 0) return;
-
-    const unique = Array.from(new Set(urls));
-    // Chỉ prefetch 10 ảnh đầu (cover của các category) — nhiều hơn sẽ bị
-    // R2.dev pub-XXX rate-limit khi gallery cũng đang load song song.
-    const TARGET = unique.slice(0, 10);
+    for (const items of Object.values(systemContent.library)) {
+      if (Array.isArray(items)) (items as any[]).forEach(walkCat);
+    }
+    // Covers trước, variants sau → ảnh visible đầu tiên của mỗi section
+    // được cache sớm nhất.
+    const ordered = Array.from(new Set([...covers, ...variants]));
+    if (ordered.length === 0) return;
 
     const warm = async () => {
-      // Đợi SW active để fetch đi qua interceptor (không hit network trực tiếp).
+      // Đợi SW active để mọi request đi qua interceptor (queue + cache).
       try { await navigator.serviceWorker?.ready; } catch (_) { /* ignore */ }
-      const CONCURRENCY = 2;
-      let i = 0;
-      const worker = async () => {
-        while (i < TARGET.length) {
-          const idx = i++;
-          try {
-            const img = new Image();
-            await new Promise<void>((resolve) => {
-              img.onload = () => resolve();
-              img.onerror = () => resolve();
-              img.src = TARGET[idx];
-            });
-          } catch (_) { /* ignore */ }
-        }
-      };
-      await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+      // Stagger: max 6 fire đồng thời, đợi xong mới fire tiếp 6 → tránh
+      // R2.dev rate-limit khi flood 400+ requests đồng loạt.
+      const BATCH = 6;
+      for (let i = 0; i < ordered.length; i += BATCH) {
+        const chunk = ordered.slice(i, i + BATCH);
+        await Promise.all(chunk.map((url) => new Promise<void>((resolve) => {
+          const img = new Image();
+          img.decoding = 'async';
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+          img.src = url;
+        })));
+        // Yield CPU + nhường network 100ms giữa batch.
+        await new Promise(r => setTimeout(r, 100));
+      }
     };
     const ric = (window as any).requestIdleCallback;
-    if (ric) ric(warm, { timeout: 4000 });
+    if (ric) ric(warm, { timeout: 5000 });
     else setTimeout(warm, 2000);
   }, [systemContent?.library]);
 
