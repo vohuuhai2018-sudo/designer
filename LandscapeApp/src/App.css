@@ -7240,12 +7240,12 @@ canvas {
 
 /* Designer AppBar — sticky cream bar */
 .success-view .appbar,
-.my-projects-view .appbar {
+.my-projects-view .projects-nav {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 1000;
   height: 64px;
-  background: rgba(251, 247, 238, 0.92);
+  background: #FBF7EE;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--cream-200);
@@ -7254,7 +7254,7 @@ canvas {
   flex-shrink: 0;
 }
 .success-view .appbar-inner,
-.my-projects-view .appbar-inner {
+.my-projects-view .projects-nav .appbar-inner {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -7420,20 +7420,15 @@ canvas {
     padding: 32px 18px 80px;
   }
   .success-view .appbar,
-  .my-projects-view .appbar { height: 56px; }
-  .appbar-link { padding: 6px 10px; font-size: 13px; }
-  .appbar-cta {
-    padding: 8px 12px !important;
-    font-size: 12px !important;
-  }
   .appbar-link span { display: none; }
-  .my-projects-view .appbar {
+  .my-projects-view .projects-nav {
     position: fixed;
     top: 0; left: 0; right: 0;
-    height: 60px;
-    background: #FBF7EE;
-    border-bottom: 1px solid var(--cream-200);
-    z-index: 1000;
+    height: 60px !important;
+    background: #FBF7EE !important;
+    display: flex !important;
+    visibility: visible !important;
+    z-index: 2000;
   }
 }
 

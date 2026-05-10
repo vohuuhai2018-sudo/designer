@@ -4535,7 +4535,7 @@ function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewRe
       exit={{ opacity: 0 }}
       className="view my-projects-view"
     >
-      <div className="appbar">
+      <div className="projects-nav">
         <div className="appbar-inner">
           <a
             href="/"
