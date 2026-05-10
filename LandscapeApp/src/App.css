@@ -1439,7 +1439,16 @@ canvas {
 }
 @media (max-width: 480px) {
   .processing-title { font-size: 1.18rem; }
-  .processing-video-frame { max-width: 100%; aspect-ratio: 1.6; }
+  .processing-video-frame { 
+    width: 100% !important; 
+    max-width: 100% !important; 
+    aspect-ratio: 1.5 !important;
+    height: auto !important;
+    margin: -10px 0 10px !important;
+  }
+  .processing-video {
+    transform: scale(1.15) !important;
+  }
   .processing-slot-percent { font-size: 1.3rem; }
 }
 
