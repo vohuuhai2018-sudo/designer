@@ -4747,7 +4747,11 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                    playsInline
                    preload="auto"
                    onLoadedData={(e) => { e.currentTarget.currentTime = 1; }}
-                   onEnded={(e) => { e.currentTarget.currentTime = 1; e.currentTarget.play(); }}
+                   loop
+                   onTimeUpdate={(e) => {
+                     const v = e.currentTarget;
+                     if (v.duration && v.currentTime < 0.95) { v.currentTime = 1; }
+                   }}
                  />
                </div>
                <div className="processing-headline">
