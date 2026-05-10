@@ -1105,102 +1105,131 @@ async function runFlowVariantV2(page, prompt, inputFiles, tempDir, onImageReady,
       await page.keyboard.press('Enter');
     }
 
-    console.log(`[FlowV2] Dang cho Google Flow sinh ket qua ${targetCount} anh (timeout 6 phut)...`);
-    // Race waitForFunction (image generation) vs polling errors (every 4s).
-    const generationPromise = page.waitForFunction(({ oldSources, need }) => {
-      const currentImages = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
-      const newImages = currentImages.filter(img => !oldSources.includes(img.src));
-      return newImages.length >= need;
-    }, { oldSources: existingImgSources, need: targetCount }, { timeout: 360000 })
-      .then(() => 'images')
-      .catch((e) => { return { type: 'timeout', err: e }; });
-    const errorPollPromise = (async () => {
-      const start = Date.now();
-      // Poll moi 2s (tu 4s) cho detect nhanh hon. Cac scan da co fast-path.
-      while (Date.now() - start < 360000) {
-        await delay(2000);
-        if (await detectFlowAccountBlocked(page)) return 'account_blocked';
-        if (await detectFlowRateLimit(page)) return 'rate_limit';
-        if (await detectFlowProjectError(page)) return 'project_error';
-      }
-      return 'rl_timeout';
-    })();
+    console.log(`[FlowV2] Streaming: poll moi 2s, tai tung anh ngay khi xuat hien (timeout 6 phut)...`);
 
-    const winner = await Promise.race([generationPromise, errorPollPromise]);
-    if (winner === 'rate_limit') {
-      console.log('[FlowV2] Flow tra ve loi rate-limit — abort som de retry o cap cao hon.');
-      throw new Error('FLOW_RATE_LIMIT: Bạn đang yêu cầu tạo quá nhanh.');
-    } else if (winner === 'project_error') {
-      console.log('[FlowV2] Flow tra ve "Đã xảy ra lỗi" — abort som de retry o cap cao hon.');
-      throw new Error('FLOW_PROJECT_ERROR: Flow project loi giua chung, can retry.');
-    } else if (winner === 'account_blocked') {
-      console.log('[FlowV2] Flow tra ve "Không thành công · unusual activity" — account bi chan, switch profile NGAY.');
-      throw new Error('FLOW_ACCOUNT_BLOCKED: We noticed some unusual activity.');
-    } else if (winner && winner.type === 'timeout') {
-      console.log(`[FlowV2] Het thoi gian cho ${targetCount} anh moi, se xu ly nhung anh da co: ${winner.err?.message || ''}`);
+    // Streaming download: tag tung img moi xuat hien voi data-stream-id, doi
+    // STABILIZE_MS de Flow swap low-res preview → final src, sau do tai +
+    // goi onImageReady ngay lap tuc — KHONG cho du targetCount.
+    const STABILIZE_MS = 5000;        // sau khi tag, doi 5s cho src on dinh
+    const POLL_INTERVAL_MS = 2000;
+    const MAX_WAIT_MS = 360000;
+    const POST_TARGET_GRACE_MS = 30000; // sau khi du targetCount xuat hien, doi them 30s neu chua tai du
+    const startTime = Date.now();
+    const tagTimestamps = new Map(); // streamId → first-seen ms
+    const processedStreamIds = new Set();
+    let processedCount = 0;
+    let allTargetVisibleAt = null;
+
+    while (Date.now() - startTime < MAX_WAIT_MS) {
+      // Inline error detection (poll moi 2s)
+      if (await detectFlowAccountBlocked(page)) {
+        console.log('[FlowV2] Flow tra ve "unusual activity" — account bi chan, switch profile NGAY.');
+        throw new Error('FLOW_ACCOUNT_BLOCKED: We noticed some unusual activity.');
+      }
+      if (await detectFlowRateLimit(page)) {
+        console.log('[FlowV2] Flow tra ve loi rate-limit — abort som de retry o cap cao hon.');
+        throw new Error('FLOW_RATE_LIMIT: Bạn đang yêu cầu tạo quá nhanh.');
+      }
+      if (await detectFlowProjectError(page)) {
+        console.log('[FlowV2] Flow tra ve "Đã xảy ra lỗi" — abort som de retry o cap cao hon.');
+        throw new Error('FLOW_PROJECT_ERROR: Flow project loi giua chung, can retry.');
+      }
+
+      // Tag new imgs + tra ve danh sach tat ca tagged imgs voi src hien tai
+      const taggedImgs = await page.evaluate((oldSources) => {
+        const all = Array.from(document.querySelectorAll('img'))
+          .filter(img => img.width > 200 && !img.src.includes('avatar'));
+        const newOnes = all.filter(img => !oldSources.includes(img.src));
+        for (const img of newOnes) {
+          if (!img.dataset.streamId) {
+            img.dataset.streamId = `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+          }
+        }
+        return Array.from(document.querySelectorAll('img[data-stream-id]')).map(img => ({
+          streamId: img.dataset.streamId,
+          src: img.src,
+          complete: img.complete,
+          naturalWidth: img.naturalWidth || 0,
+        }));
+      }, existingImgSources);
+
+      // Track first-seen timestamps
+      for (const img of taggedImgs) {
+        if (!tagTimestamps.has(img.streamId)) {
+          tagTimestamps.set(img.streamId, Date.now());
+          console.log(`[FlowV2] Anh moi xuat hien (streamId=${img.streamId.slice(0, 12)}...)`);
+        }
+      }
+
+      if (allTargetVisibleAt === null && taggedImgs.length >= targetCount) {
+        allTargetVisibleAt = Date.now();
+      }
+
+      // Process: tai tung img da on dinh (qua STABILIZE_MS) va chua xu ly
+      for (const img of taggedImgs) {
+        if (processedCount >= targetCount) break;
+        if (processedStreamIds.has(img.streamId)) continue;
+        const taggedAt = tagTimestamps.get(img.streamId);
+        if (Date.now() - taggedAt < STABILIZE_MS) continue;
+        if (!img.complete || img.naturalWidth < 200) continue;
+        if (!img.src) continue;
+
+        const outputPath = path.join(tempDir, `flow_result_${Date.now()}_${processedCount}.png`);
+        try {
+          if (img.src.startsWith('data:image')) {
+            const content = img.src.split('base64,')[1];
+            await fs.writeFile(outputPath, Buffer.from(content, 'base64'));
+          } else if (img.src.startsWith('blob:')) {
+            const base64Data = await page.evaluate(async (blobUrl) => {
+              const response = await fetch(blobUrl);
+              const blob = await response.blob();
+              return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+              });
+            }, img.src);
+            const content = String(base64Data).split('base64,')[1];
+            await fs.writeFile(outputPath, Buffer.from(content, 'base64'));
+          } else {
+            const arrayBuffer = await page.evaluate(async (url) => {
+              const response = await fetch(url);
+              const buffer = await response.arrayBuffer();
+              return Array.from(new Uint8Array(buffer));
+            }, img.src);
+            await fs.writeFile(outputPath, Buffer.from(arrayBuffer));
+          }
+
+          outputPaths.push(outputPath);
+          processedStreamIds.add(img.streamId);
+          processedCount += 1;
+          console.log(`[FlowV2] Da tai xong anh ket qua ${processedCount}/${targetCount} (streaming)`);
+
+          if (typeof onImageReady === 'function') {
+            await onImageReady(outputPath);
+          }
+        } catch (error) {
+          console.log(`[FlowV2] Bo qua anh loi (streamId=${img.streamId.slice(0, 12)}...): ${error.message}`);
+          processedStreamIds.add(img.streamId); // mark de khong retry vo han
+        }
+      }
+
+      if (processedCount >= targetCount) {
+        console.log(`[FlowV2] Da tai du ${targetCount}/${targetCount} anh, thoat som.`);
+        break;
+      }
+
+      // Sau khi du targetCount imgs xuat hien, neu sau 30s grace van chua tai du → thoat
+      if (allTargetVisibleAt !== null && Date.now() - allTargetVisibleAt > POST_TARGET_GRACE_MS) {
+        console.log(`[FlowV2] Co ${taggedImgs.length} img trong DOM nhung chi tai duoc ${processedCount}/${targetCount} sau ${Math.round(POST_TARGET_GRACE_MS/1000)}s grace, thoat.`);
+        break;
+      }
+
+      await delay(POLL_INTERVAL_MS);
     }
 
-    await delay(20000);
-
-    const newResultsInDom = await page.evaluate((oldSources) => {
-      const currentImages = Array.from(document.querySelectorAll('img')).filter(img => img.width > 200 && !img.src.includes('avatar'));
-      return currentImages.filter(img => !oldSources.includes(img.src)).map(img => ({
-        src: img.src,
-        rect: {
-          x: img.getBoundingClientRect().x + img.getBoundingClientRect().width / 2,
-          y: img.getBoundingClientRect().y + img.getBoundingClientRect().height / 2,
-          w: img.getBoundingClientRect().width,
-          h: img.getBoundingClientRect().height
-        }
-      }));
-    }, existingImgSources);
-
-    console.log(`[FlowV2] Tim thay ${newResultsInDom.length} anh ket qua moi.`);
-
-    let processedCount = 0;
-    for (let index = 0; index < Math.min(newResultsInDom.length, targetCount); index += 1) {
-      const item = newResultsInDom[index];
-      const outputPath = path.join(tempDir, `flow_result_${Date.now()}_${index}.png`);
-
-      try {
-        if (!item.src) {
-          continue;
-        }
-
-        if (item.src.startsWith('data:image')) {
-          const content = item.src.split('base64,')[1];
-          await fs.writeFile(outputPath, Buffer.from(content, 'base64'));
-        } else if (item.src.startsWith('blob:')) {
-          const base64Data = await page.evaluate(async (blobUrl) => {
-            const response = await fetch(blobUrl);
-            const blob = await response.blob();
-            return new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result);
-              reader.readAsDataURL(blob);
-            });
-          }, item.src);
-          const content = String(base64Data).split('base64,')[1];
-          await fs.writeFile(outputPath, Buffer.from(content, 'base64'));
-        } else {
-          const arrayBuffer = await page.evaluate(async (url) => {
-            const response = await fetch(url);
-            const buffer = await response.arrayBuffer();
-            return Array.from(new Uint8Array(buffer));
-          }, item.src);
-          await fs.writeFile(outputPath, Buffer.from(arrayBuffer));
-        }
-
-        outputPaths.push(outputPath);
-        processedCount += 1;
-        console.log(`[FlowV2] Da tai xong anh ket qua ${index + 1}`);
-
-        if (typeof onImageReady === 'function') {
-          await onImageReady(outputPath);
-        }
-      } catch (error) {
-        console.log(`[FlowV2] Bo qua anh loi: ${error.message}`);
-      }
+    if (processedCount === 0) {
+      console.log(`[FlowV2] Het ${Math.round(MAX_WAIT_MS/60000)} phut ma chua tai duoc anh nao.`);
     }
 
     console.log(`[FlowV2] Hoan tat: ${processedCount}/${targetCount} anh da tai va upload thanh cong.`);
