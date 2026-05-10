@@ -60,7 +60,6 @@ import {
   RotateCcw,
   Lock,
   Cpu,
-  ArrowUpRight,
   FileCheck2,
   PhoneCall,
   UploadCloud,
