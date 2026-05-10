@@ -10390,7 +10390,7 @@ canvas {
   }
   .welcome-redesign .wd-branch-tag { display: none; }
   .welcome-redesign .wd-branch-title {
-    font-size: 16px;
+    font-size: 20px;
     line-height: 1.2;
     margin: 0;
     color: var(--ink-900);
