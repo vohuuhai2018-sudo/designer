@@ -9841,6 +9841,38 @@ canvas {
 .share-chip svg { width: 14px; height: 14px; }
 .share-chip:disabled { opacity: 0.5; cursor: not-allowed; }
 
+.btn-retry-prominent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: var(--bronze-500);
+  color: #fff;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(217, 176, 120, 0.3);
+}
+.btn-retry-prominent:hover:not(:disabled) {
+  background: var(--bronze-600);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(217, 176, 120, 0.4);
+}
+.btn-retry-prominent:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+.btn-retry-prominent svg {
+  width: 16px;
+  height: 16px;
+}
+
+
 /* Pay card — dark navy */
 .pay-card {
   position: relative;

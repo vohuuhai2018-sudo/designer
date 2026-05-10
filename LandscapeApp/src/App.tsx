@@ -55,7 +55,6 @@ import {
   EyeOff,
   Eye,
   Check,
-  Mail,
   CreditCard,
   RotateCcw,
   Lock,
@@ -4883,21 +4882,12 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                    </button>
                  </div>
                  <div className="link-share">
-                   <a className="share-chip" href={`https://zalo.me/share?url=${encodeURIComponent(`${window.location.origin}/result/${projectId}`)}`} target="_blank" rel="noopener noreferrer">
-                     <MessageCircle size={14} /> Zalo
-                   </a>
-                   <a className="share-chip" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${window.location.origin}/result/${projectId}`)}`} target="_blank" rel="noopener noreferrer">
-                     <Share2 size={14} /> Facebook
-                   </a>
-                   <a className="share-chip" href={`mailto:?subject=Bản vẽ thiết kế&body=${encodeURIComponent(`${window.location.origin}/result/${projectId}`)}`}>
-                     <Mail size={14} /> Email
-                   </a>
-                   {retryCount < 1 && !isShareView && onRetry && (
-                     <button className="share-chip" onClick={onRetry} disabled={isRetrying}>
-                       <RefreshCcw size={14} className={isRetrying ? 'spin' : ''} /> {isRetrying ? 'Đang gửi...' : 'Thử lần 2'}
-                     </button>
-                   )}
-                 </div>
+                    {retryCount < 1 && !isShareView && onRetry && (
+                      <button className="btn-retry-prominent" onClick={onRetry} disabled={isRetrying}>
+                        <RefreshCcw size={16} className={isRetrying ? 'spin' : ''} /> {isRetrying ? 'Đang tạo...' : 'Thử lần 2'}
+                      </button>
+                    )}
+                  </div>
                </aside>
 
                <aside className={`pay-card ${isPaid ? 'is-paid' : ''}`}>
