@@ -7427,6 +7427,14 @@ canvas {
     font-size: 12px !important;
   }
   .appbar-link span { display: none; }
+  .my-projects-view .appbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 60px;
+    background: #FBF7EE;
+    border-bottom: 1px solid var(--cream-200);
+    z-index: 1000;
+  }
 }
 
 /* =============================================================
@@ -7448,7 +7456,12 @@ canvas {
   width: 100%;
   max-width: 1280px;
   margin: 0 auto;
-  padding: 56px var(--gutter) 120px;
+  padding: 80px var(--gutter) 120px;
+}
+@media (max-width: 720px) {
+  .my-projects-shell {
+    padding: 76px 18px 100px;
+  }
 }
 .proj-head {
   display: flex;
