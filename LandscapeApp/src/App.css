@@ -7663,9 +7663,9 @@ canvas {
 .designer-view-shell .appbar {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 1000;
   height: 64px;
-  background: rgba(251, 247, 238, 0.92);
+  background: #FBF7EE;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--cream-200);
@@ -7689,8 +7689,17 @@ canvas {
   padding: 56px var(--gutter) 120px;
 }
 @media (max-width: 720px) {
-  .designer-view-shell .appbar { height: 56px; }
-  .designer-content { padding: 32px 18px 120px; }
+  .designer-view-shell .appbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 60px !important;
+    background: #FBF7EE !important;
+    z-index: 2000 !important;
+    display: flex !important;
+  }
+  .designer-content {
+    padding: 76px 18px 100px !important;
+  }
 }
 
 /* ViewHeader */
