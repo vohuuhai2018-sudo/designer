@@ -9199,7 +9199,7 @@ canvas {
   box-shadow: 0 4px 14px rgba(164, 118, 47, 0.35);
   transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-.wd-branch-card:hover .wd-branch-arrow { transform: rotate(-45deg) scale(1.05); }
+.wd-branch-card:hover .wd-branch-arrow { transform: translateX(4px); }
 @media (max-width: 880px) {
   .wd-branches-grid { grid-template-columns: 1fr; }
 }

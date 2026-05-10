@@ -2627,7 +2627,7 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
                   <h3 className="wd-branch-title">{b.title}</h3>
                   <p className="wd-branch-desc">{b.desc}</p>
                 </div>
-                <span className="wd-branch-arrow"><ArrowUpRight size={20} /></span>
+                <span className="wd-branch-arrow"><ArrowRight size={20} /></span>
               </button>
             ))}
           </div>
