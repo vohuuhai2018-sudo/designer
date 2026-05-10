@@ -10272,26 +10272,45 @@ canvas {
     margin-left: auto;
   }
 
-  /* Hero: center large logo + eyebrow text, koi pond bg pinned to bottom */
+  /* Hero: center large logo + eyebrow text. Bg moves to view level. */
   .welcome-redesign .wd-hero {
     min-height: auto;
     padding: 18px 18px 24px;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
+    background: transparent;
   }
   .welcome-redesign .wd-display,
   .welcome-redesign .wd-hero-sub,
   .welcome-redesign .wd-hero-actions,
   .welcome-redesign .wd-hero-strip { display: none; }
-  /* Strong cream gradient at top so logo + eyebrow read clean, koi pond peek bottom */
-  .welcome-redesign .wd-hero-bg {
+  /* Apply koi pond bg to entire welcome view as fixed backdrop */
+  .welcome-redesign {
+    background-color: var(--cream-50);
+    background-image: url('/assets/BG_KOI_MOBILE_V2.jpg');
     background-size: 100% auto;
-    background-position: center bottom;
+    background-position: center top;
+    background-repeat: no-repeat;
+    background-attachment: scroll;
   }
-  .welcome-redesign .wd-hero-scrim {
-    background: linear-gradient(180deg, var(--cream-50) 0%, var(--cream-50) 75%, rgba(251, 247, 238, 0.85) 92%, rgba(251, 247, 238, 0) 100%);
+  /* Cream wash to keep cards/text readable above the bg */
+  .welcome-redesign::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg,
+      rgba(251, 247, 238, 0.92) 0%,
+      rgba(251, 247, 238, 0.55) 35%,
+      rgba(251, 247, 238, 0.85) 75%,
+      rgba(251, 247, 238, 0.96) 100%);
+    z-index: 0;
+    pointer-events: none;
   }
+  .welcome-redesign > * { position: relative; z-index: 1; }
+  /* Hero's own bg + scrim hidden — view-level bg takes over */
+  .welcome-redesign .wd-hero-bg,
+  .welcome-redesign .wd-hero-scrim { display: none; }
   .welcome-redesign .wd-hero-inner {
     text-align: center;
     max-width: none;

@@ -4134,7 +4134,7 @@ function BasicSelectionView({
   );
 }
 
-function PlanSelectionView({ service, onServiceChange, systemContent, mainBranch, onTestPayment, onBack, onJumpToStep }: {
+function PlanSelectionView({ service, onServiceChange, systemContent, onTestPayment, onBack, onJumpToStep }: {
   service: string;
   onServiceChange: (s: string) => void;
   systemContent: any;
