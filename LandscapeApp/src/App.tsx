@@ -4627,9 +4627,7 @@ function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewRe
 
 function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isRetrying = false, onBack, isShareView = false }: { projectId: string; service: string; onReset: () => void; retryCount?: number; onRetry?: () => void; isRetrying?: boolean; onBack?: () => void; isShareView?: boolean }) {
   const [pass2Picked, setPass2Picked] = useState('');
-  const [pass2W, setPass2W] = useState('4');
-  const [pass2L, setPass2L] = useState('4');
-  const [pass2Starting, setPass2Starting] = useState(false);
+      const [pass2Starting, setPass2Starting] = useState(false);
   const [pass2Msg, setPass2Msg] = useState('');
   const [project, setProject] = useState<Project | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -4971,28 +4969,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                      );
                    })}
                  </div>
-                 <div className="pass2-controls">
-                   <label className="num-field">
-                     <span>Chiều ngang (m)</span>
-                     <div className="num-input">
-                       <button type="button" onClick={() => setPass2W(String(Math.max(1, (parseFloat(pass2W) || 4) - 0.5)))}>−</button>
-                       <input type="number" min="1" step="0.5" value={pass2W} onChange={e => setPass2W(e.target.value)} />
-                       <button type="button" onClick={() => setPass2W(String((parseFloat(pass2W) || 4) + 0.5))}>+</button>
-                     </div>
-                   </label>
-                   <label className="num-field">
-                     <span>Chiều dài (m)</span>
-                     <div className="num-input">
-                       <button type="button" onClick={() => setPass2L(String(Math.max(1, (parseFloat(pass2L) || 4) - 0.5)))}>−</button>
-                       <input type="number" min="1" step="0.5" value={pass2L} onChange={e => setPass2L(e.target.value)} />
-                       <button type="button" onClick={() => setPass2L(String((parseFloat(pass2L) || 4) + 0.5))}>+</button>
-                     </div>
-                   </label>
-                   <div className="num-field">
-                     <span>Video walkthrough</span>
-                     <div className="num-fixed">2 video <Lock size={14} /></div>
-                   </div>
-                 </div>
+                 
                  <button
                    className="btn btn-primary btn-lg pass2-cta"
                    disabled={!pass2Picked || pass2Starting}
@@ -5003,7 +4980,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                      try {
                        const res = await apiFetch(`/api/projects/${projectId}/pass2`, {
                          method: 'POST', headers: { 'Content-Type': 'application/json' },
-                         body: JSON.stringify({ referenceImageUrl: pass2Picked, dimensions: { width: parseFloat(pass2W) || 4, length: parseFloat(pass2L) || 4 } })
+                         body: JSON.stringify({ referenceImageUrl: pass2Picked })
                        });
                        const data = await res.json();
                        if (!res.ok) throw new Error(data.error || 'Không khởi động được.');
