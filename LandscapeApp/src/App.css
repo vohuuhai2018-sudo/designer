@@ -7446,6 +7446,7 @@ canvas {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  contain: none !important;
 }
 .my-projects-shell {
   width: 100%;
@@ -7659,6 +7660,7 @@ canvas {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  contain: none !important;
 }
 .designer-view-shell .appbar {
   position: sticky;
