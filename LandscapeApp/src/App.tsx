@@ -2535,9 +2535,9 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
   };
 
   const BRANCHES: { id: MainBranch; tag: string; title: string; desc: string; img: string }[] = [
-    { id: 'landscape', tag: 'Cảnh quan', title: 'Hồ koi & sân vườn', desc: 'Hồ koi cổ điển, hiện đại, hồ bơi thiên nhiên, tường cây, quy hoạch farm — chuẩn phong thủy.', img: pickLibImg('HO') || '/assets/Cảnh quan/1. HO KOI SAN VUON CO DIEN_THUMB.png' },
-    { id: 'architecture', tag: 'Kiến trúc', title: 'Nhà phố & biệt thự', desc: 'Nhà phố, biệt thự, nhà cấp 4, nhà vườn, nhà tiền chế — bản vẽ kết cấu chi tiết.', img: pickLibImg('BIET_THU') || '/assets/Kiến trúc/2. BIET THU_THUMB.png' },
-    { id: 'interior', tag: 'Nội thất', title: 'Hiện đại đến Indochine', desc: 'Hiện đại, tân cổ điển, Indochine, Wabi-Sabi, nội thất gỗ — phối cảnh từng phòng.', img: pickLibImg('HIEN_DAI') || '/assets/Nội thất/1. HIEN DAI _ THUMB.png' },
+    { id: 'landscape', tag: 'Cảnh quan', title: 'Thiết kế cảnh quan', desc: 'Hồ koi cổ điển, hiện đại, hồ bơi thiên nhiên, tường cây, quy hoạch farm — chuẩn phong thủy.', img: pickLibImg('HO') || '/assets/Cảnh quan/1. HO KOI SAN VUON CO DIEN_THUMB.png' },
+    { id: 'architecture', tag: 'Kiến trúc', title: 'Thiết kế kiến trúc', desc: 'Nhà phố, biệt thự, nhà cấp 4, nhà vườn, nhà tiền chế — bản vẽ kết cấu chi tiết.', img: pickLibImg('BIET_THU') || '/assets/Kiến trúc/2. BIET THU_THUMB.png' },
+    { id: 'interior', tag: 'Nội thất', title: 'Thiết kế nội thất', desc: 'Hiện đại, tân cổ điển, Indochine, Wabi-Sabi, nội thất gỗ — phối cảnh từng phòng.', img: pickLibImg('HIEN_DAI') || '/assets/Nội thất/1. HIEN DAI _ THUMB.png' },
   ];
 
   const STEPS = [
