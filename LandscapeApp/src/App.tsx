@@ -13,6 +13,7 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  ArrowLeft,
   Camera,
   Layers,
   X,
@@ -52,7 +53,18 @@ import {
   GripVertical,
   Plus,
   EyeOff,
-  Eye
+  Eye,
+  Check,
+  Mail,
+  CreditCard,
+  RotateCcw,
+  Lock,
+  Cpu,
+  ArrowUpRight,
+  FileCheck2,
+  PhoneCall,
+  UploadCloud,
+  Lightbulb
 } from 'lucide-react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -305,6 +317,40 @@ function apiFetch(path: string, options?: RequestInit): Promise<Response> {
 
 // --- TYPES ---
 type AppView = 'welcome' | 'upload' | 'editor' | 'service' | 'plan' | 'submit' | 'success' | 'admin' | 'login' | 'basic_selection' | 'my_projects' | 'branch_selection';
+
+type StepNavView = 'basic_selection' | 'upload' | 'plan' | 'submit';
+const STEP_NAV: { id: StepNavView; num: number; label: string }[] = [
+  { id: 'basic_selection', num: 1, label: 'Chọn mẫu' },
+  { id: 'upload', num: 2, label: 'Tải ảnh' },
+  { id: 'plan', num: 3, label: 'Gói thiết kế' },
+  { id: 'submit', num: 4, label: 'Liên hệ' },
+];
+
+function StepNav({ current, onJump }: { current: StepNavView; onJump: (v: StepNavView) => void }) {
+  const currentIdx = STEP_NAV.findIndex(s => s.id === current);
+  return (
+    <nav className="appbar-steps" aria-label="Các bước">
+      {STEP_NAV.map((s, i) => {
+        const isActive = i === currentIdx;
+        const isDone = i < currentIdx;
+        const canClick = isDone;
+        return (
+          <React.Fragment key={s.id}>
+            {i > 0 && <span className="appbar-step-sep">›</span>}
+            <button
+              className={`appbar-step ${isActive ? 'is-active' : ''} ${isDone ? 'is-done' : ''}`}
+              disabled={!canClick && !isActive}
+              onClick={() => canClick && onJump(s.id)}
+            >
+              <span className="appbar-step-num">{isDone ? '✓' : s.num}</span>
+              <span className="appbar-step-label">{s.label}</span>
+            </button>
+          </React.Fragment>
+        );
+      })}
+    </nav>
+  );
+}
 type MainBranch = 'landscape' | 'architecture' | 'interior';
 
 // Device ID — định danh thiết bị thay cho đăng nhập
@@ -1938,6 +1984,15 @@ export default function App() {
     else if (view === 'submit') handleSubmit();
   };
 
+  const handleJumpToStep = (target: StepNavView) => {
+    if (target === 'basic_selection') {
+      setBasicSubStep('gallery');
+      setView('basic_selection');
+    } else {
+      setView(target);
+    }
+  };
+
   const handleGlobalBack = () => {
     if (view === 'plan') setView('upload');
     else if (view === 'basic_selection') {
@@ -1955,7 +2010,7 @@ export default function App() {
     else if (view === 'submit') setView('plan');
   };
 
-  const showGlobalNav = ['upload', 'editor', 'service', 'plan', 'submit', 'basic_selection'].includes(view);
+  const showGlobalNav = ['editor', 'service'].includes(view);
 
   return (
     <ErrorBoundary>
@@ -1991,10 +2046,11 @@ export default function App() {
         </div>
       )}
 
-      <div className={`container ${['admin', 'login', 'welcome'].includes(view as any) ? 'full-width' : ''} ${view === 'plan' ? 'wider' : ''}`}>
+      <div className={`container ${['admin', 'login', 'welcome', 'success', 'my_projects', 'basic_selection', 'upload', 'plan', 'submit'].includes(view as any) ? 'full-width' : ''}`}>
         <AnimatePresence mode="wait">
         {view === 'welcome' && (
           <WelcomeView
+            systemContent={systemContent}
             onStart={(branch) => {
               setMainBranch(branch);
               setView('basic_selection');
@@ -2024,16 +2080,19 @@ export default function App() {
             selectedCategory={basicCategory}
             onCategoryChange={setBasicCategory}
             onSelect={handleBasicSelect}
-            onBack={() => setView('plan')}
+            onBack={handleGlobalBack}
+            onJumpToStep={handleJumpToStep}
           />
         )}
         {view === 'upload' && (
-          <UploadView 
+          <UploadView
             rawImage={rawImage}
-            onUpload={handleUpload} 
+            onUpload={handleUpload}
             extraAssets={extraAssets}
             onExtraAssetsChange={setExtraAssets}
             onProceed={handleGlobalNext}
+            onBack={handleGlobalBack}
+            onJumpToStep={handleJumpToStep}
             systemContent={systemContent}
             service={service}
             note={note}
@@ -2076,6 +2135,8 @@ export default function App() {
             service={service}
             systemContent={systemContent}
             mainBranch={mainBranch}
+            onBack={handleGlobalBack}
+            onJumpToStep={handleJumpToStep}
             onServiceChange={(s) => {
               setService(s);
               setView('submit');
@@ -2123,8 +2184,15 @@ export default function App() {
             customerPhone={customerPhone}
             onPhoneChange={setCustomerPhone}
             onSubmit={handleSubmit}
+            onBack={handleGlobalBack}
+            onJumpToStep={handleJumpToStep}
             isSubmitting={isSubmitting}
             systemContent={systemContent}
+            service={service}
+            mainBranch={mainBranch}
+            selectedCategory={basicCategory}
+            rawImage={rawImage}
+            extraAssets={extraAssets}
           />
         )}
         {view === 'success' && (
@@ -2427,8 +2495,17 @@ function LoginView({ onSuccess, onBack }: { onSuccess: () => void, onBack: () =>
 
 // --- SUB-VIEWS ---
 
-function WelcomeView({ onStart, onAdmin, onMyProjects }: { onStart: (branch: MainBranch) => void, onAdmin: () => void, onMyProjects: () => void }) {
+function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStart: (branch: MainBranch) => void, onAdmin: () => void, onMyProjects: () => void, systemContent?: any }) {
   const [clickCount, setClickCount] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 80);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const handleLogoClick = () => {
     const newCount = clickCount + 1;
@@ -2441,83 +2518,248 @@ function WelcomeView({ onStart, onAdmin, onMyProjects }: { onStart: (branch: Mai
     }
   };
 
+  const scrollTo = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const lib = systemContent?.library || {};
+  const pickLibImg = (key: string, idx = 0): string | null => {
+    const root = lib[key];
+    if (!root || !root[0]) return null;
+    const variants = root[0].variants || [];
+    return variants[idx]?.url || variants[0]?.url || root[0].url || null;
+  };
+
+  const BRANCHES: { id: MainBranch; tag: string; title: string; desc: string; img: string }[] = [
+    { id: 'landscape', tag: 'Cảnh quan', title: 'Hồ koi & sân vườn', desc: 'Hồ koi cổ điển, hiện đại, hồ bơi thiên nhiên, tường cây, quy hoạch farm — chuẩn phong thủy.', img: pickLibImg('HO') || '/assets/Cảnh quan/1. HO KOI SAN VUON CO DIEN_THUMB.png' },
+    { id: 'architecture', tag: 'Kiến trúc', title: 'Nhà phố & biệt thự', desc: 'Nhà phố, biệt thự, nhà cấp 4, nhà vườn, nhà tiền chế — bản vẽ kết cấu chi tiết.', img: pickLibImg('BIET_THU') || '/assets/Kiến trúc/2. BIET THU_THUMB.png' },
+    { id: 'interior', tag: 'Nội thất', title: 'Hiện đại đến Indochine', desc: 'Hiện đại, tân cổ điển, Indochine, Wabi-Sabi, nội thất gỗ — phối cảnh từng phòng.', img: pickLibImg('HIEN_DAI') || '/assets/Nội thất/1. HIEN DAI _ THUMB.png' },
+  ];
+
+  const STEPS = [
+    { n: 1, label: 'Chọn mẫu đẹp', desc: 'Duyệt 500+ mẫu đã thực hiện. Lưu mẫu yêu thích để làm tham chiếu.', icon: <ImageIcon size={28} strokeWidth={1.5} />, img: '/assets/ICON TRANG CHU/1. CHON MAU.png' },
+    { n: 2, label: 'Chụp hiện trạng', desc: 'Gửi ảnh khu đất, mặt bằng và mong muốn. Chỉ cần điện thoại.', icon: <Camera size={28} strokeWidth={1.5} />, img: '/assets/ICON TRANG CHU/2. CHUP HIEN TRANG.png' },
+    { n: 3, label: 'Nhận bản vẽ', desc: 'Bản vẽ 2D, phối cảnh 3D, kết cấu chi tiết — AI render 5 phút hoặc KTS thiết kế chuyên sâu trong 24h.', icon: <FileCheck2 size={28} strokeWidth={1.5} />, img: '/assets/ICON TRANG CHU/3. NHAN BAN VE.png' },
+  ];
+
+  const STATS = [
+    { num: '5 phút', label: 'AI render tự động' },
+    { num: '24h', label: 'KTS chuyên sâu' },
+    { num: '500+', label: 'Dự án hoàn thành' },
+    { num: '4,9★', label: 'Đánh giá khách hàng' },
+  ];
+
+  const GALLERY: { cat: string; img: string; branch: MainBranch }[] = [
+    { cat: 'Cảnh quan', img: pickLibImg('HO', 0) || '/assets/Cảnh quan/1. HO KOI SAN VUON CO DIEN_THUMB.png', branch: 'landscape' },
+    { cat: 'Cảnh quan', img: pickLibImg('HO_HIEN_DAI', 0) || '/assets/Cảnh quan/2. HO KOI SAN VUON HIEN DAI_THUMB.png', branch: 'landscape' },
+    { cat: 'Kiến trúc', img: pickLibImg('BIET_THU', 0) || '/assets/Kiến trúc/2. BIET THU_THUMB.png', branch: 'architecture' },
+    { cat: 'Kiến trúc', img: pickLibImg('NHA_PHO', 0) || '/assets/Kiến trúc/1. NHA PHO_THUMB.png', branch: 'architecture' },
+    { cat: 'Nội thất', img: pickLibImg('HIEN_DAI', 0) || '/assets/Nội thất/1. HIEN DAI _ THUMB.png', branch: 'interior' },
+    { cat: 'Nội thất', img: pickLibImg('TAN_CO_DIEN', 0) || '/assets/Nội thất/2. TAN CO DIEN_THUMB.png', branch: 'interior' },
+  ];
+
+  const NAV_LINKS: [string, string][] = [['canh-quan','Dịch vụ'], ['quy-trinh','Quy trình'], ['du-an','Dự án'], ['lien-he','Liên hệ']];
+
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view welcome-view welcome-v2">
-      <div className="founder-bg-overlay" />
-      <div className="hero-content">
-        <div className="logo-tech-container" onClick={handleLogoClick}>
-           <img decoding="async" loading="lazy" src="/assets/LOGO _ PNG.png" alt="Logo" className="main-logo-image" />
-        </div>
-        <h1 className="main-title-v3">Hệ thống thiết kế bản vẽ nhanh nhất Việt Nam</h1>
-        
-        <div className="branch-cta-group-v2">
-          <button className="btn-v2-main" onClick={() => onStart('landscape')}>
-            <div className="btn-v2-icon"><img decoding="async" loading="lazy" src="/assets/LUỒNG THIẾT KẾ/1. THIET KE CANH QUAN.png" alt="Cảnh quan" className="full-width-icon" /></div>
-            <div className="btn-v2-text">
-              <strong>Thiết kế cảnh quan</strong>
-              <span>Hồ koi, sân vườn, farm, hồ bơi</span>
-            </div>
-            <span className="arrow-circle" aria-hidden><ArrowRight size={18} strokeWidth={2.5} /></span>
-          </button>
-
-          <button className="btn-v2-main" onClick={() => onStart('architecture')}>
-            <div className="btn-v2-icon"><img decoding="async" loading="lazy" src="/assets/LUỒNG THIẾT KẾ/2. THIET KE KIEN TRUC.png" alt="Kiến trúc" className="full-width-icon" /></div>
-            <div className="btn-v2-text">
-              <strong>Thiết kế kiến trúc</strong>
-              <span>Nhà phố, biệt thự, nhà tiền chế</span>
-            </div>
-            <span className="arrow-circle" aria-hidden><ArrowRight size={18} strokeWidth={2.5} /></span>
-          </button>
-
-          <button className="btn-v2-main" onClick={() => onStart('interior')}>
-            <div className="btn-v2-icon"><img decoding="async" loading="lazy" src="/assets/LUỒNG THIẾT KẾ/3. THIET KE NOI THAT.png" alt="Nội thất" className="full-width-icon" /></div>
-            <div className="btn-v2-text">
-              <strong>Thiết kế nội thất</strong>
-              <span>Hiện đại, tân cổ điển, indochine</span>
-            </div>
-            <span className="arrow-circle" aria-hidden><ArrowRight size={18} strokeWidth={2.5} /></span>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view welcome-view welcome-redesign">
+      {/* Header */}
+      <header className={`wd-header ${scrolled ? 'scrolled' : ''}`}>
+        <div className="wd-header-inner">
+          <a className="wd-logo" onClick={handleLogoClick}>
+            <img src="/assets/LOGO _ PNG.png" alt="thietke5p" />
+          </a>
+          <nav className={`wd-nav ${navOpen ? 'open' : ''}`}>
+            {NAV_LINKS.map(([id, label]) => (
+              <a key={id} onClick={() => { setNavOpen(false); scrollTo(id); }}>{label}</a>
+            ))}
+          </nav>
+          <button className="btn btn-primary wd-header-cta" onClick={() => scrollTo('canh-quan')}>Đặt thiết kế</button>
+          <button className="wd-burger" aria-label="menu" onClick={() => setNavOpen(!navOpen)}>
+            <span /><span /><span />
           </button>
         </div>
+      </header>
 
-        <button
-          className="btn-my-projects-v2"
-          onClick={onMyProjects}
-        >
-          <FolderOpen size={22} /> <span>Dự án của bạn</span>
-        </button>
-
-        <div className="process-flow-v3">
-          <div className="process-step">
-            <div className="step-icon"><img decoding="async" loading="lazy" src="/assets/ICON TRANG CHU/1. CHON MAU.png" alt="Chọn mẫu đẹp" className="full-width-icon" /></div>
-            <span>Chọn mẫu đẹp</span>
+      {/* Hero */}
+      <section id="top" className="wd-hero">
+        <div className="wd-hero-bg" />
+        <div className="wd-hero-scrim" />
+        <div className="wd-container wd-hero-inner">
+          <span className="eyebrow wd-hero-eyebrow">
+            <span className="wd-hero-eyebrow-desktop">Thiết kế bản vẽ · 5 phút</span>
+            <span className="wd-hero-eyebrow-mobile">Hệ thống thiết kế bản vẽ nhanh nhất Việt Nam</span>
+          </span>
+          <h1 className="wd-display">Hồ koi sân vườn<br /><em>đẹp như mơ.</em></h1>
+          <p className="wd-hero-sub">Hệ thống thiết kế bản vẽ nhanh nhất Việt Nam. Cảnh quan, kiến trúc, nội thất — AI render chỉ 5 phút, hoặc KTS thiết kế chuyên sâu trong 24h.</p>
+          <div className="wd-hero-actions">
+            <button className="btn btn-primary btn-lg" onClick={() => scrollTo('canh-quan')}>Đặt thiết kế ngay <ArrowRight size={18} /></button>
+            <button className="btn btn-ghost-light btn-lg" onClick={() => scrollTo('du-an')}>Xem mẫu thiết kế</button>
           </div>
-          <div className="step-arrow" aria-hidden><span className="dashed-connector" /></div>
-          <div className="process-step">
-            <div className="step-icon"><img decoding="async" loading="lazy" src="/assets/ICON TRANG CHU/2. CHUP HIEN TRANG.png" alt="Chụp hiện trạng" className="full-width-icon" /></div>
-            <span>Chụp hiện trạng</span>
-          </div>
-          <div className="step-arrow" aria-hidden><span className="dashed-connector" /></div>
-          <div className="process-step">
-            <div className="step-icon"><img decoding="async" loading="lazy" src="/assets/ICON TRANG CHU/3. NHAN BAN VE.png" alt="Nhận bản vẽ" className="full-width-icon" /></div>
-            <span>Nhận bản vẽ</span>
+          <div className="wd-hero-strip">
+            <span><b>4,9★</b> đánh giá</span>
+            <span className="wd-strip-sep" />
+            <span><b>500+</b> dự án</span>
+            <span className="wd-strip-sep" />
+            <span><b>5 phút</b> AI render</span>
           </div>
         </div>
+      </section>
+
+      {/* Branches */}
+      <section id="canh-quan" className="wd-section wd-branches">
+        <div className="wd-container">
+          <div className="wd-section-head center">
+            <span className="eyebrow body-eyebrow">Chọn nhánh thiết kế</span>
+            <h2 className="wd-h2">Ba dòng sản phẩm,<br />một quy trình duy nhất.</h2>
+          </div>
+          <div className="wd-branches-grid">
+            {BRANCHES.map((b) => (
+              <button key={b.id} type="button" className="wd-branch-card" onClick={() => onStart(b.id)}>
+                <div className="wd-branch-img">
+                  <img src={b.img} alt={b.tag} loading="lazy" decoding="async" />
+                </div>
+                <div className="wd-branch-body">
+                  <span className="wd-branch-tag">{b.tag}</span>
+                  <h3 className="wd-branch-title">{b.title}</h3>
+                  <p className="wd-branch-desc">{b.desc}</p>
+                </div>
+                <span className="wd-branch-arrow"><ArrowUpRight size={20} /></span>
+              </button>
+            ))}
+          </div>
+          <div className="wd-my-projects-row">
+            <button type="button" className="wd-my-projects-pill" onClick={onMyProjects}>
+              <FolderOpen size={16} /> Dự án của bạn
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Process */}
+      <section id="quy-trinh" className="wd-section wd-process">
+        <div className="wd-container">
+          <div className="wd-section-head center">
+            <span className="eyebrow body-eyebrow">Quy trình</span>
+            <h2 className="wd-h2">3 bước, 5 phút,<br />một bản vẽ hoàn chỉnh.</h2>
+          </div>
+          <ol className="wd-process-grid">
+            {STEPS.map((s) => (
+              <li key={s.n} className="wd-process-step">
+                <div className="wd-process-num-circle">
+                  <img src={s.img} alt={s.label} className="wd-process-step-img" loading="lazy" decoding="async" />
+                  <span className="wd-process-num-pip">{String(s.n).padStart(2, '0')}</span>
+                </div>
+                <h3 className="wd-process-label">{s.label}</h3>
+                <p className="wd-process-desc">{s.desc}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section className="wd-stats">
+        <div className="wd-container">
+          <ul className="wd-stats-grid">
+            {STATS.map((s, i) => (
+              <li key={i} className="wd-stat">
+                <div className="wd-stat-num">{s.num}</div>
+                <div className="wd-stat-label">{s.label}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* Gallery */}
+      <section id="du-an" className="wd-section wd-gallery">
+        <div className="wd-container">
+          <div className="wd-section-head center">
+            <span className="eyebrow body-eyebrow">Dự án tiêu biểu</span>
+            <h2 className="wd-h2">500+ mẫu thiết kế,<br />đã thực hiện thật.</h2>
+          </div>
+          <div className="wd-gallery-grid">
+            {GALLERY.map((g, i) => (
+              <button key={i} type="button" className="wd-gallery-tile" onClick={() => onStart(g.branch)}>
+                <img src={g.img} alt={g.cat} loading="lazy" decoding="async" />
+                <span className="wd-gallery-chip">{g.cat}</span>
+              </button>
+            ))}
+          </div>
+          <div className="wd-gallery-foot">
+            <button type="button" className="btn btn-primary btn-lg" onClick={onMyProjects}>Xem toàn bộ dự án <ArrowRight size={18} /></button>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer id="lien-he" className="wd-footer">
+        <div className="wd-container wd-footer-grid">
+          <div className="wd-footer-brand">
+            <img src="/assets/LOGO _ PNG.png" alt="thietke5p" className="wd-footer-logo" />
+            <p>Hệ thống thiết kế bản vẽ nhanh nhất Việt Nam. AI render chỉ 5 phút, hoặc KTS thiết kế chuyên sâu trong 24h.</p>
+          </div>
+          <div>
+            <h4>Dịch vụ</h4>
+            <ul>
+              <li><a onClick={() => onStart('landscape')}>Cảnh quan</a></li>
+              <li><a onClick={() => onStart('architecture')}>Kiến trúc</a></li>
+              <li><a onClick={() => onStart('interior')}>Nội thất</a></li>
+              <li><a onClick={() => onStart('landscape')}>Quy hoạch farm</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4>Công ty</h4>
+            <ul>
+              <li><a>Về 5P</a></li>
+              <li><a onClick={() => scrollTo('quy-trinh')}>Quy trình</a></li>
+              <li><a onClick={() => scrollTo('du-an')}>Dự án</a></li>
+              <li><a>Tuyển dụng</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4>Liên hệ</h4>
+            <ul>
+              <li><a href="tel:0909555555">0909 555 555</a></li>
+              <li><a>Zalo: thietke5p</a></li>
+              <li><a href="mailto:cs@thietke5p.com">cs@thietke5p.com</a></li>
+              <li><a>Q.7, TP. Hồ Chí Minh</a></li>
+            </ul>
+          </div>
+        </div>
+        <div className="wd-container wd-footer-bottom">
+          <span>© 2026 thietke5p.com — Hệ thống thiết kế 5P.</span>
+          <span>Điều khoản · Bảo mật</span>
+        </div>
+      </footer>
+
+      {/* Floating contact */}
+      <div className="wd-float">
+        <a className="wd-float-pill wd-float-tel" href="tel:0909555555">
+          <PhoneCall size={18} /><span>0909 555 555</span>
+        </a>
+        <a className="wd-float-pill wd-float-zalo" href="https://zalo.me" target="_blank" rel="noopener noreferrer">
+          <MessageCircle size={18} /><span>Chat Zalo</span>
+        </a>
       </div>
     </motion.div>
   );
 }
 
-function UploadView({ 
-  rawImage, onUpload, extraAssets, onExtraAssetsChange, onProceed, systemContent,
+function UploadView({
+  rawImage, onUpload, extraAssets, onExtraAssetsChange, onProceed, onBack, onJumpToStep, systemContent,
   service, note, referenceModelUrl, onNoteChange,
-  interiorComboImages, interiorSiteImages, onInteriorSiteImageChange, 
+  interiorComboImages, interiorSiteImages, onInteriorSiteImageChange,
   mainBranch, selectedCategory
-}: { 
-  rawImage: string; 
+}: {
+  rawImage: string;
   onUpload: (img: string) => void;
   extraAssets: string[];
   onExtraAssetsChange: (assets: string[]) => void;
   onProceed: () => void;
+  onBack?: () => void;
+  onJumpToStep?: (v: StepNavView) => void;
   systemContent: any;
   service?: string;
   note?: string;
@@ -2623,193 +2865,239 @@ function UploadView({
   const basicModelUrl = referenceModelUrl || extractSelectedModelUrl(note);
   const isInteriorCombo = interiorComboImages && interiorComboImages.length > 0;
 
+  const canProceed = !!preview || (isInteriorCombo && !!interiorSiteImages?.some(img => img !== ''));
+  const cleanedNote = note ? note.replace(/(\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?)/gi, '').replace(/^https?:\/\/\S+\n?/gm, '').trimStart() : '';
+
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view upload-view nav-offset">
-      <h2>{isInteriorCombo ? t('upload_title_interior', 'Tải ảnh hiện trạng công trình theo các góc tương ứng') : t('upload_title', 'Tải ảnh hiện trạng công trình')}</h2>
-      
-      {isInteriorCombo ? (
-        <div className="interior-upload-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginTop: '20px' }}>
-          {interiorComboImages.map((comboImg, idx) => (
-            <div key={idx} className="interior-upload-pair" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '15px', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <div style={{ marginBottom: '15px' }}>
-                <span style={{ color: 'var(--accent)', fontWeight: 700, fontSize: '0.9rem', marginBottom: '8px', display: 'block' }}>
-                  <CheckCircle2 size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }}/> 
-                  Ảnh Mẫu {idx + 1}_{['Phòng khách', 'Phòng ngủ', 'Phòng bếp', 'Phòng tắm'][idx] || 'Khác'}
-                </span>
-                <ProtectedImage src={comboImg} alt={`Combo ${idx}`} style={{ width: '100%', height: '140px', borderRadius: '12px' }} />
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="view designer-view-shell upload-view"
+    >
+      <div className="appbar">
+        <div className="appbar-inner">
+          <a
+            href="/"
+            className="appbar-logo-wrap"
+            onClick={(e) => { e.preventDefault(); onBack && onBack(); }}
+          >
+            <img src="/assets/LOGO _ PNG.png" alt="thietke5p" className="appbar-logo" />
+          </a>
+          {onJumpToStep && <StepNav current="upload" onJump={onJumpToStep} />}
+          <button className="appbar-link" onClick={onBack}>
+            <ChevronLeft size={16} /> <span>Quay lại</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="designer-content" style={{ paddingBottom: 120 }}>
+        <div className="vh">
+          <div className="vh-row">
+            <button className="vh-back" onClick={onBack} aria-label="Back">
+              <ArrowLeft size={18} />
+            </button>
+            <div className="vh-stepper">
+              <span>Bước 2/5</span>
+              <div className="vh-stepper-bar">
+                <div className="vh-stepper-fill" style={{ width: '40%' }} />
               </div>
-              <div 
-                className="upload-area-mini" 
-                onClick={() => interiorFileRefs.current[idx]?.click()} 
+            </div>
+          </div>
+          <h1 className="vh-title">
+            {isInteriorCombo
+              ? t('upload_title_interior', 'Tải ảnh hiện trạng theo các góc')
+              : t('upload_title', 'Chụp / tải ảnh hiện trạng')
+            }
+          </h1>
+          <p className="vh-sub">
+            {isInteriorCombo
+              ? 'Tải ảnh thực tế từng phòng tương ứng với mẫu KTS sẽ áp dụng phong cách.'
+              : 'Gửi ảnh khu đất, mặt bằng, hoặc bản phác. Định dạng JPG / PNG / WEBP — dưới 25MB.'
+            }
+          </p>
+        </div>
+
+        {isInteriorCombo ? (
+          <div className="dv-interior-grid">
+            {interiorComboImages.map((comboImg, idx) => {
+              const roomLabel = ['Phòng khách', 'Phòng ngủ', 'Phòng bếp', 'Phòng tắm'][idx] || 'Khác';
+              const siteImg = interiorSiteImages?.[idx];
+              return (
+                <div key={idx} className="dv-interior-pair">
+                  <span className="dv-interior-ref">Mẫu {idx + 1} · {roomLabel}</span>
+                  <img
+                    src={comboImg}
+                    alt={`Mẫu ${roomLabel}`}
+                    className="dv-interior-ref-img"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div
+                    className="dv-interior-drop"
+                    onClick={() => interiorFileRefs.current[idx]?.click()}
+                  >
+                    {siteImg ? (
+                      <>
+                        <img src={siteImg} alt={`Hiện trạng ${roomLabel}`} />
+                        <span className="dv-drop-tag"><Check /> Đã tải</span>
+                      </>
+                    ) : (
+                      <>
+                        <Camera />
+                        <span>Tải ảnh hiện trạng<br/>{roomLabel}</span>
+                      </>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={el => { interiorFileRefs.current[idx] = el; }}
+                    onChange={(e) => handleInteriorFile(e, idx)}
+                    hidden
+                  />
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="upload-grid">
+            <div>
+              <div
+                className={`dv-drop ${isValidPreview(preview) ? 'has-files' : ''}`}
+                onClick={() => fileRef.current?.click()}
               >
-                {interiorSiteImages?.[idx] ? (
-                  <>
-                    <img decoding="async" loading="lazy" src={interiorSiteImages[idx]} alt={`Site ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <div className="tag-overlay-premium">
-                      <CheckCircle2 size={12} /> ĐÃ TẢI ẢNH
-                    </div>
-                  </>
+                {isValidPreview(preview) ? (
+                  <div className="dv-preview-wrap">
+                    <img
+                      src={preview}
+                      alt="Preview"
+                      onLoad={(e) => {
+                        const img = e.currentTarget;
+                        if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+                          setPreview('');
+                        }
+                      }}
+                      onError={() => setPreview('')}
+                    />
+                    <button
+                      type="button"
+                      className="dv-preview-replace"
+                      onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
+                    >
+                      <RefreshCw /> Thay ảnh
+                    </button>
+                  </div>
                 ) : (
                   <>
-                    <Camera size={32} style={{ marginBottom: '8px', color: 'rgba(255,255,255,0.5)' }} />
-                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.7)', textAlign: 'center', padding: '0 10px' }}>
-                      TẢI ẢNH HIỆN TRẠNG<br/>{['PHÒNG KHÁCH', 'PHÒNG NGỦ', 'PHÒNG BẾP', 'PHÒNG TẮM'][idx] || 'GÓC TƯƠNG TỰ'}
-                    </span>
+                    <div className="dv-drop-icon"><UploadCloud /></div>
+                    <div className="dv-drop-title">Nhấn để chọn ảnh chính</div>
+                    <div className="dv-drop-sub">
+                      hoặc kéo thả vào đây · <u>JPG / PNG / WEBP</u> — dưới 25MB
+                    </div>
                   </>
                 )}
               </div>
+              <input type="file" accept="image/*" ref={fileRef} onChange={handleFile} hidden />
 
-              <input type="file" accept="image/*" ref={el => { interiorFileRefs.current[idx] = el; }} onChange={(e) => handleInteriorFile(e, idx)} hidden />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <>
-          <div className={`upload-area ${isValidPreview(preview) ? 'has-preview' : ''}`} onClick={() => fileRef.current?.click()}>
-            {isValidPreview(preview) ? (
-              <div className="preview-wrap">
-                <img
-                  decoding="async"
-                  src={preview}
-                  alt="Preview"
-                  onLoad={(e) => {
-                    const img = e.currentTarget;
-                    console.log('[upload] preview loaded:', { w: img.naturalWidth, h: img.naturalHeight });
-                    if (img.naturalWidth === 0 || img.naturalHeight === 0) {
-                      console.warn('[upload] preview has 0×0 dimensions — resetting');
-                      setPreview('');
-                    }
-                  }}
-                  onError={() => {
-                    console.error('[upload] preview <img> failed to load');
-                    setPreview('');
-                  }}
+              <label className="dv-field">
+                <span className="dv-field-label">{t('upload_title_note', 'Mô tả ý tưởng chi tiết')}</span>
+                <textarea
+                  className="dv-field-input"
+                  rows={6}
+                  placeholder={getDynamicPlaceholder()}
+                  value={cleanedNote}
+                  onChange={(e) => onNoteChange && onNoteChange(e.target.value)}
                 />
-                <div className="change-image-overlay">
-                  <div className="change-image-btn">
-                    <RefreshCw size={20} />
-                    <span>Thay đổi ảnh</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="upload-circle"><Camera size={60} /></div>
-                <span className="upload-prompt">NHẤN ĐỂ CHỌN ẢNH CHÍNH</span>
-                <span style={{ fontSize: '0.85rem', color: '#9b6e2e', fontWeight: 500 }}>
-                  JPG / PNG / WEBP — tối đa 25MB
+                <span className="dv-field-help">
+                  {cleanedNote.length} ký tự — càng chi tiết, AI render càng đúng ý.
                 </span>
-              </>
-            )}
-          </div>
+              </label>
+            </div>
 
-          <input type="file" accept="image/*" ref={fileRef} onChange={handleFile} hidden />
-
-          <div className="upload-guide-side">
-            <div className="guide-content-left">
-              <div className="guide-header-side">
-                <Zap size={24} color="#e2b170" />
-                <span>{systemContent.tips.title}</span>
+            <aside className="dv-tips-card">
+              <div className="dv-tips-head">
+                <Lightbulb />
+                <span>{systemContent.tips?.title || 'Mẹo chụp ảnh hiện trạng'}</span>
               </div>
-              <ul className="guide-list-side">
-                {systemContent.tips.items.map((it: string, idx: number) => <li key={idx}>{it}</li>)}
+              <ul className="dv-tips-list">
+                {(systemContent.tips?.items || []).map((it: string, idx: number) => (
+                  <li key={idx}><Check /><span>{it}</span></li>
+                ))}
               </ul>
-            </div>
-            <div className="guide-visual-right">
-              {basicModelUrl ? (
-                <div className="guide-template-side">
-                  <span className="guide-template-label">ẢNH MẪU ĐÃ CHỌN</span>
-                  <img decoding="async" loading="lazy" src={basicModelUrl} alt="Selected Template" className="guide-template-img" />
-                </div>
-              ) : (
-                <img decoding="async" loading="lazy" src={systemContent.tips.sampleImage} alt="Guide" className="guide-template-img" />
-              )}
-            </div>
+              <div className="dv-tips-sample">
+                <img
+                  src={basicModelUrl || systemContent.tips?.sampleImage}
+                  alt={basicModelUrl ? 'Mẫu đã chọn' : 'Ảnh mẫu chuẩn'}
+                  loading="lazy"
+                />
+                <span>{basicModelUrl ? 'Mẫu đã chọn' : 'Ảnh mẫu chuẩn'}</span>
+              </div>
+            </aside>
           </div>
+        )}
 
-        </>
-      )}
-
-      {/* MÔ TẢ Ý TƯỞNG CHI TIẾT - LUÔN HIỆN */}
-      <div className="idea-desc-section" style={{ marginTop: '20px' }}>
-        <div className="idea-desc-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--accent)', fontWeight: 800 }}>
-            <CheckCircle2 size={32} />
-            <span style={{ fontSize: '1.6rem', fontWeight: 950, letterSpacing: '0.02em' }}>{t('upload_title_note', 'Mô tả ý tưởng chi tiết')}</span>
-          </div>
-        </div>
-        <textarea
-          className="luxe-textarea"
-          placeholder={getDynamicPlaceholder()}
-          value={note ? note.replace(/(\[M[AĂ]U Đ[AĂ] CH[OỌ]N\]:[^\n]*\n?)/gi, '').replace(/^https?:\/\/\S+\n?/gm, '').trimStart() : ''}
-          onChange={(e) => {
-            if (onNoteChange) onNoteChange(e.target.value);
-          }}
-          style={{
-            width: '100%',
-            minHeight: '200px',
-            background: '#ffffff',
-            color: '#1a1a1a',
-            border: '1.5px solid #fed7aa',
-            borderRadius: '16px',
-            padding: '20px',
-            marginTop: '8px',
-            fontSize: '1.25rem',
-            lineHeight: '1.8',
-            fontFamily: 'inherit',
-            resize: 'vertical',
-          }}
-        />
-      </div>
-
-      {/* CONDITIONAL SECTION FOR ADDITIONAL ASSETS */}
-      {service !== 'Gói Cơ bản' && (
-        <div className="extra-assets-section-premium" style={{ marginTop: '20px' }}>
-          <div className="extra-header-premium">
-            <div className="extra-title-group">
-              <Layers size={26} color="var(--accent)" />
-              <h3>Hình ảnh, video và tài liệu liên quan</h3>
+        {service !== 'Gói Cơ bản' && (
+          <div className="dv-extra-section">
+            <div className="dv-extra-head">
+              <Layers />
+              <span>Hình ảnh, video và tài liệu liên quan</span>
             </div>
-            <p className="extra-desc-premium">
+            <p className="dv-extra-desc">
               Gửi thêm ảnh, video, hoặc bản phác thảo để KTS hiểu rõ không gian và yêu cầu của bạn (áp dụng cho gói thiết kế chuyên nghiệp).
             </p>
-          </div>
-
-          <div className="multi-upload-trigger" onClick={() => multiFileRef.current?.click()}>
-            <div className="multi-upload-box-premium">
-              <div className="multi-icon-stack">
-                <ImageIcon size={32} />
-                <Play size={24} />
-                <Folder size={20} />
+            <div className="dv-extra-trigger" onClick={() => multiFileRef.current?.click()}>
+              <div className="dv-extra-trigger-icons">
+                <ImageIcon />
+                <Play />
+                <Folder />
               </div>
-              <span>NHẤN ĐỂ CHỌN NHIỀU TÀI LIỆU CÙNG LÚC</span>
+              <div>Nhấn để chọn nhiều tài liệu cùng lúc</div>
             </div>
+            <input type="file" multiple accept="image/*,video/*" ref={multiFileRef} onChange={handleMultiFiles} hidden />
+            {extraAssets.length > 0 && (
+              <div className="dv-extra-thumbs">
+                {extraAssets.map((asset, idx) => (
+                  <div key={idx} className="dv-extra-thumb">
+                    {asset.startsWith('data:video') ? (
+                      <video src={asset} muted />
+                    ) : (
+                      <img src={asset} alt={`Tài liệu ${idx + 1}`} loading="lazy" />
+                    )}
+                    <button
+                      className="dv-extra-thumb-x"
+                      onClick={(e) => { e.stopPropagation(); removeExtraAsset(idx); }}
+                      aria-label="Xóa"
+                    >
+                      <X />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          <input type="file" multiple accept="image/*,video/*" ref={multiFileRef} onChange={handleMultiFiles} hidden />
+        )}
+      </div>
 
-          {extraAssets.length > 0 && (
-            <div className="extra-preview-grid-premium">
-              {extraAssets.map((asset, idx) => (
-                <div key={idx} className="extra-preview-item" style={{ width: '100px', height: '100px' }}>
-                  {asset.startsWith('data:video') ? (
-                    <video src={asset} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <img decoding="async" loading="lazy" src={asset} alt={`Extra ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  )}
-                  <button className="btn-remove-extra" onClick={(e) => { e.stopPropagation(); removeExtraAsset(idx); }}>
-                    <X size={18} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {(preview || (isInteriorCombo && interiorSiteImages && interiorSiteImages.some(img => img !== ''))) && (
-        <button className="btn-primary main-cta" onClick={onProceed} style={{ marginTop: '20px', width: '100%' }}>
-          {t('upload_btn_next', 'Tiếp theo')} <ArrowRight size={20} />
-        </button>
+      {createPortal(
+        <div className="view-foot">
+          <div className="view-foot-inner">
+            <span className="foot-hint">
+              {isInteriorCombo
+                ? `${interiorSiteImages?.filter(i => !!i).length || 0}/${interiorComboImages?.length || 0} ảnh đã tải`
+                : (preview ? '1 ảnh đã tải' : 'Chưa tải ảnh chính')
+              }
+            </span>
+            <button
+              className="btn-designer btn-designer-primary"
+              disabled={!canProceed}
+              onClick={onProceed}
+            >
+              {t('upload_btn_next', 'Tiếp tục')} <ArrowRight />
+            </button>
+          </div>
+        </div>,
+        document.body
       )}
     </motion.div>
   );
@@ -3488,7 +3776,7 @@ function ServiceView({
 }
 
 function BasicSelectionView({
-  systemContent, onSelect, mainBranch, subStep, setSubStep, onBack: _onBack,
+  systemContent, onSelect, mainBranch, subStep, setSubStep, onBack, onJumpToStep,
   selectedCategory, onCategoryChange
 }: {
   systemContent: any, 
@@ -3497,6 +3785,7 @@ function BasicSelectionView({
   subStep: 'category' | 'gallery', 
   setSubStep: (v: 'category' | 'gallery') => void, 
   onBack?: () => void,
+  onJumpToStep?: (v: StepNavView) => void,
   selectedCategory: string,
   onCategoryChange: (cat: string) => void
 }) {
@@ -3607,345 +3896,551 @@ function BasicSelectionView({
   }, [subStep, galleryHash]);
 
 
-  return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="view basic-selection-view nav-offset" style={{ alignItems: 'flex-start' }}>
-       <div className="selection-panel">
-          <div className="title-group" style={{ textAlign: 'left', marginBottom: '1.5rem', paddingLeft: '10px', width: '100%', marginTop: '40px' }}>
-            <h2 style={{ fontSize: '2.5rem', fontWeight: 900 }}>
-              {subStep === 'category' 
-                ? t('selection_title_cats', 'Chọn mẫu thiết kế') 
-                : t('selection_title_gallery', 'Nhấn chọn mẫu phù hợp')
-              }
-            </h2>
-            {subStep === 'category' && (
-              <p style={{ fontSize: '1.2rem', color: 'rgba(255,255,255,0.6)' }}>
-                {t('selection_sub_cats', 'Hãy chọn một danh mục để thực hiện dự án của bạn.')}
-              </p>
-            )}
-          </div>
+  const goBackHome = () => {
+    if (subStep === 'gallery') {
+      setSubStep('category');
+    } else if (onBack) {
+      onBack();
+    }
+  };
 
-          <AnimatePresence mode="wait">
-            {subStep === 'category' ? (
-              <motion.div 
-                key="cats" 
-                initial={{ opacity: 0, scale: 0.95 }} 
-                animate={{ opacity: 1, scale: 1 }} 
-                exit={{ opacity: 0, scale: 1.05 }}
-                className="basic-cat-grid"
-              >
-                {categories.map(cat => (
+  const catName = (currentCat?.name || '').trim();
+  const stepTitle = subStep === 'category'
+    ? t('selection_title_cats', 'Chọn mẫu thiết kế')
+    : (catName ? `Thư viện · ${catName}` : 'Thư viện mẫu thiết kế');
+  const stepSub = subStep === 'category'
+    ? t('selection_sub_cats', 'Hãy chọn một danh mục để thực hiện dự án của bạn.')
+    : 'Chọn 1 mẫu tham khảo. Anh/chị có thể đổi sau ở bước upload.';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="view designer-view-shell basic-selection-view"
+    >
+      <div className="appbar">
+        <div className="appbar-inner">
+          <a
+            href="/"
+            className="appbar-logo-wrap"
+            onClick={(e) => { e.preventDefault(); onBack && onBack(); }}
+          >
+            <img src="/assets/LOGO _ PNG.png" alt="thietke5p" className="appbar-logo" />
+          </a>
+          {onJumpToStep && <StepNav current="basic_selection" onJump={onJumpToStep} />}
+          <button className="appbar-link" onClick={goBackHome}>
+            <ChevronLeft size={16} /> <span>Quay lại</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="designer-content">
+        <div className="vh">
+          <div className="vh-row">
+            <button className="vh-back" onClick={goBackHome} aria-label="Back">
+              <ArrowLeft size={18} />
+            </button>
+            <div className="vh-stepper">
+              <span>Bước 1/5</span>
+              <div className="vh-stepper-bar">
+                <div className="vh-stepper-fill" style={{ width: '20%' }} />
+              </div>
+            </div>
+          </div>
+          <h1 className="vh-title">{stepTitle}</h1>
+          <p className="vh-sub">{stepSub}</p>
+        </div>
+
+        <AnimatePresence mode="wait">
+          {subStep === 'category' ? (
+            <motion.div
+              key="cats"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="cat-grid"
+            >
+              {categories.map(cat => {
+                const sampleCount = (() => {
+                  const arr = (lib[cat.libraryKey] || []) as any[];
+                  let n = 0;
+                  arr.forEach((c: any) => {
+                    n += (c.variants && c.variants.length > 0) ? c.variants.length : 1;
+                  });
+                  return n;
+                })();
+                return (
                   <button
                     key={cat.id}
-                    className={`basic-cat-card ${!cat.active ? 'disabled' : ''}`}
+                    className={`cat-card ${!cat.active ? 'is-soon' : ''}`}
+                    disabled={!cat.active}
                     onClick={() => {
                       if (!cat.active) return;
                       onCategoryChange(cat.id);
                       setSubStep('gallery');
                     }}
                   >
-                    {cat.thumb ? (
-                      <img decoding="async" loading="lazy" src={cat.thumb} alt={cat.name} className="cat-thumb" />
-                    ) : (
-                      <div className="cat-icon-orb">{(cat as any).icon}</div>
-                    )}
-                    <h3>{cat.name}</h3>
-                    {!cat.active && <span className="cat-coming-soon">Sắp ra mắt</span>}
-                    <div className="cat-arrow"><ArrowRight size={24} /></div>
+                    <div className="cat-img">
+                      {cat.thumb && <img src={cat.thumb} alt={cat.name} loading="lazy" decoding="async" />}
+                      {cat.active && sampleCount > 0 && (
+                        <span className="cat-count"><Layers /> {sampleCount} mẫu</span>
+                      )}
+                    </div>
+                    <div className="cat-meta">
+                      <span className="cat-name">{cat.name}</span>
+                      {cat.active
+                        ? <span className="cat-cta">Xem mẫu →</span>
+                        : <span className="cat-chip">Sắp ra mắt</span>
+                      }
+                    </div>
                   </button>
-                ))}
-              </motion.div>
-            ) : !galleryReady ? (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="gallery-loading-overlay"
-              >
-                <div className="gallery-loading-inner">
-                  <div className="gallery-loading-spinner" />
-                  <div className="gallery-loading-text">Đang chuẩn bị mẫu thiết kế</div>
-                  <div className="gallery-loading-progress-bar">
-                    <div
-                      className="gallery-loading-progress-fill"
-                      style={{ width: loadProgress.total > 0 ? `${(loadProgress.done / loadProgress.total) * 100}%` : '0%' }}
-                    />
-                  </div>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="gallery"
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -50 }}
-                className="basic-gallery-container"
-              >
-                {/* Nút quay lại đã được tích hợp vào global-nav bên trên */}
+                );
+              })}
+            </motion.div>
+          ) : !galleryReady ? (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="dv-loading"
+            >
+              <div className="dv-loading-spinner" />
+              <div className="dv-loading-text">Đang chuẩn bị mẫu thiết kế</div>
+              <div className="dv-loading-bar">
+                <div
+                  className="dv-loading-fill"
+                  style={{ width: loadProgress.total > 0 ? `${(loadProgress.done / loadProgress.total) * 100}%` : '0%' }}
+                />
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="gallery"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="lib-grid"
+            >
+              {galleryImages.map((img, idx) => {
+                const isInteriorCombo = mainBranch === 'interior' && img.images && img.images.length > 0;
+                const previewUrl = isInteriorCombo ? img.images[0] : img.url;
+                const styleLabel = img.parentName || (isInteriorCombo ? `Bộ ${img.images.length} góc nhìn` : '');
+                return (
+                  <button
+                    key={img.id || idx}
+                    className="lib-card"
+                    onClick={() => setSelectedImage(img)}
+                  >
+                    <div className="lib-card-img">
+                      <ProtectedImage src={previewUrl} alt={img.name} />
+                      <span className="lib-card-num">#{String(idx + 1).padStart(2, '0')}</span>
+                    </div>
+                    <div className="lib-card-meta">
+                      <span className="lib-card-name">{img.name}</span>
+                      {styleLabel && <span className="lib-card-style">{styleLabel}</span>}
+                    </div>
+                  </button>
+                );
+              })}
+              {galleryImages.length === 0 && (
+                <div className="lib-empty">Chưa có mẫu cho danh mục này.</div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-                <div className={mainBranch === 'interior' ? "interior-full-stack-gallery" : "full-width-gallery"}>
-                   {galleryImages.map((img, idx) => {
-                     const isInterior = mainBranch === 'interior';
-                     if (isInterior && img.images && img.images.length > 0) {
-                       return (
-                         <div key={img.id || idx} className="interior-combo-stack-card" onClick={() => setSelectedImage(img)}>
-                           <div className="combo-header-luxe">
-                             <span className="combo-badge">BỘ SƯU TẬP MẪU</span>
-                             <h3>{img.name}</h3>
-                           </div>
-                           <div className="combo-images-stack">
-                             {img.images.map((url: string, i: number) => (
-                               <div key={i} className="stack-image-frame">
-                                 <ProtectedImage src={url} alt={`${img.name} perspective ${i+1}`} />
-                               </div>
-                             ))}
-                           </div>
-                           <div className="combo-footer-action">
-                             <button className="btn-select-combo" onClick={(e) => { e.stopPropagation(); const url = img.url; const imgs = img.images; setSelectedImage(null); setTimeout(() => onSelect(url, selectedCategory, imgs), 150); }}>
-                               CHỌN PHONG CÁCH NÀY <CheckCircle2 size={18} />
-                             </button>
-                           </div>
-                         </div>
-                       );
-                     }
-                     return (
-                       <div 
-                         key={img.id || idx} 
-                         className={`gallery-item-luxe ${isInterior ? 'interior-item' : ''}`}
-                         onClick={() => setSelectedImage(img)}
-                       >
-                         <ProtectedImage src={img.url} alt={img.name} />
-                         <div className="gallery-overlay">
-                            <CheckCircle2 size={40} className="check-icon" style={{ opacity: 0.5 }} />
-                            <span>{img.name}</span>
-                         </div>
-                       </div>
-                     );
-                   })}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Modal Chốt Mẫu (Fullscreen Modal) */}
+        {/* Modal Chốt Mẫu — render to body to escape view's containing block */}
+        {selectedImage && createPortal(
           <AnimatePresence>
-            {selectedImage && (
-              <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                exit={{ opacity: 0 }} 
-                className="samples-modal-overlay" 
-                style={{ zIndex: 4000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="samples-modal-overlay"
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(28, 26, 20, 0.78)',
+                backdropFilter: 'blur(6px)',
+                WebkitBackdropFilter: 'blur(6px)',
+                zIndex: 4000,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 16,
+                overflowY: 'auto'
+              }}
+              onClick={() => setSelectedImage(null)}
+            >
+              <div
+                className="preview-modal-content"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  background: '#fff',
+                  width: '100%',
+                  maxWidth: mainBranch === 'interior' ? '900px' : '480px',
+                  borderRadius: '24px',
+                  overflow: 'hidden',
+                  border: '1px solid var(--cream-200)',
+                  boxShadow: 'var(--shadow-deep)'
+                }}
               >
-                <div className="preview-modal-content" style={{ background: 'var(--primary)', width: '95%', maxWidth: mainBranch === 'interior' ? '900px' : '450px', borderRadius: '24px', overflow: 'hidden', border: '2px solid var(--accent)' }}>
-                  <div style={{ position: 'relative', width: '100%', aspectRatio: mainBranch === 'interior' ? 'auto' : '1/1.2' }}>
-                    {mainBranch === 'interior' && selectedImage.images ? (
-                      <div className="interior-preview-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', padding: '8px' }}>
-                        {selectedImage.images.map((url: string, i: number) => (
-                          <ProtectedImage key={i} src={url} alt={`${selectedImage.name} ${i+1}`} style={{ width: '100%', aspectRatio: '16/9', borderRadius: '8px' }} />
-                        ))}
-                      </div>
-                    ) : (
-                        <ProtectedImage src={selectedImage.url} alt={selectedImage.name} style={{ width: '100%', height: '100%' }} />
-                    )}
-                    <button 
-                      onClick={() => setSelectedImage(null)} 
-                      style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(0,0,0,0.5)', borderRadius: '50%', padding: '8px', color: '#fff', zIndex: 10 }}
-                    >
-                      <X size={24} />
-                    </button>
-                  </div>
-                  <div style={{ padding: '24px', textAlign: 'center' }}>
-                    <h3 style={{ fontSize: '1.6rem', color: 'var(--accent)', marginBottom: '10px' }}>{selectedImage.name}</h3>
-                    <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '24px', fontSize: '1rem' }}>Anh/Chị đã ưng ý mẫu phong cách này và muốn KTS dùng làm chuẩn tham khảo?</p>
-                    <button
-                      className="btn-primary"
-                      style={{ width: '100%', fontSize: '1.2rem', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
-                      onClick={() => {
-                        const url = selectedImage.url;
-                        const cats = selectedImage.images;
-                        setSelectedImage(null);
-                        setTimeout(() => onSelect(url, selectedCategory, cats), 150);
-                      }}
-                    >
-                      CHỐT MẪU NÀY <CheckCircle2 size={24} />
-                    </button>
-                  </div>
+                <div style={{ position: 'relative', width: '100%', aspectRatio: mainBranch === 'interior' ? 'auto' : '1/1' }}>
+                  {mainBranch === 'interior' && selectedImage.images ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', padding: '8px' }}>
+                      {selectedImage.images.map((url: string, i: number) => (
+                        <ProtectedImage key={i} src={url} alt={`${selectedImage.name} ${i + 1}`} style={{ width: '100%', aspectRatio: '16/9', borderRadius: '8px', objectFit: 'cover' }} />
+                      ))}
+                    </div>
+                  ) : (
+                    <ProtectedImage src={selectedImage.url} alt={selectedImage.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  )}
+                  <button
+                    onClick={() => setSelectedImage(null)}
+                    style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(0,0,0,0.5)', borderRadius: '50%', padding: '8px', color: '#fff', zIndex: 10, border: 0, cursor: 'pointer' }}
+                  >
+                    <X size={20} />
+                  </button>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-       </div>
+                <div style={{ padding: '24px', textAlign: 'center' }}>
+                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 600, color: 'var(--ink-900)', marginBottom: '8px' }}>
+                    {selectedImage.name}
+                  </h3>
+                  <p style={{ color: 'var(--ink-700)', marginBottom: '20px', fontSize: '14px', lineHeight: 1.6 }}>
+                    Anh/Chị đã ưng ý mẫu phong cách này và muốn KTS dùng làm chuẩn tham khảo?
+                  </p>
+                  <button
+                    className="btn-designer btn-designer-primary"
+                    style={{ width: '100%', padding: '14px', fontSize: '15px' }}
+                    onClick={() => {
+                      const url = selectedImage.url;
+                      const cats = selectedImage.images;
+                      setSelectedImage(null);
+                      setTimeout(() => onSelect(url, selectedCategory, cats), 150);
+                    }}
+                  >
+                    Chốt mẫu này <CheckCircle2 size={18} />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </AnimatePresence>,
+          document.body
+        )}
+      </div>
     </motion.div>
   );
 }
 
-function PlanSelectionView({ service, onServiceChange, systemContent, mainBranch, onTestPayment }: {
+function PlanSelectionView({ service, onServiceChange, systemContent, mainBranch, onTestPayment, onBack, onJumpToStep }: {
   service: string;
   onServiceChange: (s: string) => void;
   systemContent: any;
   mainBranch: MainBranch;
   onTestPayment?: () => void;
+  onBack?: () => void;
+  onJumpToStep?: (v: StepNavView) => void;
 }) {
   const t = (key: string, defaultVal: string) => systemContent.uiText?.[key] || defaultVal;
-  const services = (mainBranch === 'landscape')
-    ? [
-        { id: 'basic', name: 'Gói Cơ bản', img: '/assets/GOI CANH QUAN/1. CO BAN.webp', color: '#5eb44b' },
-        { id: 'advanced', name: 'Gói Nâng cao', img: '/assets/GOI CANH QUAN/2. NANG CAO.webp', color: '#2a7fff' },
-        { id: 'premium', name: 'Gói Premium', img: '/assets/GOI CANH QUAN/3. CAO CAP.webp', color: '#9146ff' }
-      ]
-    : [
-        { id: 'basic', name: 'Gói Cơ bản', img: '/assets/GOI KIEN TRUC - NOI THAT/1. CO BAN.webp', color: '#5eb44b' },
-        { id: 'advanced', name: 'Gói Nâng cao', img: '/assets/GOI KIEN TRUC - NOI THAT/2. NANG CAO.webp', color: '#2a7fff' },
-        { id: 'premium', name: 'Gói Premium', img: '/assets/GOI KIEN TRUC - NOI THAT/3. CAO CAP.webp', color: '#9146ff' }
-      ];
+
+  const planMeta: Record<string, { tier: string; price: string; tagline: string; eta: string; featured?: boolean; features: string[] }> = {
+    basic: {
+      tier: 'Cơ bản',
+      price: '299.000đ',
+      tagline: 'AI render nhanh — phù hợp khảo sát ý tưởng',
+      eta: '~5 phút',
+      features: [
+        '4 phương án AI auto-render',
+        'Phối cảnh 2D màu HD',
+        'Tải ảnh có watermark miễn phí',
+        'Tải HD không watermark khi thanh toán',
+      ],
+    },
+    advanced: {
+      tier: 'Nâng cao',
+      price: '1.500.000đ',
+      tagline: 'KTS thiết kế + video 3D — xem trước khi thi công',
+      eta: '24 giờ',
+      featured: true,
+      features: [
+        'Tất cả tính năng gói Cơ bản',
+        'KTS chỉnh sửa thủ công 2 lần',
+        'Phối cảnh 3D ngày + đêm',
+        'Video 3D 15s mô phỏng không gian',
+        'Bóc tách vật liệu sơ bộ',
+      ],
+    },
+    premium: {
+      tier: 'Premium',
+      price: '3.500.000đ',
+      tagline: 'Trọn bộ — dùng để thi công thật',
+      eta: '48 giờ',
+      features: [
+        'Tất cả tính năng gói Nâng cao',
+        'Bộ 6 góc phối cảnh 3D',
+        'Video 4K 30s walkthrough',
+        'Bản vẽ kỹ thuật chi tiết',
+        'Hồ sơ xin phép xây dựng',
+      ],
+    },
+  };
+
+  const services = (['basic', 'advanced', 'premium'] as const).map(id => ({
+    id,
+    name: id === 'basic' ? 'Gói Cơ bản' : id === 'advanced' ? 'Gói Nâng cao' : 'Gói Premium',
+    ...planMeta[id],
+  }));
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view plan-view nav-offset">
-      <h2 style={{textAlign: 'center', marginBottom: '0.5rem', fontSize: '2.2rem', fontWeight: 950}}>{t('plan_title', 'Chọn Gói Giải Pháp')}</h2>
-
-      <div className="service-list-premium">
-        {services.map(s => (
-          <button
-            key={s.id}
-            className={`service-card-premium ${service === s.name ? 'active' : ''}`}
-            onClick={() => onServiceChange(s.name)}
-            style={{
-              padding: 0,
-              border: service === s.name ? `4px solid ${s.color}` : '2px solid transparent',
-              borderRadius: '24px',
-              overflow: 'hidden',
-              background: 'transparent',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              boxShadow: service === s.name ? `0 0 30px ${s.color}66` : '0 10px 30px rgba(0,0,0,0.3)'
-            }}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="view designer-view-shell plan-view"
+    >
+      <div className="appbar">
+        <div className="appbar-inner">
+          <a
+            href="/"
+            className="appbar-logo-wrap"
+            onClick={(e) => { e.preventDefault(); onBack && onBack(); }}
           >
-            <img decoding="async" loading="lazy"
-              src={s.img}
-              alt={s.name}
-              style={{
-                width: '100%',
-                height: 'auto',
-                objectFit: 'contain',
-                display: 'block',
-                transition: 'transform 0.3s'
-              }}
-            />
+            <img src="/assets/LOGO _ PNG.png" alt="thietke5p" className="appbar-logo" />
+          </a>
+          {onJumpToStep && <StepNav current="plan" onJump={onJumpToStep} />}
+          <button className="appbar-link" onClick={onBack}>
+            <ChevronLeft size={16} /> <span>Quay lại</span>
           </button>
-        ))}
+        </div>
       </div>
 
-      <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
-        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem', fontWeight: 600 }}>* Vui lòng chọn 1 gói bên trên để tiếp tục</span>
+      <div className="designer-content">
+        <div className="vh">
+          <div className="vh-row">
+            <button className="vh-back" onClick={onBack} aria-label="Back">
+              <ArrowLeft size={18} />
+            </button>
+            <div className="vh-stepper">
+              <span>Bước 3/5</span>
+              <div className="vh-stepper-bar">
+                <div className="vh-stepper-fill" style={{ width: '60%' }} />
+              </div>
+            </div>
+          </div>
+          <h1 className="vh-title">{t('plan_title', 'Chọn gói thiết kế')}</h1>
+          <p className="vh-sub">Ba mức — phù hợp mọi quy mô. Anh/chị có thể nâng cấp sau khi xem kết quả.</p>
+        </div>
+
+        <div className="plans-grid">
+          {services.map(p => {
+            const isActive = service === p.name;
+            return (
+              <article
+                key={p.id}
+                className={`plan-card ${isActive ? 'is-active' : ''} ${p.featured ? 'is-featured' : ''}`}
+                onClick={() => onServiceChange(p.name)}
+              >
+                {p.featured && <span className="plan-badge">Phổ biến nhất</span>}
+                <div className="plan-tier">{p.tier}</div>
+                <div className="plan-price">{p.price}<span> / dự án</span></div>
+                <div className="plan-tagline">{p.tagline}</div>
+                <div className="plan-eta"><Clock /> {p.eta}</div>
+                <ul className="plan-feats">
+                  {p.features.map((f, i) => <li key={i}><Check /><span>{f}</span></li>)}
+                </ul>
+                <button
+                  className={`btn-designer ${p.featured ? 'btn-designer-primary' : 'btn-designer-ghost'} plan-btn`}
+                  onClick={(e) => { e.stopPropagation(); onServiceChange(p.name); }}
+                >
+                  Chọn gói {p.tier}
+                </button>
+              </article>
+            );
+          })}
+        </div>
 
         {onTestPayment && (
-          <button
-            onClick={onTestPayment}
-            style={{
-              marginTop: '12px',
-              padding: '12px 22px',
-              borderRadius: '12px',
-              border: '1.5px dashed rgba(245,158,11,0.55)',
-              background: 'rgba(245,158,11,0.08)',
-              color: '#f59e0b',
-              fontSize: '0.85rem',
-              fontWeight: 700,
-              letterSpacing: '0.04em',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all .2s'
-            }}
-            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.18)'; e.currentTarget.style.borderStyle = 'solid'; }}
-            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.08)'; e.currentTarget.style.borderStyle = 'dashed'; }}
-            title="Tạo đơn 1.000đ và đi thẳng tới cổng MoMo (không qua bước upload/AI)"
-          >
-            🧪 Test thanh toán nhanh — 1.000đ
-          </button>
+          <div style={{ marginTop: 32, textAlign: 'center' }}>
+            <button
+              onClick={onTestPayment}
+              style={{
+                padding: '10px 18px',
+                borderRadius: 999,
+                border: '1.5px dashed var(--bronze-400)',
+                background: 'rgba(217,176,120,0.08)',
+                color: 'var(--bronze-600)',
+                fontSize: 13,
+                fontWeight: 600,
+                letterSpacing: '0.04em',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+              title="Tạo đơn 1.000đ và đi thẳng tới cổng MoMo"
+            >
+              Test thanh toán nhanh — 1.000đ
+            </button>
+          </div>
         )}
       </div>
-
     </motion.div>
   );
 }
 
 function SubmitView({
   customerName, onNameChange, customerPhone, onPhoneChange,
-  onSubmit, isSubmitting, systemContent
+  onSubmit, onBack, onJumpToStep, isSubmitting, systemContent,
+  service, mainBranch, selectedCategory, rawImage, extraAssets
 }: {
   customerName: string; onNameChange: (n: string) => void;
   customerPhone: string; onPhoneChange: (p: string) => void;
   onSubmit: () => void;
+  onBack?: () => void;
+  onJumpToStep?: (v: StepNavView) => void;
   isSubmitting?: boolean;
   systemContent: any;
+  service?: string;
+  mainBranch?: MainBranch;
+  selectedCategory?: string;
+  rawImage?: string;
+  extraAssets?: string[];
 }) {
   const t = (key: string, defaultVal: string) => systemContent.uiText?.[key] || defaultVal;
-  const isReady = customerName.trim().length > 0 && customerPhone.trim().length > 0;
+  const isReady = customerName.trim().length > 0 && customerPhone.trim().length >= 9;
+
+  const planMeta: Record<string, { eta: string; price: string }> = {
+    'Gói Cơ bản': { eta: '~5 phút', price: '299.000đ' },
+    'Gói Cơ Bản': { eta: '~5 phút', price: '299.000đ' },
+    'Gói Nâng cao': { eta: '24 giờ', price: '1.500.000đ' },
+    'Gói Premium': { eta: '48 giờ', price: '3.500.000đ' },
+  };
+  const meta = (service && planMeta[service]) || { eta: '—', price: '—' };
+
+  const branchLabel = mainBranch === 'architecture' ? 'Kiến trúc' : mainBranch === 'interior' ? 'Nội thất' : 'Cảnh quan';
+  const totalImgs = (rawImage ? 1 : 0) + (extraAssets?.length || 0);
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view submit-view nav-offset">
-      <div className="title-group" style={{textAlign: 'center', marginBottom: '1.5rem'}}>
-        <h2 style={{ fontSize: '2.2rem' }}>{t('contact_title', 'Thông Tin Liên Hệ')}</h2>
-      </div>
-
-      <div className="form" style={{ padding: 0 }}>
-        <div className="input-group">
-          <label><User size={20} /> Họ và tên khách hàng</label>
-          <input 
-            type="text" 
-            placeholder="Nhập họ tên của Anh/Chị..." 
-            value={customerName} 
-            onChange={e => onNameChange(e.target.value)} 
-          />
-        </div>
-        
-        <div className="input-group">
-          <label><Phone size={20} /> Số điện thoại (Zalo)</label>
-          <input 
-            type="tel" 
-            placeholder="Nhập số điện thoại để nhận bản vẽ..." 
-            value={customerPhone} 
-            onChange={e => onPhoneChange(e.target.value)} 
-          />
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="view designer-view-shell submit-view"
+    >
+      <div className="appbar">
+        <div className="appbar-inner">
+          <a
+            href="/"
+            className="appbar-logo-wrap"
+            onClick={(e) => { e.preventDefault(); onBack && onBack(); }}
+          >
+            <img src="/assets/LOGO _ PNG.png" alt="thietke5p" className="appbar-logo" />
+          </a>
+          {onJumpToStep && <StepNav current="submit" onJump={onJumpToStep} />}
+          <button className="appbar-link" onClick={onBack}>
+            <ChevronLeft size={16} /> <span>Quay lại</span>
+          </button>
         </div>
       </div>
 
-      <motion.button
-        onClick={onSubmit}
-        disabled={!isReady || isSubmitting}
-        animate={isSubmitting ? { scale: [1, 0.98, 1], opacity: [1, 0.7, 1] } : (isReady ? { scale: [1, 1.03, 1], boxShadow: ['0 0 0px rgba(226,177,112,0)', '0 0 30px rgba(226,177,112,0.6)', '0 0 20px rgba(226,177,112,0.3)'] } : {})}
-        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-        style={{
-          marginTop: '36px',
-          width: '100%',
-          padding: '20px',
-          background: isReady ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
-          color: isReady ? 'var(--primary)' : 'rgba(255,255,255,0.3)',
-          border: 'none',
-          borderRadius: '16px',
-          fontSize: '1.2rem',
-          fontWeight: 900,
-          letterSpacing: '0.05em',
-          cursor: (isReady && !isSubmitting) ? 'pointer' : 'not-allowed',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '12px',
-          transition: 'background 0.4s, color 0.4s',
-        }}
-      >
-        {isSubmitting ? (
-          <><span className="generating-spinner" style={{width: 22, height: 22, borderTopColor: 'currentColor'}} /> ĐANG GỬI TÀI LIỆU LÊN TRẠM VẼ AI...</>
-        ) : (
-          <><Sparkles size={22} /> TẠO THIẾT KẾ NGAY</>
-        )}
-      </motion.button>
+      <div className="designer-content" style={{ paddingBottom: 120 }}>
+        <div className="submit-grid">
+          <div>
+            <div className="vh">
+              <div className="vh-row">
+                <button className="vh-back" onClick={onBack} aria-label="Back">
+                  <ArrowLeft size={18} />
+                </button>
+                <div className="vh-stepper">
+                  <span>Bước 4/5</span>
+                  <div className="vh-stepper-bar">
+                    <div className="vh-stepper-fill" style={{ width: '80%' }} />
+                  </div>
+                </div>
+              </div>
+              <h1 className="vh-title">{t('contact_title', 'Thông tin liên hệ')}</h1>
+              <p className="vh-sub">Em sẽ gửi bản vẽ về Zalo của anh/chị ngay khi xong.</p>
+            </div>
 
-      {!isReady && (
-        <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem', marginTop: '12px' }}>
-          Điền Họ tên và Số điện thoại để kích hoạt nút tạo thiết kế.
-        </p>
+            <label className="dv-field">
+              <span className="dv-field-label">Họ và tên *</span>
+              <input
+                className="dv-field-input"
+                placeholder="Nguyễn Văn An"
+                value={customerName}
+                onChange={e => onNameChange(e.target.value)}
+              />
+            </label>
+            <label className="dv-field">
+              <span className="dv-field-label">Số điện thoại *</span>
+              <input
+                className="dv-field-input"
+                type="tel"
+                placeholder="0909 ___ ___"
+                value={customerPhone}
+                onChange={e => onPhoneChange(e.target.value)}
+              />
+            </label>
+            <div className="dv-field-policy">
+              <ShieldCheck /> Thông tin được bảo mật. Chỉ dùng để gửi bản vẽ và tư vấn.
+            </div>
+          </div>
+
+          <aside className="summary-card">
+            <div className="summary-head">Tóm tắt đơn hàng</div>
+            <div className="summary-row">
+              <span>Loại thiết kế</span>
+              <b>{branchLabel}{selectedCategory ? ` · ${selectedCategory}` : ''}</b>
+            </div>
+            <div className="summary-row">
+              <span>Ảnh hiện trạng</span>
+              <b>{totalImgs} ảnh</b>
+            </div>
+            <div className="summary-row">
+              <span>Gói thiết kế</span>
+              <b>{service || '—'}</b>
+            </div>
+            <div className="summary-row">
+              <span>Thời gian giao</span>
+              <b>{meta.eta}</b>
+            </div>
+            <div className="summary-divider" />
+            <div className="summary-row summary-total">
+              <span>Tổng</span>
+              <b>{meta.price}</b>
+            </div>
+            <div className="summary-pay-note">
+              Thanh toán sau khi xem kết quả. Không phát sinh chi phí ẩn.
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      {createPortal(
+        <div className="view-foot">
+          <div className="view-foot-inner">
+            <span className="foot-hint">
+              {isSubmitting
+                ? 'Đang gửi tài liệu lên trạm vẽ AI…'
+                : isReady
+                  ? 'Sẵn sàng'
+                  : 'Vui lòng nhập tên và số điện thoại'
+              }
+            </span>
+            <button
+              className="btn-designer btn-designer-primary"
+              disabled={!isReady || isSubmitting}
+              onClick={onSubmit}
+            >
+              {isSubmitting ? (
+                <><span className="generating-spinner" style={{ width: 16, height: 16, borderTopColor: 'currentColor' }} /> Đang gửi…</>
+              ) : (
+                <>Xác nhận và bắt đầu <ArrowRight /></>
+              )}
+            </button>
+          </div>
+        </div>,
+        document.body
       )}
     </motion.div>
   );
@@ -3954,6 +4449,7 @@ function SubmitView({
 function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewResult: (id: string) => void }) {
   const [myProjects, setMyProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'done' | 'processing'>('all');
 
   useEffect(() => {
     const deviceId = getDeviceId();
@@ -3964,76 +4460,109 @@ function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewRe
       .finally(() => setLoading(false));
   }, []);
 
-  const statusLabel = (s: string) => {
-    if (s === 'done') return { text: 'Hoàn thành', color: '#22c55e' };
-    if (s === 'processing') return { text: 'Đang xử lý...', color: '#eab308' };
-    return { text: 'Chờ xử lý', color: '#94a3b8' };
+  const statusMeta = (s: string) => {
+    if (s === 'done') return { label: 'Hoàn tất', cls: 'st-done' };
+    if (s === 'processing') return { label: 'Đang xử lý', cls: 'st-proc' };
+    return { label: 'Bản nháp', cls: 'st-draft' };
   };
 
-  return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="view" style={{ maxWidth: '700px', width: '100%', padding: '2rem 10px', margin: '0 auto' }}>
-      <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#64748b', fontWeight: 700, cursor: 'pointer', marginBottom: '1.5rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}>
-        <ChevronLeft size={18} /> Quay lại
-      </button>
-      <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '0.5rem', textAlign: 'center', color: '#0f172a' }}>Dự Án Của Tôi</h2>
-      <p style={{ color: '#64748b', marginBottom: '2.5rem', textAlign: 'center', fontSize: '0.95rem' }}>Các thiết kế đã tạo trên thiết bị này</p>
+  const doneCount = myProjects.filter(p => p.status === 'done').length;
+  const filtered = filter === 'all' ? myProjects : myProjects.filter(p => p.status === filter);
 
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '3rem' }}>
-          <RefreshCcw size={32} className="spin" color="var(--accent)" />
-          <p style={{ marginTop: '1rem', color: 'rgba(255,255,255,0.5)' }}>Đang tải...</p>
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="view my-projects-view"
+    >
+      <div className="appbar">
+        <div className="appbar-inner">
+          <a
+            href="/"
+            className="appbar-logo-wrap"
+            onClick={(e) => { e.preventDefault(); onBack(); }}
+          >
+            <img src="/assets/LOGO _ PNG.png" alt="thietke5p" className="appbar-logo" />
+          </a>
+          <div className="appbar-spacer" />
+          <button className="appbar-link" onClick={onBack}>
+            <ChevronLeft size={16} /> <span>Trang chủ</span>
+          </button>
         </div>
-      ) : myProjects.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '3rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <Camera size={48} color="rgba(255,255,255,0.2)" />
-          <p style={{ marginTop: '1rem', color: 'rgba(255,255,255,0.4)' }}>Chưa có dự án nào trên thiết bị này</p>
-          <button className="btn-primary" onClick={onBack} style={{ marginTop: '1.5rem' }}>Thiết kế cảnh quan</button>
+      </div>
+
+      <div className="my-projects-shell">
+        <div className="proj-head">
+          <div>
+            <h1 className="vh-title">Dự án của bạn</h1>
+            <p className="vh-sub">
+              {myProjects.length} dự án đã tạo · {doneCount} hoàn tất
+            </p>
+          </div>
+          <button className="proj-new-btn" onClick={onBack}>
+            <Plus size={16} /> Dự án mới
+          </button>
         </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {myProjects.map((p) => {
-            const st = statusLabel(p.status);
-            const previewImg = (p.aiResults && p.aiResults.length > 0) ? p.aiResults[0] : p.rawImage;
-            return (
-              <div
-                key={p.id}
-                onClick={() => p.status === 'done' || p.status === 'processing' ? onViewResult(p.id) : null}
-                style={{
-                  display: 'flex', gap: '16px', alignItems: 'center',
-                  background: '#ffffff', borderRadius: '16px', padding: '16px',
-                  border: '1px solid #e2e8f0',
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
-                  cursor: p.status === 'done' || p.status === 'processing' ? 'pointer' : 'default',
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}
-                onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
+
+        {myProjects.length > 0 && (
+          <div className="seg seg-light">
+            {([['all', 'Tất cả'], ['done', 'Hoàn tất'], ['processing', 'Đang xử lý']] as const).map(([k, l]) => (
+              <button
+                key={k}
+                className={`seg-btn ${filter === k ? 'is-active' : ''}`}
+                onClick={() => setFilter(k)}
               >
-                <img
-decoding="async" loading="lazy"                   src={previewImg} alt=""
-                  style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '10px', flexShrink: 0, background: '#f1f5f9' }}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: '1.05rem', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0f172a' }}>
-                    {p.customerName || 'Dự án'}
+                {l}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="proj-loading">
+            <RefreshCcw />
+            <p>Đang tải...</p>
+          </div>
+        ) : myProjects.length === 0 ? (
+          <div className="proj-empty">
+            <Camera />
+            <p>Chưa có dự án nào trên thiết bị này</p>
+            <button className="proj-new-btn" onClick={onBack}>
+              <Plus size={16} /> Bắt đầu thiết kế
+            </button>
+          </div>
+        ) : (
+          <div className="proj-grid">
+            {filtered.map((p) => {
+              const meta = statusMeta(p.status);
+              const previewImg = (p.aiResults && p.aiResults.length > 0) ? p.aiResults[0] : p.rawImage;
+              const clickable = p.status === 'done' || p.status === 'processing';
+              return (
+                <button
+                  key={p.id}
+                  className="proj-card"
+                  disabled={!clickable}
+                  onClick={() => clickable && onViewResult(p.id)}
+                >
+                  <div
+                    className="proj-img"
+                    style={previewImg ? { backgroundImage: `url(${previewImg})` } : undefined}
+                  >
+                    <span className={`proj-status ${meta.cls}`}>{meta.label}</span>
                   </div>
-                  <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                    {p.service} — {new Date(p.timestamp).toLocaleDateString('vi-VN')}
+                  <div className="proj-meta">
+                    <div className="proj-name">{p.customerName || 'Dự án'}</div>
+                    <div className="proj-date">
+                      {p.service} · {new Date(p.timestamp).toLocaleDateString('vi-VN')}
+                    </div>
                   </div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: st.color, background: `${st.color}20`, padding: '3px 10px', borderRadius: '20px' }}>
-                    {st.text}
-                  </span>
-                  {p.aiResults && p.aiResults.length > 0 && (
-                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>{p.aiResults.length} ảnh</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 }
@@ -4120,14 +4649,35 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
     const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
     return (
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="view success-view" style={{ position: 'relative', width: '100%', maxWidth: '700px', margin: '0 auto', paddingTop: '3rem' }}>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="view success-view">
+        <div className="appbar">
+          <div className="appbar-inner">
+            <a href="/" className="appbar-logo-wrap" onClick={(e) => { e.preventDefault(); onReset(); }}>
+              <img src="/assets/LOGO _ PNG.png" alt="thietke5p" className="appbar-logo" />
+            </a>
+            <div className="appbar-spacer" />
+            <button className="appbar-link" onClick={() => { window.location.href = '/my'; }}>
+              <FolderOpen size={16} /> Dự án
+            </button>
+            <button className="btn btn-primary appbar-cta" onClick={onReset}>
+              <Plus size={14} /> Dự án mới
+            </button>
+          </div>
+        </div>
+        <div className="success-shell">
          {onBack && (
-           <button onClick={onBack} style={{ position: 'absolute', top: '0', left: '0', background: 'none', border: 'none', color: '#64748b', fontWeight: 700, cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '4px', padding: '10px 0', zIndex: 10 }}>
+           <button onClick={onBack} className="vh-back-link">
              <ChevronLeft size={18} /> Quay lại
            </button>
          )}
          {!isDone ? (
            <>
+             <div className="processing-stepper">
+               <span>Bước 5/5</span>
+               <div className="processing-stepper-bar">
+                 <div className="processing-stepper-fill" style={{ width: '100%' }} />
+               </div>
+             </div>
              <div className="processing-stage">
                <div className="processing-video-frame">
                  <video
@@ -4143,14 +4693,14 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                <div className="processing-headline">
                  <span className="processing-pill">
                    <span className="processing-pill-dot" />
-                   ĐANG TẠO PHƯƠNG ÁN AI
+                   Đang tạo phương án AI
                  </span>
                  <h2 className="processing-title">
-                   AI đang dựng <span className="accent">{TOTAL_SLOTS} phương án thiết kế</span>
+                   AI đang dựng <em>{TOTAL_SLOTS} phương án thiết kế</em>
                  </h2>
                  <p className="processing-sub">
                    Quá trình mất khoảng 5 phút. Bạn có thể giữ trang hoặc xem lại trong mục{' '}
-                   <strong style={{ color: 'var(--accent)' }}>"Dự án của bạn"</strong>.
+                   <strong style={{ color: 'var(--bronze-600)' }}>"Dự án của bạn"</strong>.
                  </p>
                </div>
                <div className="processing-progress-bar-wrap">
@@ -4215,28 +4765,34 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
              )}
            </>
          ) : (
-           <>
-             <div className="success-icon"><CheckCircle2 size={48} /></div>
-             <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111', textAlign: 'center' }}>Đã hoàn thành bản vẽ!</h2>
-             <p className="hint" style={{ fontSize: '0.85rem' }}>
-               {retryCount > 0 ? `Tổng cộng ${allImages.length} phương án từ ${retryCount + 1} lần thiết kế.` : 'Dưới đây là các phương án thiết kế AI.'}
-             </p>
-           </>
+           <div className="done-hero">
+             <div className="done-check"><Check size={28} strokeWidth={3} /></div>
+             <div className="eyebrow body-eyebrow done-eyebrow">Hoàn tất · {allImages.length} phương án</div>
+             <h1 className="done-title">Bản vẽ đã sẵn sàng.<br /><em>Anh/chị thấy thế nào?</em></h1>
+             <p className="done-sub">Kéo thanh ngang để so sánh trước &amp; sau. Chọn phương án ưng ý để tạo bổ sung 7 bản chi tiết.</p>
+           </div>
          )}
 
          {allImages.length > 0 && isDone && (
-           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '1rem', width: '100%' }}>
+           <div className="results-grid">
              {allImages.map((url, i) => {
                const isOld = retryCount > 0 && i < previousImages.length;
-               const label = retryCount > 0
-                 ? (isOld ? `Lần 1 - PA${i + 1}` : `Lần 2 - PA${i - previousImages.length + 1}`)
-                 : `Phương án ${i + 1}`;
+               const num = retryCount > 0
+                 ? (isOld ? `L1·${i + 1}` : `L2·${i - previousImages.length + 1}`)
+                 : `${i + 1}`;
                const beforeUrl = project?.rawImage || url;
+               const isPicked = pass2Picked === url;
                return (
-                 <div key={i} style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}>
-                   <BeforeAfterSlider before={beforeUrl} after={url} alt={label} aspectRatio="16/10" />
-                   <div onClick={() => setPreviewImage(url)} style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: isOld ? 'rgba(0,0,0,0.7)' : 'rgba(226,177,112,0.85)', padding: '5px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.75rem', color: isOld ? '#fff' : '#000', cursor: 'pointer' }}>
-                     {label}
+                 <div key={i} className={`result-card ${isPicked ? 'is-picked' : ''}`} onClick={() => setPass2Picked(url)}>
+                   <BeforeAfterSlider before={beforeUrl} after={url} alt={`Phương án ${num}`} aspectRatio="4/3" beforeLabel="Trước" afterLabel="Sau" />
+                   <div className="result-meta">
+                     <span className="result-name">Phương án {num}</span>
+                     <button className="result-zoom" onClick={(e) => { e.stopPropagation(); setPreviewImage(url); }} aria-label="Phóng to">
+                       <Search size={14} />
+                     </button>
+                     <span className={`result-pickdot ${isPicked ? 'is-on' : ''}`}>
+                       {isPicked && <Check size={14} strokeWidth={3} />}
+                     </span>
                    </div>
                  </div>
                );
@@ -4245,158 +4801,146 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
          )}
 
          {isDone && (
-           <div style={{ marginTop: '1.5rem', width: '100%', textAlign: 'center' }}>
-             {/* SHARE LINK BLOCK */}
-             <div style={{
-               background: '#ffffff',
-               borderRadius: '14px', padding: '14px', marginBottom: '1rem',
-               border: '1.5px solid rgba(212,163,115,0.25)',
-               boxShadow: '0 4px 14px rgba(28,20,12,0.05)'
-             }}>
-               <p style={{ fontSize: '0.78rem', color: '#7c5c2e', marginBottom: '8px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Link xem kết quả</p>
-               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
-                 <code style={{ background: 'rgba(212,163,115,0.12)', padding: '8px 12px', borderRadius: '8px', fontSize: '0.78rem', wordBreak: 'break-all', color: '#1a1a1a', fontWeight: 600, border: '1px solid rgba(212,163,115,0.25)' }}>
-                   {window.location.origin}/result/{projectId}
-                 </code>
-                 <button
-                   onClick={() => {
-                     navigator.clipboard.writeText(`${window.location.origin}/result/${projectId}`);
-                     alert('Đã sao chép link!');
-                   }}
-                   style={{ padding: '8px 14px', borderRadius: '8px', background: 'linear-gradient(135deg, #d4a373, #b88857)', color: '#fff', fontWeight: 800, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '0.82rem', boxShadow: '0 4px 12px rgba(212,163,115,0.3)' }}
-                 >
-                   Sao chép
-                 </button>
-               </div>
-             </div>
-             {/* PAYMENT BLOCK */}
-             <div style={{
-               marginBottom: '12px', padding: '18px', borderRadius: '16px',
-               background: isPaid
-                 ? 'linear-gradient(135deg, rgba(34,197,94,0.08), #ffffff 80%)'
-                 : 'linear-gradient(135deg, rgba(165,0,100,0.06), #ffffff 80%)',
-               border: isPaid ? '1.5px solid rgba(34,197,94,0.4)' : '1.5px solid rgba(165,0,100,0.3)',
-               boxShadow: isPaid ? '0 4px 14px rgba(34,197,94,0.1)' : '0 4px 14px rgba(165,0,100,0.08)',
-               textAlign: 'left'
-             }}>
-               {isPaid ? (
-                 <>
-                   <p style={{ fontSize: '0.95rem', fontWeight: 800, color: '#15803d', marginBottom: '12px', textAlign: 'center' }}>
-                     ✅ Đã thanh toán — Tải về toàn bộ tài liệu
-                   </p>
-                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-                     {[
-                       ...(project?.aiResults || []),
-                       ...((project as any)?.pass2Results?.tasks || []).filter((t: any) => t.url).map((t: any) => t.url)
-                     ].map((url: string, i: number) => {
-                       const isVid = url.endsWith('.mp4') || url.includes('/video/');
-                       return (
-                         <a key={`${url}-${i}`} href={url} download
-                           style={{ padding: '10px 12px', borderRadius: '10px', background: 'rgba(34,197,94,0.1)', border: '1.5px solid rgba(34,197,94,0.4)', color: '#15803d', fontWeight: 800, fontSize: '0.82rem', textAlign: 'center', textDecoration: 'none' }}
-                         >
-                           ⬇ {isVid ? `Video ${i + 1}` : `Ảnh ${i + 1}`}
-                         </a>
-                       );
-                     })}
-                   </div>
-                 </>
-               ) : (
-                 <>
-                   <p style={{ fontSize: '0.95rem', fontWeight: 800, color: '#1a1a1a', marginBottom: '4px', textAlign: 'center' }}>
-                     Tải bản vẽ chất lượng cao
-                   </p>
-                   <p style={{ fontSize: '0.82rem', color: '#7c5c2e', marginBottom: '14px', textAlign: 'center' }}>
-                     Thanh toán để tải ảnh và video độ phân giải cao về máy.
-                   </p>
+           <>
+             {/* DONE GRID: Link card + Pay card */}
+             <div className="done-grid">
+               <aside className="link-card">
+                 <div className="link-eyebrow">Link xem kết quả</div>
+                 <div className="link-row">
+                   <input className="link-input" readOnly value={`${window.location.origin}/result/${projectId}`} />
                    <button
-                     onClick={() => setPaymentOpen(true)}
-                     style={{
-                       width: '100%', padding: '14px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 800,
-                       border: 'none', cursor: 'pointer',
-                       background: 'linear-gradient(135deg, #a50064, #d6336c)', color: '#fff',
-                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                       boxShadow: '0 8px 22px rgba(165,0,100,0.3)'
+                     className="btn btn-ghost link-copy"
+                     onClick={() => {
+                       navigator.clipboard.writeText(`${window.location.origin}/result/${projectId}`);
+                       alert('Đã sao chép link!');
                      }}
                    >
-                     💳 Thanh toán để tải bản vẽ
+                     <Copy size={14} /> Sao chép
                    </button>
-                 </>
-               )}
+                 </div>
+                 <div className="link-share">
+                   <a className="share-chip" href={`https://zalo.me/share?url=${encodeURIComponent(`${window.location.origin}/result/${projectId}`)}`} target="_blank" rel="noopener noreferrer">
+                     <MessageCircle size={14} /> Zalo
+                   </a>
+                   <a className="share-chip" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${window.location.origin}/result/${projectId}`)}`} target="_blank" rel="noopener noreferrer">
+                     <Share2 size={14} /> Facebook
+                   </a>
+                   <a className="share-chip" href={`mailto:?subject=Bản vẽ thiết kế&body=${encodeURIComponent(`${window.location.origin}/result/${projectId}`)}`}>
+                     <Mail size={14} /> Email
+                   </a>
+                   {retryCount < 1 && onRetry && (
+                     <button className="share-chip" onClick={onRetry} disabled={isRetrying}>
+                       <RefreshCcw size={14} className={isRetrying ? 'spin' : ''} /> {isRetrying ? 'Đang gửi...' : 'Thử lần 2'}
+                     </button>
+                   )}
+                 </div>
+               </aside>
+
+               <aside className={`pay-card ${isPaid ? 'is-paid' : ''}`}>
+                 <div className="pay-shine" />
+                 {isPaid ? (
+                   <>
+                     <div className="pay-eyebrow"><CheckCircle2 size={14} /> Đã thanh toán</div>
+                     <div className="pay-title">Tải về toàn bộ tài liệu</div>
+                     <div className="pay-desc">Bấm vào từng file để tải HD về máy.</div>
+                     <div className="pay-downloads">
+                       {[
+                         ...(project?.aiResults || []),
+                         ...((project as any)?.pass2Results?.tasks || []).filter((t: any) => t.url).map((t: any) => t.url)
+                       ].map((url: string, i: number) => {
+                         const isVid = url.endsWith('.mp4') || url.includes('/video/');
+                         return (
+                           <a key={`${url}-${i}`} href={url} download className="pay-download-btn">
+                             ⬇ {isVid ? `Video ${i + 1}` : `Ảnh ${i + 1}`}
+                           </a>
+                         );
+                       })}
+                     </div>
+                   </>
+                 ) : (
+                   <>
+                     <div className="pay-eyebrow"><Sparkles size={14} /> Bản HD không watermark</div>
+                     <div className="pay-title">Tải bản vẽ chất lượng cao</div>
+                     <div className="pay-desc">Ảnh 4K + video walkthrough + bản vẽ vector. Có hóa đơn VAT.</div>
+                     <div className="pay-row">
+                       <div className="pay-price">
+                         <b>299.000<span>đ</span></b>
+                         <i>/ trọn gói {allImages.length} phương án</i>
+                       </div>
+                       <button className="btn btn-pay" onClick={() => setPaymentOpen(true)}>
+                         <CreditCard size={16} /> Thanh toán &amp; tải về
+                       </button>
+                     </div>
+                     <div className="pay-trust">
+                       <span><ShieldCheck size={13} /> Cổng VNPay bảo mật</span>
+                       <span><RotateCcw size={13} /> Hoàn tiền nếu không hài lòng</span>
+                     </div>
+                   </>
+                 )}
+               </aside>
              </div>
 
-             {retryCount < 1 && onRetry && (
-               <button
-                 onClick={onRetry}
-                 disabled={isRetrying}
-                 style={{
-                   width: '100%',
-                   padding: '14px',
-                   marginBottom: '10px',
-                   background: isRetrying ? 'rgba(212,163,115,0.15)' : '#ffffff',
-                   border: '2px solid var(--accent)',
-                   borderRadius: '14px',
-                   color: '#7c5c2e',
-                   fontSize: '0.95rem',
-                   fontWeight: 800,
-                   cursor: isRetrying ? 'wait' : 'pointer',
-                   display: 'flex',
-                   alignItems: 'center',
-                   justifyContent: 'center',
-                   gap: '10px',
-                   boxShadow: '0 4px 14px rgba(212,163,115,0.15)'
-                 }}
-               >
-                 {isRetrying ? (
-                   <><RefreshCcw size={18} className="spin" /> Đang gửi lại...</>
-                 ) : (
-                   <><RefreshCcw size={18} /> Thử lại lần 2 — Tìm mẫu ưng ý hơn</>
-                 )}
-               </button>
-             )}
-
-             {/* PASS 2 CTA — chỉ hiện khi chưa chạy */}
+             {/* PASS 2 — Phát triển sâu phương án */}
              {!project?.pass2Results && allImages.length > 0 && (
-               <div style={{
-                 marginBottom: '10px', padding: '18px', borderRadius: '16px',
-                 background: 'linear-gradient(135deg, rgba(250,204,21,0.10), #ffffff 80%)',
-                 border: '1.5px solid rgba(202,138,4,0.35)',
-                 boxShadow: '0 4px 14px rgba(202,138,4,0.08)',
-                 textAlign: 'left'
-               }}>
-                 <p style={{ fontSize: '0.95rem', fontWeight: 800, color: '#854d0e', marginBottom: '4px', textAlign: 'center' }}>
-                   ⭐ Tiếp tục tạo bổ sung (7 bản)
-                 </p>
-                 <p style={{ fontSize: '0.8rem', color: '#7c5c2e', marginBottom: '14px', textAlign: 'center', lineHeight: 1.5 }}>
-                   Chọn 1 phương án ưng ý nhất, hệ thống sẽ tạo thêm:<br />
-                   <strong style={{ color: '#854d0e' }}>3 góc chụp · 2 bản vẽ · 2 video</strong>
-                 </p>
-                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '12px' }}>
+               <div className="pass2-card">
+                 <div className="pass2-head">
+                   <div>
+                     <div className="eyebrow body-eyebrow pass2-eyebrow">Bước tiếp theo · Tạo bổ sung</div>
+                     <div className="pass2-title">Phát triển sâu phương án ưng ý nhất</div>
+                     <div className="pass2-desc">Chọn 1 phương án, hệ thống sẽ tạo thêm 3 góc chụp · 2 bản vẽ · 2 video.</div>
+                   </div>
+                   <div className="pass2-counter">
+                     <Layers size={18} />
+                     <b>+7</b>
+                     <span>bản bổ sung</span>
+                   </div>
+                 </div>
+                 <div className="pass2-thumbs">
                    {allImages.slice(0, 8).map((url, i) => {
                      const isOldImg = retryCount > 0 && i < previousImages.length;
                      const label = retryCount > 0
-                       ? (isOldImg ? `L1-${i + 1}` : `L2-${i - previousImages.length + 1}`)
+                       ? (isOldImg ? `L1·${i + 1}` : `L2·${i - previousImages.length + 1}`)
                        : `PA${i + 1}`;
+                     const isPicked = pass2Picked === url;
                      return (
-                       <div key={i} onClick={() => setPass2Picked(url)} style={{
-                         position: 'relative', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer',
-                         border: pass2Picked === url ? '3px solid #ca8a04' : '2px solid rgba(212,163,115,0.3)',
-                         opacity: pass2Picked === url ? 1 : 0.7, transition: 'all 0.15s', aspectRatio: '1',
-                         boxShadow: pass2Picked === url ? '0 6px 20px rgba(202,138,4,0.4)' : 'none'
-                       }}>
-                         <img decoding="async" loading="lazy" src={url} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '0.6rem', padding: '3px', textAlign: 'center', fontWeight: 700 }}>{label}</div>
-                       </div>
+                       <button
+                         key={i}
+                         type="button"
+                         className={`pass2-thumb ${isPicked ? 'is-on' : ''}`}
+                         onClick={() => setPass2Picked(url)}
+                         aria-pressed={isPicked}
+                       >
+                         <img decoding="async" loading="lazy" src={url} alt={label} />
+                         <span>{label}</span>
+                         {isPicked && <span className="pass2-thumb-tick"><Check size={12} strokeWidth={3} /></span>}
+                       </button>
                      );
                    })}
                  </div>
-                 <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'center' }}>
-                   <input type="number" min="1" step="0.5" value={pass2W} onChange={e => setPass2W(e.target.value)} placeholder="Ngang (m)"
-                     style={{ flex: 1, padding: '10px', borderRadius: '8px', background: '#ffffff', color: '#1a1a1a', border: '1.5px solid rgba(202,138,4,0.3)', fontSize: '0.85rem', textAlign: 'center', fontWeight: 600 }} />
-                   <span style={{ color: '#854d0e', fontWeight: 700 }}>×</span>
-                   <input type="number" min="1" step="0.5" value={pass2L} onChange={e => setPass2L(e.target.value)} placeholder="Dài (m)"
-                     style={{ flex: 1, padding: '10px', borderRadius: '8px', background: '#ffffff', color: '#1a1a1a', border: '1.5px solid rgba(202,138,4,0.3)', fontSize: '0.85rem', textAlign: 'center', fontWeight: 600 }} />
+                 <div className="pass2-controls">
+                   <label className="num-field">
+                     <span>Chiều ngang (m)</span>
+                     <div className="num-input">
+                       <button type="button" onClick={() => setPass2W(String(Math.max(1, (parseFloat(pass2W) || 4) - 0.5)))}>−</button>
+                       <input type="number" min="1" step="0.5" value={pass2W} onChange={e => setPass2W(e.target.value)} />
+                       <button type="button" onClick={() => setPass2W(String((parseFloat(pass2W) || 4) + 0.5))}>+</button>
+                     </div>
+                   </label>
+                   <label className="num-field">
+                     <span>Chiều dài (m)</span>
+                     <div className="num-input">
+                       <button type="button" onClick={() => setPass2L(String(Math.max(1, (parseFloat(pass2L) || 4) - 0.5)))}>−</button>
+                       <input type="number" min="1" step="0.5" value={pass2L} onChange={e => setPass2L(e.target.value)} />
+                       <button type="button" onClick={() => setPass2L(String((parseFloat(pass2L) || 4) + 0.5))}>+</button>
+                     </div>
+                   </label>
+                   <div className="num-field">
+                     <span>Video walkthrough</span>
+                     <div className="num-fixed">2 video <Lock size={14} /></div>
+                   </div>
                  </div>
                  <button
+                   className="btn btn-primary btn-lg pass2-cta"
                    disabled={!pass2Picked || pass2Starting}
                    onClick={async () => {
                      if (!pass2Picked) return;
@@ -4413,51 +4957,44 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                      } catch (e: any) { setPass2Msg(`Lỗi: ${e.message}`); }
                      finally { setPass2Starting(false); }
                    }}
-                   style={{
-                     width: '100%', padding: '14px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 800,
-                     border: 'none', cursor: !pass2Picked || pass2Starting ? 'not-allowed' : 'pointer',
-                     background: pass2Picked ? 'linear-gradient(135deg, #ca8a04 0%, #a16207 100%)' : 'rgba(202,138,4,0.15)',
-                     color: pass2Picked ? '#fff' : '#a16207',
-                     boxShadow: pass2Picked ? '0 8px 22px rgba(202,138,4,0.35)' : 'none',
-                     transition: 'all .2s'
-                   }}
                  >
-                   {pass2Starting ? 'Đang khởi động...' : '✨ Tiếp tục tạo bổ sung'}
+                   <Sparkles size={18} />
+                   {pass2Starting
+                     ? 'Đang khởi động...'
+                     : pass2Picked
+                       ? `Tiếp tục tạo bổ sung từ Phương án ${allImages.indexOf(pass2Picked) + 1}`
+                       : 'Chọn phương án để tiếp tục'}
                  </button>
-                 {pass2Msg && <p style={{ fontSize: '0.78rem', fontWeight: 600, color: pass2Msg.startsWith('Lỗi') ? '#b91c1c' : '#15803d', marginTop: '10px', textAlign: 'center' }}>{pass2Msg}</p>}
+                 {pass2Msg && <p className={`pass2-msg ${pass2Msg.startsWith('Lỗi') ? 'err' : 'ok'}`}>{pass2Msg}</p>}
                </div>
              )}
 
-             {/* PASS 2 PROGRESS + RESULTS */}
+             {/* PASS 2 PROGRESS */}
              {project?.pass2Results && (
-               <div style={{
-                 marginBottom: '10px', padding: '16px', borderRadius: '16px',
-                 background: 'linear-gradient(135deg, rgba(250,204,21,0.06), #ffffff 80%)',
-                 border: '1.5px solid rgba(202,138,4,0.25)',
-                 boxShadow: '0 4px 14px rgba(202,138,4,0.05)',
-                 textAlign: 'left'
-               }}>
-                 <p style={{ fontSize: '0.95rem', fontWeight: 800, color: '#854d0e', marginBottom: '12px', textAlign: 'center' }}>
-                   Kết quả bổ sung — {project.pass2Results.tasks?.filter(t => t.status === 'done').length || 0}/7 xong
-                   {project.pass2Results.status === 'running' && ' · đang xử lý...'}
-                   {project.pass2Results.status === 'done' && ' · ✅ Hoàn tất'}
-                   {project.pass2Results.status === 'failed' && ' · ❌ Lỗi'}
-                 </p>
-                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+               <div className="pass2-progress">
+                 <div className="pass2-progress-head">
+                   <Layers size={18} />
+                   <strong>Bản bổ sung — {project.pass2Results.tasks?.filter(t => t.status === 'done').length || 0}/7 xong</strong>
+                   {project.pass2Results.status === 'running' && <span className="pass2-progress-tag">đang xử lý…</span>}
+                   {project.pass2Results.status === 'done' && <span className="pass2-progress-tag is-ok">Hoàn tất</span>}
+                   {project.pass2Results.status === 'failed' && <span className="pass2-progress-tag is-err">Lỗi</span>}
+                 </div>
+                 <div className="pass2-progress-grid">
                    {project.pass2Results.tasks?.map(task => (
-                     <div key={task.taskId} style={{ borderRadius: '10px', overflow: 'hidden', background: '#ffffff', border: '1.5px solid rgba(212,163,115,0.2)', boxShadow: '0 2px 8px rgba(28,20,12,0.04)' }}>
+                     <div key={task.taskId} className="pass2-task">
                        {task.url ? (
                          task.type === 'video'
-                           ? <video src={task.url} controls style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block', background: '#000' }} />
-                           : <img decoding="async" loading="lazy" src={task.url} alt={task.label} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }} />
+                           ? <video src={task.url} controls className="pass2-task-media" />
+                           : <img decoding="async" loading="lazy" src={task.url} alt={task.label} className="pass2-task-media" />
                        ) : (
-                         <div style={{ aspectRatio: '16/10', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7c5c2e', fontSize: '0.75rem', background: 'rgba(212,163,115,0.08)', fontWeight: 600 }}>
-                           {task.status === 'failed' ? '❌' : task.status === 'running' ? '⏳ Đang tạo...' : '... chờ'}
+                         <div className="pass2-task-pending">
+                           {task.status === 'failed' ? 'Thất bại' : task.status === 'running' ? 'Đang tạo…' : 'Chờ…'}
                          </div>
                        )}
-                       <div style={{ padding: '8px', fontSize: '0.72rem', color: '#1a1a1a', fontWeight: 700, textAlign: 'center', background: 'rgba(212,163,115,0.06)' }}>{task.label}</div>
+                       <div className="pass2-task-label">{task.label}</div>
                        {(task.status === 'failed' || (task.status === 'done' && !task.url)) && (
                          <button
+                           className="pass2-task-retry"
                            onClick={async () => {
                              try {
                                const res = await apiFetch(`/api/projects/${projectId}/pass2/retry`, {
@@ -4467,9 +5004,8 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                                if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Retry failed'); }
                              } catch (e: any) { alert(`Lỗi: ${e.message}`); }
                            }}
-                           style={{ width: '100%', padding: '8px', border: 'none', background: '#ca8a04', color: '#fff', fontWeight: 800, fontSize: '0.74rem', cursor: 'pointer' }}
                          >
-                           🔄 Thử lại
+                           Thử lại
                          </button>
                        )}
                      </div>
@@ -4478,11 +5014,36 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                </div>
              )}
 
-             <button className="btn-primary main-cta" onClick={onReset} style={{ fontSize: '0.95rem', padding: '14px' }}>
-               Tạo Dự Án Mới
+             <button className="btn btn-ghost btn-lg done-new" onClick={onReset}>
+               <Plus size={18} /> Tạo dự án mới
              </button>
-           </div>
+
+             <div className="trust-foot">
+               <div className="trust-item">
+                 <Zap size={24} />
+                 <div>
+                   <b>Nhanh chóng</b>
+                   <span>4 phương án trong 5 phút</span>
+                 </div>
+               </div>
+               <div className="trust-item">
+                 <Cpu size={24} />
+                 <div>
+                   <b>AI hiện đại</b>
+                   <span>Model SDXL fine-tune cho thiết kế Việt</span>
+                 </div>
+               </div>
+               <div className="trust-item">
+                 <Lock size={24} />
+                 <div>
+                   <b>Bảo mật</b>
+                   <span>Ảnh chỉ lưu 30 ngày, mã hoá AES-256</span>
+                 </div>
+               </div>
+             </div>
+           </>
          )}
+        </div>
 
         {previewImage && createPortal(
           <div style={{
