@@ -1605,6 +1605,7 @@ export default function App() {
 
   const [submittedProjectId, setSubmittedProjectId] = useState<string>('');
   const [retryCount, setRetryCount] = useState(0);
+  const [isShareView, setIsShareView] = useState(false);
   const [interiorComboImages, setInteriorComboImages] = useState<string[]>([]);
   const [interiorSiteImages, setInteriorSiteImages] = useState<string[]>([]);
 
@@ -1653,7 +1654,7 @@ export default function App() {
     if (resultMatch) {
       setSubmittedProjectId(resultMatch[1]);
       setService('Gói Cơ Bản');
-      setRetryCount(99);
+      setIsShareView(true);
       setView('success');
     }
     // Route /my — dự án của tôi (theo thiết bị)
@@ -1950,6 +1951,7 @@ export default function App() {
     setTemplateSelected(false);
     setSubmittedProjectId('');
     setRetryCount(0);
+    setIsShareView(false);
     setInteriorComboImages([]);
     setInteriorSiteImages([]);
     setView('welcome');
@@ -2202,6 +2204,7 @@ export default function App() {
             onReset={resetAll}
             onBack={() => setView('my_projects')}
             retryCount={retryCount}
+            isShareView={isShareView}
             onRetry={async () => {
               setRetryCount(prev => prev + 1);
               setIsSubmitting(true);
@@ -2257,7 +2260,7 @@ export default function App() {
             onViewResult={(projectId) => {
               setSubmittedProjectId(projectId);
               setService('Gói Cơ Bản');
-              setRetryCount(99);
+              setIsShareView(true);
               setView('success');
             }}
           />
@@ -4567,7 +4570,7 @@ function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewRe
   );
 }
 
-function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isRetrying = false, onBack }: { projectId: string; service: string; onReset: () => void; retryCount?: number; onRetry?: () => void; isRetrying?: boolean; onBack?: () => void }) {
+function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isRetrying = false, onBack, isShareView = false }: { projectId: string; service: string; onReset: () => void; retryCount?: number; onRetry?: () => void; isRetrying?: boolean; onBack?: () => void; isShareView?: boolean }) {
   const [pass2Picked, setPass2Picked] = useState('');
   const [pass2W, setPass2W] = useState('4');
   const [pass2L, setPass2L] = useState('4');
@@ -4828,7 +4831,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                    <a className="share-chip" href={`mailto:?subject=Bản vẽ thiết kế&body=${encodeURIComponent(`${window.location.origin}/result/${projectId}`)}`}>
                      <Mail size={14} /> Email
                    </a>
-                   {retryCount < 1 && onRetry && (
+                   {retryCount < 1 && !isShareView && onRetry && (
                      <button className="share-chip" onClick={onRetry} disabled={isRetrying}>
                        <RefreshCcw size={14} className={isRetrying ? 'spin' : ''} /> {isRetrying ? 'Đang gửi...' : 'Thử lần 2'}
                      </button>
