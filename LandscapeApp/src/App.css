@@ -9326,13 +9326,10 @@ canvas {
   line-height: 1.55;
 }
 @media (max-width: 880px) {
-  .wd-process-grid { 
-    grid-template-columns: 1fr !important; 
-    gap: 48px !important; 
-    padding: 0 24px !important;
-    margin: 0 !important;
+  .wd-process-grid {
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    gap: 0;
   }
-  .wd-process-divider { display: none !important; }
 }
 
 /* ── Stats strip ── */
@@ -10459,6 +10456,85 @@ canvas {
     align-items: center;
     gap: 8px;
   }
+
+  /* Process: compact horizontal row of 3 thumbs */
+  .welcome-redesign .wd-process {
+    padding: 18px 0 24px;
+    background: transparent;
+  }
+  .welcome-redesign .wd-process .wd-section-head { display: none; }
+  .welcome-redesign .wd-process-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    gap: 0;
+    padding: 16px 8px;
+    margin: 0 12px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 18px;
+    box-shadow: var(--shadow-soft);
+    position: relative;
+    align-items: flex-start;
+  }
+  .welcome-redesign .wd-process-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 64px;
+  }
+  .welcome-redesign .wd-divider-line {
+    width: 10px;
+    height: 1px;
+    background: var(--bronze-400);
+  }
+  .welcome-redesign .wd-divider-circle {
+    width: 6px;
+    height: 6px;
+    border: 1px solid var(--bronze-400);
+    border-radius: 50%;
+  }
+  .welcome-redesign .wd-process-grid::before { display: none; }
+  .welcome-redesign .wd-process-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    position: relative;
+  }
+
+  .welcome-redesign .wd-process-num-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    background: #fff;
+    border: 0;
+    box-shadow: 0 2px 10px rgba(28, 26, 20, 0.08);
+    overflow: hidden;
+    margin: 0 0 10px;
+    position: relative;
+    padding: 0;
+  }
+  .welcome-redesign .wd-process-num-circle .wd-process-step-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .welcome-redesign .wd-process-num-pip { display: none; }
+  .welcome-redesign .wd-process-step h3 {
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-900);
+    margin: 0;
+    line-height: 1.2;
+  }
+  .welcome-redesign .wd-process-step p { display: none; }
 
   /* Sections below the fold: keep visible but tighter */
   .welcome-redesign .wd-stats { padding: 32px 0; }
