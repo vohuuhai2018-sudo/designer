@@ -2519,8 +2519,12 @@ function AutoSlideGalleryImage({ imgs, cat }: { imgs: string[], cat: string }) {
             position: i === 0 ? 'relative' : 'absolute',
             top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover',
             opacity: i === idx ? 1 : 0,
-            transition: 'opacity 0.8s ease-in-out',
-            zIndex: i === idx ? 1 : 0
+            transition: 'opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            zIndex: i === idx ? 1 : 0,
+            willChange: 'opacity',
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
           }} 
         />
       ))}
