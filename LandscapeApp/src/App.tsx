@@ -2628,13 +2628,14 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
       <section id="top" className="wd-hero">
         <div className="wd-hero-bg" />
         <div className="wd-hero-scrim" />
-        <div className="wd-container wd-hero-inner">
+        <div className="wd-container">
+          <div className="wd-hero-inner glass-hero">
           <span className="eyebrow wd-hero-eyebrow">
             <span className="wd-hero-eyebrow-desktop">Thiết kế bản vẽ · 5 phút</span>
             <span className="wd-hero-eyebrow-mobile">Hệ thống thiết kế bản vẽ nhanh nhất Việt Nam</span>
           </span>
-          <h1 className="wd-display">Hồ koi sân vườn<br /><em>đẹp như mơ.</em></h1>
-          <p className="wd-hero-sub">Hệ thống thiết kế bản vẽ nhanh nhất Việt Nam. Cảnh quan, kiến trúc, nội thất — AI render chỉ 5 phút, hoặc KTS thiết kế chuyên sâu trong 24h.</p>
+          <h1 className="wd-display">Thiết kế & Diễn họa 3D<br /><em>chuyên nghiệp trong 5 phút.</em></h1>
+          <p className="wd-hero-sub">Nâng tầm không gian sống với sự kết hợp hoàn hảo giữa công nghệ AI và tư duy KTS chuyên sâu. Render 3D thần tốc hoặc thiết kế bản vẽ kỹ thuật chi tiết chỉ từ 24h.</p>
           <div className="wd-hero-actions">
             <button className="btn btn-primary btn-lg" onClick={() => scrollTo('canh-quan')}>Đặt thiết kế ngay <ArrowRight size={18} /></button>
             <button className="btn btn-ghost-light btn-lg" onClick={() => scrollTo('du-an')}>Xem mẫu thiết kế</button>
@@ -2646,6 +2647,7 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
             <span className="wd-strip-sep" />
             <span><b>5 phút</b> AI render</span>
           </div>
+        </div>
         </div>
       </section>
 
