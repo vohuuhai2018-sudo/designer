@@ -2760,10 +2760,10 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
           <div>
             <h4>Liên hệ</h4>
             <ul>
-              <li><a href="tel:0909555555">0909 555 555</a></li>
-              <li><a>Zalo: thietke5p</a></li>
+              <li><a href="tel:0888220044">08 88220044</a></li>
+              <li><a href="https://zalo.me/0888220044" target="_blank" rel="noreferrer">Zalo: 0888220044</a></li>
               <li><a href="mailto:cs@thietke5p.com">cs@thietke5p.com</a></li>
-              <li><a>Q.7, TP. Hồ Chí Minh</a></li>
+              <li><a>403A Nguyễn Duy Trinh, Bình Trưng, HCM</a></li>
             </ul>
           </div>
         </div>
@@ -2775,10 +2775,10 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
 
       {/* Floating contact */}
       <div className="wd-float">
-        <a className="wd-float-pill wd-float-tel" href="tel:0909555555">
-          <PhoneCall size={18} /><span>0909 555 555</span>
+        <a className="wd-float-pill wd-float-tel" href="tel:0888220044">
+          <PhoneCall size={18} /><span>08 88220044</span>
         </a>
-        <a className="wd-float-pill wd-float-zalo" href="https://zalo.me" target="_blank" rel="noopener noreferrer">
+        <a className="wd-float-pill wd-float-zalo" href="https://zalo.me/0888220044" target="_blank" rel="noopener noreferrer">
           <MessageCircle size={18} /><span>Chat Zalo</span>
         </a>
       </div>
