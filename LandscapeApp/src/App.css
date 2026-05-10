@@ -9326,8 +9326,29 @@ canvas {
   line-height: 1.55;
 }
 @media (max-width: 880px) {
-  .wd-process-grid { grid-template-columns: 1fr; gap: 40px; }
-  .wd-process-divider { display: none; }
+  .wd-process-grid { grid-template-columns: 1fr; gap: 0; }
+  .wd-process-divider {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 64px;
+    width: 100%;
+    padding: 0;
+  }
+  .wd-divider-line {
+    width: 1.5px;
+    height: 20px;
+    background: var(--bronze-400);
+    border-radius: 2px;
+  }
+  .wd-divider-circle {
+    width: 12px;
+    height: 12px;
+    border: 1.5px solid var(--bronze-400);
+    border-radius: 50%;
+  }
 }
 
 /* ── Stats strip ── */
