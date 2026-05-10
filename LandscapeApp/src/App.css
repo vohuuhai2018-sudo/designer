@@ -1257,18 +1257,18 @@ canvas {
   margin-bottom: 18px;
 }
 .processing-video-frame {
-  width: 200px;
-  height: 200px;
-  border-radius: 40px;
-  overflow: hidden;
-  background: var(--cream-50);
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  aspect-ratio: 1.8;
+  background: transparent;
   position: relative;
+  margin: 0 auto;
 }
 .processing-video-frame::after {
   content: '';
   position: absolute; inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(120% 120% at 50% 0%, rgba(255,255,255,0.35), transparent 65%);
+  background: radial-gradient(circle at center, transparent 30%, var(--cream-50) 85%);
   pointer-events: none;
 }
 .processing-video {
@@ -1276,6 +1276,7 @@ canvas {
   object-fit: contain;
   display: block;
   mix-blend-mode: multiply;
+  filter: contrast(1.05) brightness(1.02);
 }
 .processing-pill {
   display: inline-flex;
@@ -1438,7 +1439,7 @@ canvas {
 }
 @media (max-width: 480px) {
   .processing-title { font-size: 1.18rem; }
-  .processing-video-frame { width: 150px; height: 150px; border-radius: 32px; }
+  .processing-video-frame { max-width: 100%; aspect-ratio: 1.6; }
   .processing-slot-percent { font-size: 1.3rem; }
 }
 
