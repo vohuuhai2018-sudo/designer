@@ -4128,7 +4128,7 @@ function BasicSelectionView({
               >
                 <div style={{ position: 'relative', width: '100%', aspectRatio: mainBranch === 'interior' ? 'auto' : '1/1' }}>
                   {mainBranch === 'interior' && selectedImage.images ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', padding: '8px' }}>
+                    <div className="interior-variants-grid">
                       {selectedImage.images.map((url: string, i: number) => (
                         <ProtectedImage key={i} src={url} alt={`${selectedImage.name} ${i + 1}`} style={{ width: '100%', aspectRatio: '16/9', borderRadius: '8px', objectFit: 'cover' }} />
                       ))}

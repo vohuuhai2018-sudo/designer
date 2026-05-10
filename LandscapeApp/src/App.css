@@ -10529,3 +10529,19 @@ canvas {
   .welcome-redesign .wd-gallery { padding: 32px 0 24px; }
 }
 
+
+/* Interior Variants Modal Grid */
+.interior-variants-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 8px;
+}
+
+@media (max-width: 600px) {
+  .interior-variants-grid {
+    grid-template-columns: 1fr;
+    padding: 12px;
+    gap: 12px;
+  }
+}
