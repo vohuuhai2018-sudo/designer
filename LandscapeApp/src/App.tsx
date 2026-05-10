@@ -4183,7 +4183,7 @@ function BasicSelectionView({
   );
 }
 
-function PlanSelectionView({ service, onServiceChange, systemContent, onTestPayment, onBack, onJumpToStep }: {
+function PlanSelectionView({ service, onServiceChange, systemContent, onTestPayment, onBack, onJumpToStep, mainBranch }: {
   service: string;
   onServiceChange: (s: string) => void;
   systemContent: any;
@@ -4194,51 +4194,57 @@ function PlanSelectionView({ service, onServiceChange, systemContent, onTestPaym
 }) {
   const t = (key: string, defaultVal: string) => systemContent.uiText?.[key] || defaultVal;
 
-  const planMeta: Record<string, { tier: string; price: string; tagline: string; eta: string; featured?: boolean; features: string[] }> = {
+  const planMeta: Record<string, { tier: string; price: string; unit: string; tagline: string; eta: string; featured?: boolean; features: string[] }> = {
     basic: {
       tier: 'Cơ bản',
-      price: '299.000đ',
-      tagline: 'AI render nhanh — phù hợp khảo sát ý tưởng',
+      price: 'Miễn phí',
+      unit: ' / phương án',
+      tagline: 'Lên ý tưởng thiết kế nhanh',
       eta: '~5 phút',
       features: [
-        '4 phương án AI auto-render',
-        'Phối cảnh 2D màu HD',
-        'Tải ảnh có watermark miễn phí',
-        'Tải HD không watermark khi thanh toán',
+        'Tải 4 ảnh HD: 50.000đ',
+        'Tải 8 ảnh + 2 video: 200.000đ',
+        'Giới hạn 2 lần chỉnh sửa',
+        'Bản vẽ có Watermark',
       ],
     },
     advanced: {
       tier: 'Nâng cao',
-      price: '1.500.000đ',
-      tagline: 'KTS thiết kế + video 3D — xem trước khi thi công',
+      price: '500.000đ',
+      unit: ' / 10 dự án',
+      tagline: 'Gói tiết kiệm cho nhiều công trình',
       eta: '24 giờ',
       featured: true,
       features: [
-        'Tất cả tính năng gói Cơ bản',
-        'KTS chỉnh sửa thủ công 2 lần',
-        'Phối cảnh 3D ngày + đêm',
-        'Video 3D 15s mô phỏng không gian',
-        'Bóc tách vật liệu sơ bộ',
+        'Thực hiện được 10 dự án',
+        'Mỗi dự án: 8 ảnh + 2 video',
+        'Giới hạn 4 lần chỉnh sửa',
+        'Tư vấn vật liệu cơ bản',
       ],
     },
     premium: {
-      tier: 'Premium',
-      price: '3.500.000đ',
-      tagline: 'Trọn bộ — dùng để thi công thật',
+      tier: '3D KTS',
+      price: '69.000đ',
+      unit: ' / m²',
+      tagline: 'Thiết kế chuyên nghiệp với KTS',
       eta: '48 giờ',
-      features: [
-        'Tất cả tính năng gói Nâng cao',
-        'Bộ 6 góc phối cảnh 3D',
-        'Video 4K 30s walkthrough',
-        'Bản vẽ kỹ thuật chi tiết',
-        'Hồ sơ xin phép xây dựng',
+      features: mainBranch === 'landscape' ? [
+        '20.000đ/m² cho dự án > 1000m²',
+        '8.000đ/m² cho dự án > 1 Hecta',
+        'Phối cảnh và video chi tiết',
+        'Không giới hạn lần chỉnh sửa',
+      ] : [
+        'Phối cảnh và video chi tiết',
+        'Bản vẽ kỹ thuật thi công',
+        'Tư vấn phong thủy chuyên sâu',
+        'Không giới hạn lần chỉnh sửa',
       ],
     },
   };
 
   const services = (['basic', 'advanced', 'premium'] as const).map(id => ({
     id,
-    name: id === 'basic' ? 'Gói Cơ bản' : id === 'advanced' ? 'Gói Nâng cao' : 'Gói Premium',
+    name: id === 'basic' ? 'Gói Cơ bản' : id === 'advanced' ? 'Gói Nâng cao' : 'Gói 3D KTS',
     ...planMeta[id],
   }));
 
@@ -4293,7 +4299,7 @@ function PlanSelectionView({ service, onServiceChange, systemContent, onTestPaym
               >
                 {p.featured && <span className="plan-badge">Phổ biến nhất</span>}
                 <div className="plan-tier">{p.tier}</div>
-                <div className="plan-price">{p.price}<span> / dự án</span></div>
+                <div className="plan-price">{p.price}<span>{p.unit}</span></div>
                 <div className="plan-tagline">{p.tagline}</div>
                 <div className="plan-eta"><Clock /> {p.eta}</div>
                 <ul className="plan-feats">
@@ -4358,13 +4364,13 @@ function SubmitView({
   const t = (key: string, defaultVal: string) => systemContent.uiText?.[key] || defaultVal;
   const isReady = customerName.trim().length > 0 && customerPhone.trim().length >= 9;
 
-  const planMeta: Record<string, { eta: string; price: string }> = {
-    'Gói Cơ bản': { eta: '~5 phút', price: '299.000đ' },
-    'Gói Cơ Bản': { eta: '~5 phút', price: '299.000đ' },
-    'Gói Nâng cao': { eta: '24 giờ', price: '1.500.000đ' },
-    'Gói Premium': { eta: '48 giờ', price: '3.500.000đ' },
+  const planMeta: Record<string, { eta: string; price: string; unit: string }> = {
+    'Gói Cơ bản': { eta: '~5 phút', price: 'Miễn phí', unit: ' / phương án' },
+    'Gói Cơ Bản': { eta: '~5 phút', price: 'Miễn phí', unit: ' / phương án' },
+    'Gói Nâng cao': { eta: '24 giờ', price: '500.000đ', unit: ' / 10 dự án' },
+    'Gói 3D KTS': { eta: '48 giờ', price: '69.000đ', unit: ' / m²' },
   };
-  const meta = (service && planMeta[service]) || { eta: '—', price: '—' };
+  const meta = (service && planMeta[service]) || { eta: '—', price: '—', unit: '' };
 
   const branchLabel = mainBranch === 'architecture' ? 'Kiến trúc' : mainBranch === 'interior' ? 'Nội thất' : 'Cảnh quan';
   const totalImgs = (rawImage ? 1 : 0) + (extraAssets?.length || 0);
@@ -4448,6 +4454,10 @@ function SubmitView({
             <div className="summary-row">
               <span>Gói thiết kế</span>
               <b>{service || '—'}</b>
+            </div>
+            <div className="summary-row">
+              <span>Chi phí</span>
+              <b className="sum-price">{meta.price}{meta.unit}</b>
             </div>
             <div className="summary-row">
               <span>Thời gian giao</span>

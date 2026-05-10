@@ -8628,6 +8628,11 @@ canvas {
   background: var(--cream-200);
   margin: 8px 0;
 }
+.summary-row b.sum-price {
+  color: var(--bronze-600);
+  font-family: var(--font-display);
+  font-size: 18px;
+}
 .summary-total {
   font-size: 16px;
 }
