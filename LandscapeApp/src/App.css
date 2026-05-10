@@ -10308,6 +10308,8 @@ canvas {
     pointer-events: none;
   }
   .welcome-redesign > * { position: relative; z-index: 1; }
+  /* Header phai ngoi tren cung de mobile menu khong bi hero content de len */
+  .welcome-redesign .wd-header { z-index: 100; }
   /* Hero's own bg + scrim hidden — view-level bg takes over */
   .welcome-redesign .wd-hero-bg,
   .welcome-redesign .wd-hero-scrim { display: none; }
