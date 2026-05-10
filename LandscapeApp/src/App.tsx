@@ -2541,7 +2541,7 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
   ];
 
   const STEPS = [
-    { n: 1, label: 'Chọn mẫu đẹp', desc: 'Duyệt 500+ mẫu đã thực hiện. Lưu mẫu yêu thích để làm tham chiếu.', icon: <ImageIcon size={28} strokeWidth={1.5} />, img: '/assets/ICON TRANG CHU/1. CHON MAU.png' },
+    { n: 1, label: 'Chọn mẫu đẹp', desc: 'Duyệt 5000+ mẫu đã thực hiện. Lưu mẫu yêu thích để làm tham chiếu.', icon: <ImageIcon size={28} strokeWidth={1.5} />, img: '/assets/ICON TRANG CHU/1. CHON MAU.png' },
     { n: 2, label: 'Chụp hiện trạng', desc: 'Gửi ảnh khu đất, mặt bằng và mong muốn. Chỉ cần điện thoại.', icon: <Camera size={28} strokeWidth={1.5} />, img: '/assets/ICON TRANG CHU/2. CHUP HIEN TRANG.png' },
     { n: 3, label: 'Nhận bản vẽ', desc: 'Bản vẽ 2D, phối cảnh 3D, kết cấu chi tiết — AI render 5 phút hoặc KTS thiết kế chuyên sâu trong 24h.', icon: <FileCheck2 size={28} strokeWidth={1.5} />, img: '/assets/ICON TRANG CHU/3. NHAN BAN VE.png' },
   ];
@@ -2549,7 +2549,7 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
   const STATS = [
     { num: '5 phút', label: 'AI render tự động' },
     { num: '24h', label: 'KTS chuyên sâu' },
-    { num: '500+', label: 'Dự án hoàn thành' },
+    { num: '5000+', label: 'Dự án hoàn thành' },
     { num: '4,9★', label: 'Đánh giá khách hàng' },
   ];
 
@@ -2602,7 +2602,7 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
           <div className="wd-hero-strip">
             <span><b>4,9★</b> đánh giá</span>
             <span className="wd-strip-sep" />
-            <span><b>500+</b> dự án</span>
+            <span><b>5000+</b> dự án</span>
             <span className="wd-strip-sep" />
             <span><b>5 phút</b> AI render</span>
           </div>
@@ -2680,7 +2680,7 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
         <div className="wd-container">
           <div className="wd-section-head center">
             <span className="eyebrow body-eyebrow">Dự án tiêu biểu</span>
-            <h2 className="wd-h2">500+ mẫu thiết kế,<br />đã thực hiện thật.</h2>
+            <h2 className="wd-h2">5000+ mẫu thiết kế,<br />đã thực hiện thật.</h2>
           </div>
           <div className="wd-gallery-grid">
             {GALLERY.map((g, i) => (
