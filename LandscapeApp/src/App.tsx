@@ -2497,6 +2497,39 @@ function LoginView({ onSuccess, onBack }: { onSuccess: () => void, onBack: () =>
 
 // --- SUB-VIEWS ---
 
+function AutoSlideGalleryImage({ imgs, cat }: { imgs: string[], cat: string }) {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    if (imgs.length <= 1) return;
+    const interval = setInterval(() => {
+      setIdx(prev => (prev + 1) % imgs.length);
+    }, 2500 + Math.random() * 1500);
+    return () => clearInterval(interval);
+  }, [imgs.length]);
+
+  return (
+    <>
+      {imgs.map((src, i) => (
+        <img 
+          key={src} 
+          src={src} 
+          alt={cat} 
+          loading="lazy" 
+          decoding="async" 
+          style={{
+            position: i === 0 ? 'relative' : 'absolute',
+            top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover',
+            opacity: i === idx ? 1 : 0,
+            transition: 'opacity 0.8s ease-in-out',
+            zIndex: i === idx ? 1 : 0
+          }} 
+        />
+      ))}
+      <span className="wd-gallery-chip">{cat}</span>
+    </>
+  );
+}
+
 function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStart: (branch: MainBranch) => void, onAdmin: () => void, onMyProjects: () => void, systemContent?: any }) {
   const [clickCount, setClickCount] = useState(0);
   const [scrolled, setScrolled] = useState(false);
@@ -2552,13 +2585,18 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
     { num: '4,9★', label: 'Đánh giá khách hàng' },
   ];
 
-  const GALLERY: { cat: string; img: string; branch: MainBranch }[] = [
-    { cat: 'Cảnh quan', img: pickLibImg('HO', 0) || '/assets/Cảnh quan/1. HO KOI SAN VUON CO DIEN_THUMB.png', branch: 'landscape' },
-    { cat: 'Cảnh quan', img: pickLibImg('HO_HIEN_DAI', 0) || '/assets/Cảnh quan/2. HO KOI SAN VUON HIEN DAI_THUMB.png', branch: 'landscape' },
-    { cat: 'Kiến trúc', img: pickLibImg('BIET_THU', 0) || '/assets/Kiến trúc/2. BIET THU_THUMB.png', branch: 'architecture' },
-    { cat: 'Kiến trúc', img: pickLibImg('NHA_PHO', 0) || '/assets/Kiến trúc/1. NHA PHO_THUMB.png', branch: 'architecture' },
-    { cat: 'Nội thất', img: pickLibImg('HIEN_DAI', 0) || '/assets/Nội thất/1. HIEN DAI _ THUMB.png', branch: 'interior' },
-    { cat: 'Nội thất', img: pickLibImg('TAN_CO_DIEN', 0) || '/assets/Nội thất/2. TAN CO DIEN_THUMB.png', branch: 'interior' },
+  const getImgs = (key: string, fallback: string) => {
+    const arr = [pickLibImg(key, 0), pickLibImg(key, 1), pickLibImg(key, 2), pickLibImg(key, 3), pickLibImg(key, 4)].filter(Boolean) as string[];
+    return arr.length > 0 ? arr : [fallback];
+  };
+
+  const GALLERY: { cat: string; imgs: string[]; branch: MainBranch }[] = [
+    { cat: 'Cảnh quan', imgs: getImgs('HO', '/assets/Cảnh quan/1. HO KOI SAN VUON CO DIEN_THUMB.png'), branch: 'landscape' },
+    { cat: 'Cảnh quan', imgs: getImgs('HO_HIEN_DAI', '/assets/Cảnh quan/2. HO KOI SAN VUON HIEN DAI_THUMB.png'), branch: 'landscape' },
+    { cat: 'Kiến trúc', imgs: getImgs('BIET_THU', '/assets/Kiến trúc/2. BIET THU_THUMB.png'), branch: 'architecture' },
+    { cat: 'Kiến trúc', imgs: getImgs('NHA_PHO', '/assets/Kiến trúc/1. NHA PHO_THUMB.png'), branch: 'architecture' },
+    { cat: 'Nội thất', imgs: getImgs('HIEN_DAI', '/assets/Nội thất/1. HIEN DAI _ THUMB.png'), branch: 'interior' },
+    { cat: 'Nội thất', imgs: getImgs('TAN_CO_DIEN', '/assets/Nội thất/2. TAN CO DIEN_THUMB.png'), branch: 'interior' },
   ];
 
   const NAV_LINKS: [string, string][] = [['canh-quan','Dịch vụ'], ['quy-trinh','Quy trình'], ['du-an','Dự án'], ['lien-he','Liên hệ']];
@@ -2684,8 +2722,7 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
           <div className="wd-gallery-grid">
             {GALLERY.map((g, i) => (
               <button key={i} type="button" className="wd-gallery-tile" onClick={() => onStart(g.branch)}>
-                <img src={g.img} alt={g.cat} loading="lazy" decoding="async" />
-                <span className="wd-gallery-chip">{g.cat}</span>
+                <AutoSlideGalleryImage imgs={g.imgs} cat={g.cat} />
               </button>
             ))}
           </div>
