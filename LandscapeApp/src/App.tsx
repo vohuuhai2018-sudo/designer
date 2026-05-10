@@ -4101,15 +4101,16 @@ function BasicSelectionView({
               style={{
                 position: 'fixed',
                 inset: 0,
-                background: 'rgba(28, 26, 20, 0.78)',
-                backdropFilter: 'blur(6px)',
-                WebkitBackdropFilter: 'blur(6px)',
+                background: 'rgba(10, 10, 10, 0.85)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
                 zIndex: 4000,
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: 'flex-start',
                 justifyContent: 'center',
-                padding: 16,
-                overflowY: 'auto'
+                padding: '32px 16px',
+                overflowY: 'auto',
+                WebkitOverflowScrolling: 'touch'
               }}
               onClick={() => setSelectedImage(null)}
             >
