@@ -2684,15 +2684,24 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
             <h2 className="wd-h2">3 bước, 5 phút,<br />một bản vẽ hoàn chỉnh.</h2>
           </div>
           <ol className="wd-process-grid">
-            {STEPS.map((s) => (
-              <li key={s.n} className="wd-process-step">
-                <div className="wd-process-num-circle">
-                  <img src={s.img} alt={s.label} className="wd-process-step-img" loading="lazy" decoding="async" />
-                  <span className="wd-process-num-pip">{String(s.n).padStart(2, '0')}</span>
-                </div>
-                <h3 className="wd-process-label">{s.label}</h3>
-                <p className="wd-process-desc">{s.desc}</p>
-              </li>
+            {STEPS.map((s, i) => (
+              <React.Fragment key={s.n}>
+                <li className="wd-process-step">
+                  <div className="wd-process-num-circle">
+                    <img src={s.img} alt={s.label} className="wd-process-step-img" loading="lazy" decoding="async" />
+                    <span className="wd-process-num-pip">{String(s.n).padStart(2, '0')}</span>
+                  </div>
+                  <h3 className="wd-process-label">{s.label}</h3>
+                  <p className="wd-process-desc">{s.desc}</p>
+                </li>
+                {i < STEPS.length - 1 && (
+                  <li className="wd-process-divider">
+                    <span className="wd-divider-line"></span>
+                    <span className="wd-divider-circle"></span>
+                    <span className="wd-divider-line"></span>
+                  </li>
+                )}
+              </React.Fragment>
             ))}
           </ol>
         </div>
