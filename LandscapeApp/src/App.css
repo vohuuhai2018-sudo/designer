@@ -9326,29 +9326,13 @@ canvas {
   line-height: 1.55;
 }
 @media (max-width: 880px) {
-  .wd-process-grid { grid-template-columns: 1fr; gap: 0; }
-  .wd-process-divider {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    height: 64px;
-    width: 100%;
-    padding: 0;
+  .wd-process-grid { 
+    grid-template-columns: 1fr !important; 
+    gap: 48px !important; 
+    padding: 0 24px !important;
+    margin: 0 !important;
   }
-  .wd-divider-line {
-    width: 1.5px;
-    height: 20px;
-    background: var(--bronze-400);
-    border-radius: 2px;
-  }
-  .wd-divider-circle {
-    width: 12px;
-    height: 12px;
-    border: 1.5px solid var(--bronze-400);
-    border-radius: 50%;
-  }
+  .wd-process-divider { display: none !important; }
 }
 
 /* ── Stats strip ── */
@@ -10475,88 +10459,6 @@ canvas {
     align-items: center;
     gap: 8px;
   }
-
-  /* Process: compact horizontal row of 3 thumbs */
-  .welcome-redesign .wd-process {
-    padding: 18px 0 24px;
-    background: transparent;
-  }
-  .welcome-redesign .wd-process .wd-section-head { display: none; }
-  .welcome-redesign .wd-process-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    padding: 16px 14px;
-    margin: 0 18px;
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border-radius: 18px;
-    box-shadow: var(--shadow-soft);
-    position: relative;
-  }
-  .welcome-redesign .wd-process-grid::before { display: none; }
-  .welcome-redesign .wd-process-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    background: transparent;
-    padding: 0;
-    border-radius: 0;
-    box-shadow: none;
-    position: relative;
-  }
-  .welcome-redesign .wd-process-step::after {
-    content: '';
-    position: absolute;
-    right: -12px;
-    top: 32px;
-    width: 28px;
-    height: 1px;
-    background: repeating-linear-gradient(to right, var(--bronze-400) 0 4px, transparent 4px 8px);
-  }
-  .welcome-redesign .wd-process-step::before {
-    content: '';
-    position: absolute;
-    right: -2px;
-    top: 28px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #fff;
-    border: 1.5px solid var(--bronze-500);
-    z-index: 1;
-  }
-  .welcome-redesign .wd-process-step:last-child::after,
-  .welcome-redesign .wd-process-step:last-child::before { display: none; }
-  .welcome-redesign .wd-process-num-circle {
-    width: 64px;
-    height: 64px;
-    border-radius: 14px;
-    background: #fff;
-    border: 0;
-    box-shadow: 0 2px 10px rgba(28, 26, 20, 0.08);
-    overflow: hidden;
-    margin: 0 0 10px;
-    position: relative;
-    padding: 0;
-  }
-  .welcome-redesign .wd-process-num-circle .wd-process-step-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .welcome-redesign .wd-process-num-pip { display: none; }
-  .welcome-redesign .wd-process-step h3 {
-    font-family: var(--font-body);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--ink-900);
-    margin: 0;
-    line-height: 1.2;
-  }
-  .welcome-redesign .wd-process-step p { display: none; }
 
   /* Sections below the fold: keep visible but tighter */
   .welcome-redesign .wd-stats { padding: 32px 0; }
