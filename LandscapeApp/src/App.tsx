@@ -4743,10 +4743,11 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                    className="processing-video"
                    src="/loading-bird.mp4"
                    autoPlay
-                   loop
                    muted
                    playsInline
                    preload="auto"
+                   onLoadedData={(e) => { e.currentTarget.currentTime = 1; }}
+                   onEnded={(e) => { e.currentTarget.currentTime = 1; e.currentTarget.play(); }}
                  />
                </div>
                <div className="processing-headline">
