@@ -136,7 +136,6 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
 
         setLoaded(true);
       }
-      }
     };
 
     let attempt = 0;
