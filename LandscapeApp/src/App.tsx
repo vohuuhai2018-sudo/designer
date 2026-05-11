@@ -61,7 +61,7 @@ import {
   Cpu,
   FileCheck2,
   UploadCloud, Download,
-  Lightbulb
+  Lightbulb, Star, Briefcase
 } from 'lucide-react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -2685,7 +2685,7 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
               <a key={id} onClick={() => { setNavOpen(false); scrollTo(id); }}>{label}</a>
             ))}
           </nav>
-          <button className="btn btn-primary wd-header-cta" onClick={() => scrollTo('canh-quan')}>Đặt thiết kế</button>
+          <button className="btn btn-primary wd-header-cta" onClick={() => scrollTo('canh-quan')}>Thiết kế</button>
           <button className="wd-burger" aria-label="menu" onClick={() => setNavOpen(!navOpen)}>
             <span /><span /><span />
           </button>
@@ -2705,15 +2705,15 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
           <h1 className="wd-display">Thiết kế & Diễn họa 3D<br /><em>chuyên nghiệp trong 5 phút.</em></h1>
           <p className="wd-hero-sub">Nâng tầm không gian sống với sự kết hợp hoàn hảo giữa công nghệ AI và tư duy KTS chuyên sâu. Render 3D thần tốc hoặc thiết kế bản vẽ kỹ thuật chi tiết chỉ từ 24h.</p>
           <div className="wd-hero-actions">
-            <button className="btn btn-primary btn-lg" onClick={() => scrollTo('canh-quan')}>Đặt thiết kế ngay <ArrowRight size={18} /></button>
+            <button className="btn btn-primary btn-lg" onClick={() => scrollTo('canh-quan')}>Thiết kế ngay <ArrowRight size={20} /></button>
             <button className="btn btn-ghost-light btn-lg" onClick={() => scrollTo('du-an')}>Xem mẫu thiết kế</button>
           </div>
           <div className="wd-hero-strip">
-            <span><b>4,9★</b> đánh giá</span>
+            <span><Star size={18} fill="#f59e0b" stroke="#f59e0b" /> <b>4,9</b> đánh giá</span>
             <span className="wd-strip-sep" />
-            <span><b>5000+</b> dự án</span>
+            <span><Briefcase size={18} /> <b>5000+</b> dự án</span>
             <span className="wd-strip-sep" />
-            <span><b>5 phút</b> AI render</span>
+            <span><Zap size={18} /> <b>5 phút</b> AI render</span>
           </div>
         </div>
         </div>
