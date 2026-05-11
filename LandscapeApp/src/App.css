@@ -9542,7 +9542,7 @@ canvas {
 /* ── Floating contact ── */
 .wd-float {
   position: fixed;
-  bottom: 24px;
+  bottom: 12px;
   right: 24px;
   z-index: 200;
   display: flex;
@@ -10796,7 +10796,7 @@ canvas {
 /* Force iOS Safari Fix */
 @media (max-width: 720px) {
   .wd-float {
-    bottom: max(64px, calc(32px + env(safe-area-inset-bottom))) !important; 
+    bottom: max(48px, calc(16px + env(safe-area-inset-bottom))) !important; 
     right: 20px !important;
     z-index: 9999 !important;
   }
