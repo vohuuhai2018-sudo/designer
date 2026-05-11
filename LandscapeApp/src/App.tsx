@@ -4774,28 +4774,9 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
     if (!isAuto) return;
     const isDone = project?.status === 'done';
 
-    /*
-    if
-    */ (!isDone) {
-      if (!audioRef.current) {
-        audioRef.current = new Audio(''); // Tạm tắt nhạc chờ
-        audioRef.current.loop = true;
-      }
-      if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
-      audioRef.current.volume = 0.2;
-      audioRef.current.play().catch(e => {
-          console.log("Music blocked, waiting for interaction.");
-          const playOnAction = () => {
-              if (audioRef.current && !project?.status.includes('done')) {
-                audioRef.current.volume = 0.2;
-                audioRef.current.play().catch(() => {});
-              }
-              window.removeEventListener('mousedown', playOnAction);
-              window.removeEventListener('touchstart', playOnAction);
-          };
-          window.addEventListener('mousedown', playOnAction);
-          window.addEventListener('touchstart', playOnAction);
-      });
+    // NHẠC CHỜ TẠM TẮT THEO YÊU CẦU
+    if (!isDone) {
+      // Disabled logic
     } else {
       // FORCE STOP / FADE OUT
       const stopMusic = () => {
@@ -4817,7 +4798,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
             clearInterval(fadeIntervalRef.current);
             fadeIntervalRef.current = null;
           }
-        }, 100); // Faster fade out (1s total)
+        }, 100);
       };
       stopMusic();
     }
