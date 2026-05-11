@@ -2808,6 +2808,14 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
 }
 
 function UploadView({
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const audio = new Audio('/assets/Voice hướng dẫn.wav');
+      audio.play().catch(e => console.log("Autoplay blocked:", e));
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
   rawImage, onUpload, extraAssets, onExtraAssetsChange, onProceed, onBack, onJumpToStep, systemContent,
   service, note, referenceModelUrl, onNoteChange,
   interiorComboImages, interiorSiteImages, onInteriorSiteImageChange,
