@@ -107,11 +107,24 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
         // 1. Draw Original Image
         ctx.drawImage(img, 0, 0);
 
-        // 2. Add single watermark at bottom-right (clear but subtle)
-        ctx.globalAlpha = 0.65; 
-        const wmWidth = canvas.width * 0.38;
+        // 2. Add VERY subtle diagonal pattern (prevents easy AI removal/cropping)
+        ctx.globalAlpha = 0.08; 
+        const patternSize = canvas.width * 0.15;
+        const patternH = (watermark.naturalHeight / watermark.naturalWidth) * patternSize;
+        for(let x = -patternSize; x < canvas.width + patternSize; x += patternSize * 2.5) {
+          for(let y = -patternH; y < canvas.height + patternH; y += patternH * 3) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(-Math.PI / 8);
+            ctx.drawImage(watermark, 0, 0, patternSize, patternH);
+            ctx.restore();
+          }
+        }
+
+        // 3. Add single clear watermark at bottom-right
+        ctx.globalAlpha = 0.7; 
+        const wmWidth = canvas.width * 0.35;
         const wmHeight = (watermark.naturalHeight / watermark.naturalWidth) * wmWidth;
-        // Padding from edges: 2%
         const padding = canvas.width * 0.02;
         ctx.drawImage(watermark, canvas.width - wmWidth - padding, canvas.height - wmHeight - padding, wmWidth, wmHeight);
 
@@ -256,7 +269,7 @@ function BeforeAfterSlider({
       onPointerCancel={onPointerUp}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <img src={after} alt={alt || 'Sau'} draggable={false}
+      <ProtectedImage src={after} alt={alt || 'Sau'} 
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', inset: 0, clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
         <img src={before} alt={alt ? `${alt} (trước)` : 'Trước'} draggable={false}
