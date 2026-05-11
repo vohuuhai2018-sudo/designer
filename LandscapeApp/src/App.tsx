@@ -4734,7 +4734,7 @@ function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewRe
   );
 }
 
-function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isRetrying = false, onBack, isShareView = false }: { projectId: string; service: string; onReset: () => void; retryCount?: number; onRetry?: () => void; isRetrying?: boolean; onBack?: () => void; isShareView?: boolean }) {
+function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isRetrying = false, onBack, isShareView = false }: { projectId: string; service: string; onReset: () => void; retryCount?: number; onRetry?: () => void; isRetrying?: boolean; onBack?: () => void; isShareView?: boolean }) {\n  const [project, setProject] = useState<Project | null>(null);\n  const isPaid = (project as any)?.payment?.status === 'paid';
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fadeIntervalRef = useRef<any>(null);
 
@@ -4790,14 +4790,14 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
   const [pass2Picked, setPass2Picked] = useState('');
       const [pass2Starting, setPass2Starting] = useState(false);
   const [pass2Msg, setPass2Msg] = useState('');
-  const [project, setProject] = useState<Project | null>(null);
+  
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [previousImages, setPreviousImages] = useState<string[]>([]);
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef<number>(Date.now());
   const presetPay = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('pay') : null;
   const [paymentOpen, setPaymentOpen] = useState(!!presetPay);
-  const isPaid = (project as any)?.payment?.status === 'paid';
+  
 
   useEffect(() => {
     // Poll for Gói Cơ bản and Gói Nâng cao
