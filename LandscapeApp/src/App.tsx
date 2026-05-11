@@ -2564,20 +2564,11 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
       hasPlayed = true;
 
       audio = new Audio('/assets/Voice trang chủ.wav');
-      audio.volume = 0;
+      // Bỏ hiệu ứng to dần, phát âm lượng tối đa ngay lập tức
+      audio.volume = 1;
       
       audio.play().then(() => {
-        // Fade in smoothly over 3 seconds
-        let vol = 0;
-        fadeTimer = setInterval(() => {
-          vol += 0.05;
-          if (vol >= 1) {
-            if (audio) audio.volume = 1;
-            clearInterval(fadeTimer);
-          } else {
-            if (audio) audio.volume = vol;
-          }
-        }, 150);
+        // Không cần setInterval để tăng volume
       }).catch(e => {
         console.log("Audio autoplay blocked by browser policy. Waiting for interaction.", e);
         hasPlayed = false; // Reset to try again on interaction
