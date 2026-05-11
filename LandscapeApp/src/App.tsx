@@ -4938,7 +4938,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
            <div className="done-hero">
              <div className="done-check"><Check size={28} strokeWidth={3} /></div>
              <div className="eyebrow body-eyebrow done-eyebrow">Hoàn tất · {allImages.length} phương án</div>
-             <h1 className="done-title">Bản vẽ đã sẵn sàng.<br /><em>Anh/chị thấy thế nào?</em></h1>
+             <h1 className="done-title">Bản vẽ đã sẵn sàng.</h1>
              <p className="done-sub">Kéo thanh ngang để so sánh trước &amp; sau. Chọn phương án ưng ý để tạo bổ sung 7 bản chi tiết.</p>
            </div>
          )}

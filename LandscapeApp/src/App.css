@@ -9692,10 +9692,13 @@ canvas {
   color: var(--bronze-600);
 }
 .done-sub {
-  font-size: 16px;
+  font-size: 17px;
   color: var(--ink-700);
-  line-height: 1.6;
-  margin: 0;
+  line-height: 1.65;
+  margin: 16px auto 0;
+  max-width: 680px;
+  text-wrap: balance;
+  opacity: 0.9;
 }
 
 /* Results grid 2x2 */
