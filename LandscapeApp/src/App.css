@@ -9674,48 +9674,77 @@ canvas {
   align-items: center;
 }
 
-.done-status-bar {
+/* Animated ring around checkmark */
+.done-check-ring {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, #4a8c5c, #a3d9a5, #4a8c5c);
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
-  animation: done-bar-in 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  justify-content: center;
+  margin-bottom: 20px;
+  animation: done-ring-spin 3s linear infinite, done-ring-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 6px 20px rgba(74, 140, 92, 0.2);
 }
 
-.done-check {
-  width: 48px;
-  height: 48px;
+.done-check-circle {
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #528c5f, #2d462c);
+  background: linear-gradient(160deg, #5a9e6b, #2f5238);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 24px rgba(45, 70, 44, 0.25);
-  flex-shrink: 0;
-  border: 2px solid rgba(255,255,255,0.2);
+  box-shadow: inset 0 2px 4px rgba(255,255,255,0.25), 0 4px 12px rgba(47, 82, 56, 0.3);
 }
 
-.done-eyebrow-wrapper {
-  display: flex;
+@keyframes done-ring-spin {
+  from { background: conic-gradient(from 0deg, #4a8c5c, #a3d9a5, #4a8c5c); }
+  50% { background: conic-gradient(from 180deg, #4a8c5c, #a3d9a5, #4a8c5c); }
+  to { background: conic-gradient(from 360deg, #4a8c5c, #a3d9a5, #4a8c5c); }
+}
+
+@keyframes done-ring-in {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* Status badge pill */
+.done-badge {
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-}
-
-.done-eyebrow-line {
-  width: 40px;
-  height: 1.5px;
-  background: linear-gradient(to right, #b45309, transparent);
-  opacity: 0.6;
-}
-
-.done-eyebrow {
-  font-size: 13px;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(74, 140, 92, 0.08), rgba(74, 140, 92, 0.03));
+  border: 1px solid rgba(74, 140, 92, 0.2);
+  border-radius: 50px;
+  padding: 8px 20px;
+  margin-bottom: 24px;
+  font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.15em;
-  color: #2d462c;
-  opacity: 0.85;
-  white-space: nowrap;
+  letter-spacing: 0.18em;
+  color: #2f5238;
+  animation: done-badge-in 0.7s 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.done-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4a8c5c;
+  animation: done-dot-pulse 2s ease-in-out infinite;
+}
+
+@keyframes done-badge-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes done-dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.7); }
 }
 
 .done-title {
@@ -9743,10 +9772,10 @@ canvas {
 
 @media (max-width: 600px) {
   .done-hero { margin-bottom: 32px; padding: 0 20px; }
-  .done-status-bar { gap: 12px; margin-bottom: 16px; }
-  .done-check { width: 40px; height: 40px; }
-  .done-eyebrow-line { width: 24px; }
-  .done-eyebrow { font-size: 11px; letter-spacing: 0.1em; }
+  .done-check-ring { width: 56px; height: 56px; margin-bottom: 14px; }
+  .done-check-circle { width: 44px; height: 44px; }
+  .done-check-circle svg { width: 20px; height: 20px; }
+  .done-badge { padding: 6px 16px; font-size: 10.5px; letter-spacing: 0.12em; margin-bottom: 16px; }
   .done-title { font-size: 32px; }
   .done-sub { font-size: 15px; }
 }

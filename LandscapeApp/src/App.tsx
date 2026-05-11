@@ -5058,16 +5058,18 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
            </>
          ) : (
            <div className="done-hero">
-              <div className="done-status-bar">
-                <div className="done-check"><Check size={20} strokeWidth={3} /></div>
-                <div className="done-eyebrow-wrapper">
-                  <div className="done-eyebrow-line" />
-                  <span className="done-eyebrow">HOÀN TẤT · {allImages.length} PHƯƠNG ÁN</span>
-                </div>
-              </div>
-              <h1 className="done-title">Bản vẽ đã sẵn sàng.</h1>
-              <p className="done-sub">Kéo thanh ngang để so sánh trước &amp; sau. Chọn phương án ưng ý để tạo bổ sung 7 bản chi tiết.</p>
-            </div>
+             <div className="done-check-ring">
+               <div className="done-check-circle">
+                 <Check size={26} strokeWidth={3} />
+               </div>
+             </div>
+             <div className="done-badge">
+               <span className="done-badge-dot" />
+               <span>HOÀN TẤT · {allImages.length} PHƯƠNG ÁN</span>
+             </div>
+             <h1 className="done-title">Bản vẽ đã sẵn sàng.</h1>
+             <p className="done-sub">Kéo thanh ngang để so sánh trước &amp; sau. Chọn phương án ưng ý để tạo bổ sung 7 bản chi tiết.</p>
+           </div>
          )}
 
          {allImages.length > 0 && isDone && (
