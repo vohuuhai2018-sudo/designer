@@ -4780,12 +4780,12 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
         audioRef.current.loop = true;
       }
       if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
-      audioRef.current.volume = 0.3;
+      audioRef.current.volume = 0.2;
       audioRef.current.play().catch(e => {
           console.log("Music blocked, waiting for interaction.");
           const playOnAction = () => {
               if (audioRef.current && !project?.status.includes('done')) {
-                audioRef.current.volume = 0.3;
+                audioRef.current.volume = 0.2;
                 audioRef.current.play().catch(() => {});
               }
               window.removeEventListener('mousedown', playOnAction);
@@ -4806,7 +4806,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
               audioRef.current.volume -= 0.1;
             } else {
               audioRef.current.pause();
-              audioRef.current.volume = 0.3;
+              audioRef.current.volume = 0.2;
               audioRef.current.currentTime = 0;
               clearInterval(fadeIntervalRef.current);
               fadeIntervalRef.current = null;

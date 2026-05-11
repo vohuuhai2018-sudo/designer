@@ -1728,6 +1728,10 @@ app.post('/api/projects/:id/pass2', async (req, res) => {
     const project = await Project.findOne({ id: req.params.id });
     if (!project) return res.status(404).json({ error: 'Project not found' });
 
+    if (project.payment?.status !== 'paid') {
+      return res.status(402).json({ error: 'Yêu cầu thanh toán để tiếp tục bước này.' });
+    }
+
     if (project.pass2Results?.status === 'running') {
       return res.status(409).json({ error: 'Pass 2 đang chạy cho dự án này, vui lòng chờ.' });
     }
