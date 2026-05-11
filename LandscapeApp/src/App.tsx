@@ -2553,35 +2553,34 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
     let fadeTimer: any = null;
     let hasPlayed = false;
 
-    const playWithFade = () => {
+    const playDirectly = () => {
       if (hasPlayed) return;
       hasPlayed = true;
 
       audio = new Audio('/assets/Voice trang chủ.wav');
-      // Bỏ hiệu ứng to dần, phát âm lượng tối đa ngay lập tức
-      audio.volume = 1;
+      audio.volume = 1; // Luôn giữ 100% âm lượng, không to nhỏ
       
       audio.play().then(() => {
-        // Không cần setInterval để tăng volume
+        console.log("Home voice playing at full volume.");
       }).catch(e => {
-        console.log("Audio autoplay blocked by browser policy. Waiting for interaction.", e);
-        hasPlayed = false; // Reset to try again on interaction
+        console.log("Autoplay blocked, will play on next interaction.");
+        hasPlayed = false;
       });
     };
 
     const handleInteraction = () => {
-      playWithFade();
+      playDirectly();
       window.removeEventListener('mousedown', handleInteraction);
       window.removeEventListener('touchstart', handleInteraction);
       window.removeEventListener('keydown', handleInteraction);
     };
 
-    window.addEventListener('mousedown', handleInteraction);
-    window.addEventListener('touchstart', handleInteraction);
-    window.addEventListener('keydown', handleInteraction);
+    window.addEventListener('mousedown', handleInteraction, { once: true });
+    window.addEventListener('touchstart', handleInteraction, { once: true });
+    window.addEventListener('keydown', handleInteraction, { once: true });
 
-    // Initial delay attempt
-    const timer = setTimeout(playWithFade, 3000);
+    // Cố gắng phát ngay sau 500ms (giảm trễ từ 3000ms xuống)
+    const timer = setTimeout(playDirectly, 500);
 
     return () => {
       clearTimeout(timer);
