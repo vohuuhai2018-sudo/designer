@@ -10727,12 +10727,7 @@ canvas {
   }
 }
 
-.wd-float-support { 
-  background: #0068FF; 
-  color: #fff; 
-  box-shadow: 0 12px 24px rgba(0, 104, 255, 0.3);
-  padding: 14px 28px !important;
-}
+
 .wd-float-support:hover {
   background: #0056D2;
   box-shadow: 0 18px 36px rgba(0, 104, 255, 0.45);
@@ -10743,11 +10738,57 @@ canvas {
     bottom: 40px !important; /* Đẩy lên cao hơn để không bị che bởi thanh điều hướng browser */
     right: 20px !important;
   }
-  .wd-float-support { 
-    border-radius: 999px !important; 
-    padding: 10px 18px !important; 
-    font-size: 13px !important;
-    box-shadow: 0 8px 20px rgba(0, 104, 255, 0.4) !important;
-  }
+  
   .wd-float-support span { display: inline !important; }
+}
+
+/* Redesign support button as a fixed icon */
+.wd-float-support-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #0068FF;
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(0, 104, 255, 0.4);
+  text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+}
+
+.wd-float-support-icon:hover {
+  transform: scale(1.1) translateY(-5px);
+  background: #0056D2;
+  box-shadow: 0 15px 45px rgba(0, 104, 255, 0.5);
+}
+
+/* Pulsing effect to attract attention */
+.wd-float-support-icon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #0068FF;
+  z-index: -1;
+  animation: supportPulse 2s infinite;
+}
+
+@keyframes supportPulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+@media (max-width: 720px) {
+  .wd-float {
+    bottom: 30px !important;
+    right: 20px !important;
+    left: auto !important;
+  }
+  .wd-float-support-icon {
+    width: 60px;
+    height: 60px;
+    box-shadow: 0 8px 25px rgba(0, 104, 255, 0.45);
+  }
 }

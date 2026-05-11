@@ -2788,8 +2788,8 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
 
       {/* Floating contact */}
       <div className="wd-float">
-        <a className="wd-float-pill wd-float-support" href="https://zalo.me/0888220044" target="_blank" rel="noopener noreferrer">
-          <MessageCircle size={20} /><span>Chat Hỗ Trợ</span>
+        <a className="wd-float-support-icon" href="https://zalo.me/0888220044" target="_blank" rel="noopener noreferrer" title="Chat Hỗ Trợ">
+          <MessageCircle size={30} />
         </a>
       </div>
     </motion.div>
