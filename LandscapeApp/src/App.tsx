@@ -60,7 +60,6 @@ import {
   Lock,
   Cpu,
   FileCheck2,
-  PhoneCall,
   UploadCloud,
   Lightbulb
 } from 'lucide-react';
@@ -2789,11 +2788,8 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
 
       {/* Floating contact */}
       <div className="wd-float">
-        <a className="wd-float-pill wd-float-tel" href="tel:0888220044">
-          <PhoneCall size={18} /><span>08 88220044</span>
-        </a>
-        <a className="wd-float-pill wd-float-zalo" href="https://zalo.me/0888220044" target="_blank" rel="noopener noreferrer">
-          <MessageCircle size={18} /><span>Chat Zalo</span>
+        <a className="wd-float-pill wd-float-support" href="https://zalo.me/0888220044" target="_blank" rel="noopener noreferrer">
+          <MessageCircle size={20} /><span>Chat Hỗ Trợ</span>
         </a>
       </div>
     </motion.div>
