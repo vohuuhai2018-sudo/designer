@@ -78,87 +78,86 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
 
+  const drawWithWatermark = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, img: HTMLImageElement, wm: HTMLImageElement) => {
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    
+    // 1. Draw Original Image
+    ctx.drawImage(img, 0, 0);
+
+    // 2. Add VERY subtle diagonal pattern
+    ctx.globalAlpha = 0.08; 
+    const patternSize = canvas.width * 0.15;
+    const wmAspect = wm.naturalHeight / wm.naturalWidth;
+    const patternH = wmAspect * patternSize;
+    for(let x = -patternSize; x < canvas.width + patternSize; x += patternSize * 2.5) {
+      for(let y = -patternH; y < canvas.height + patternH; y += patternH * 3) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(-Math.PI / 8);
+        ctx.drawImage(wm, 0, 0, patternSize, patternH);
+        ctx.restore();
+      }
+    }
+
+    // 3. Add single clear watermark at bottom-right
+    ctx.globalAlpha = 0.7; 
+    const wmWidth = canvas.width * 0.35;
+    const wmHeight = wmAspect * wmWidth;
+    const padding = canvas.width * 0.02;
+    ctx.drawImage(wm, canvas.width - wmWidth - padding, canvas.height - wmHeight - padding, wmWidth, wmHeight);
+    
+    ctx.globalAlpha = 1.0;
+  };
+
   useEffect(() => {
-    setLoaded(false);
-    setFailed(false);
-    const canvas = canvasRef.current;
-    if (!canvas || !src) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
     let cancelled = false;
     let retryTimer: any = null;
+    setLoaded(false);
+    setFailed(false);
 
-    const img = new Image();
-    const watermark = new Image();
+    const mainImg = new Image();
+    const wmImg = new Image();
+    mainImg.crossOrigin = "anonymous";
+    
+    let mainLoaded = false;
+    let wmLoaded = false;
 
-    img.crossOrigin = "anonymous";
-    watermark.crossOrigin = "anonymous";
-
-    let loadedCount = 0;
-    const onLoaded = () => {
+    const checkAndDraw = () => {
       if (cancelled) return;
-      loadedCount++;
-      if (loadedCount === 2) {
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-
-        // 1. Draw Original Image
-        ctx.drawImage(img, 0, 0);
-
-        // 2. Add VERY subtle diagonal pattern (prevents easy AI removal/cropping)
-        ctx.globalAlpha = 0.08; 
-        const patternSize = canvas.width * 0.15;
-        const patternH = (watermark.naturalHeight / watermark.naturalWidth) * patternSize;
-        for(let x = -patternSize; x < canvas.width + patternSize; x += patternSize * 2.5) {
-          for(let y = -patternH; y < canvas.height + patternH; y += patternH * 3) {
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.rotate(-Math.PI / 8);
-            ctx.drawImage(watermark, 0, 0, patternSize, patternH);
-            ctx.restore();
-          }
+      if (mainLoaded && wmLoaded) {
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext('2d');
+        if (canvas && ctx) {
+          drawWithWatermark(ctx, canvas, mainImg, wmImg);
+          setLoaded(true);
         }
-
-        // 3. Add single clear watermark at bottom-right
-        ctx.globalAlpha = 0.7; 
-        const wmWidth = canvas.width * 0.35;
-        const wmHeight = (watermark.naturalHeight / watermark.naturalWidth) * wmWidth;
-        const padding = canvas.width * 0.02;
-        ctx.drawImage(watermark, canvas.width - wmWidth - padding, canvas.height - wmHeight - padding, wmWidth, wmHeight);
-
-        setLoaded(true);
       }
     };
 
-    let attempt = 0;
-    const MAX_ATTEMPTS = 4;
-    const tryLoad = () => {
+    mainImg.onload = () => { mainLoaded = true; checkAndDraw(); };
+    wmImg.onload = () => { wmLoaded = true; checkAndDraw(); };
+    
+    mainImg.onerror = () => {
       if (cancelled) return;
-      attempt++;
-      // Cache-buster trong query string KHÔNG ảnh hưởng SW (URL khác → SW
-      // sẽ fetch lại; rate-limit thường reset trong 1-3s).
-      img.src = attempt === 1 ? src : `${src}${src.includes('?') ? '&' : '?'}r=${attempt}`;
+      setFailed(true);
+      setLoaded(true);
+    };
+    wmImg.onerror = () => {
+      wmLoaded = true;
+      const dummy = new Image();
+      dummy.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+      dummy.onload = () => { 
+        if (!cancelled && mainLoaded) {
+          const ctx = canvasRef.current?.getContext('2d');
+          if (ctx) drawWithWatermark(ctx, canvasRef.current!, mainImg, dummy);
+          setLoaded(true);
+        }
+      };
     };
 
-    img.onload = onLoaded;
-    watermark.onload = onLoaded;
-    img.onerror = () => {
-      if (cancelled) return;
-      if (attempt < MAX_ATTEMPTS) {
-        // Backoff tăng dần: 1s, 2.5s, 5s.
-        const delay = [1000, 2500, 5000][attempt - 1] || 5000;
-        retryTimer = setTimeout(tryLoad, delay);
-      } else {
-        // Hết retry → hiện fallback state.
-        setFailed(true);
-        setLoaded(true);
-      }
-    };
-
-    watermark.src = '/assets/CHU KY _ HAI VO.png';
-    tryLoad();
+    wmImg.src = '/assets/watermark.png';
+    mainImg.src = src;
 
     return () => {
       cancelled = true;
@@ -169,24 +168,8 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
   const handleManualRetry = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    // Trigger remount via key change — forces useEffect to re-run with same src.
-    // Simpler: just toggle failed state and let component re-trigger.
     setFailed(false);
     setLoaded(false);
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-        ctx.drawImage(img, 0, 0);
-        setLoaded(true);
-      };
-      img.onerror = () => { setFailed(true); setLoaded(true); };
-      img.src = `${src}${src.includes('?') ? '&' : '?'}m=${Date.now()}`;
-    }
   };
 
   return (
