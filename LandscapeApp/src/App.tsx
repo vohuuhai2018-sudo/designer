@@ -2863,7 +2863,7 @@ function UploadView({
   useEffect(() => {
     const timer = setTimeout(() => {
       const audio = new Audio('/assets/Voice hướng dẫn.wav');
-      audio.play().catch(() => console.log("Autoplay blocked:", e));
+      audio.play().catch(e => console.log("Autoplay blocked:", e));
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
