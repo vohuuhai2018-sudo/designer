@@ -101,28 +101,41 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
       if (cancelled) return;
       loadedCount++;
       if (loadedCount === 2) {
-        // Cấu hình kích thước canvas theo ảnh gốc để không mất nét
         canvas.width = img.naturalWidth;
         canvas.height = img.naturalHeight;
 
-        // 1. Vẽ ảnh gốc
+        // 1. Draw Original Image
         ctx.drawImage(img, 0, 0);
 
-        // 2. Cấu hình Logo "nướng" vào ảnh
-        const wmWidth = canvas.width * 0.45; // 45% chiều rộng ảnh
-        const wmHeight = (watermark.naturalHeight / watermark.naturalWidth) * wmWidth;
-        const x = canvas.width - wmWidth - (canvas.width * 0.02); // Cách lề 2%
-        const y = canvas.height - wmHeight - (canvas.height * 0.02);
-
-        ctx.globalAlpha = 0.85;
-        // Hiệu ứng đổ bóng trực tiếp vào pixels
-        ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
-        ctx.shadowBlur = 15;
-        ctx.shadowOffsetX = 5;
-        ctx.shadowOffsetY = 5;
+        // 2. Add repeated watermark pattern for protection
+        ctx.globalAlpha = 0.15; // Subtle repeated pattern
+        const wmSize = canvas.width * 0.12;
+        const wmH = (watermark.naturalHeight / watermark.naturalWidth) * wmSize;
         
-        ctx.drawImage(watermark, x, y, wmWidth, wmHeight);
+        for(let x = -wmSize; x < canvas.width + wmSize; x += wmSize * 1.8) {
+          for(let y = -wmH; y < canvas.height + wmH; y += wmH * 2.2) {
+            ctx.save();
+            ctx.translate(x + wmSize, y + wmH);
+            ctx.rotate(-Math.PI / 8);
+            ctx.drawImage(watermark, -wmSize/2, -wmH/2, wmSize, wmH);
+            ctx.restore();
+          }
+        }
+
+        // 3. Add large central watermark
+        ctx.globalAlpha = 0.5;
+        const mainWmW = canvas.width * 0.55;
+        const mainWmH = (watermark.naturalHeight / watermark.naturalWidth) * mainWmW;
+        ctx.drawImage(watermark, (canvas.width - mainWmW)/2, (canvas.height - mainWmH)/2, mainWmW, mainWmH);
+
+        // 4. Add solid bottom-right branding
+        ctx.globalAlpha = 0.85;
+        const brandW = canvas.width * 0.4;
+        const brandH = (watermark.naturalHeight / watermark.naturalWidth) * brandW;
+        ctx.drawImage(watermark, canvas.width - brandW - (canvas.width * 0.02), canvas.height - brandH - (canvas.height * 0.02), brandW, brandH);
+
         setLoaded(true);
+      }
       }
     };
 
@@ -5140,7 +5153,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                          onClick={() => setPass2Picked(url)}
                          aria-pressed={isPicked}
                        >
-                         <img decoding="async" loading="lazy" src={url} alt={label} />
+                         <ProtectedImage src={url} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
                          <span>{label}</span>
                          {isPicked && <span className="pass2-thumb-tick"><Check size={12} strokeWidth={3} /></span>}
                        </button>
