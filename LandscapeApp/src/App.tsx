@@ -2331,7 +2331,8 @@ export default function App() {
       {createPortal(
         <div className="wd-float">
           <a className="wd-float-support-icon" href="https://zalo.me/0888220044" target="_blank" rel="noopener noreferrer" title="Chat Hỗ Trợ">
-            <MessageCircle size={30} />
+            <User size={22} strokeWidth={2.5} />
+            <span>Hỗ trợ</span>
           </a>
         </div>,
         document.body

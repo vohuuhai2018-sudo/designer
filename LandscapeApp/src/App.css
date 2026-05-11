@@ -10756,15 +10756,17 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
+  gap: 10px;
+  padding: 12px 24px;
+  border-radius: 50px;
   background: #0068FF;
   color: #fff;
   box-shadow: 0 10px 30px rgba(0, 104, 255, 0.4);
   text-decoration: none;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
+  font-weight: 700;
+  font-size: 15px;
 }
 
 .wd-float-support-icon:hover {
@@ -10796,8 +10798,8 @@ canvas {
     left: auto !important;
   }
   .wd-float-support-icon {
-    width: 60px;
-    height: 60px;
+    padding: 10px 20px;
+    font-size: 14px;
     box-shadow: 0 8px 25px rgba(0, 104, 255, 0.45);
   }
 }
