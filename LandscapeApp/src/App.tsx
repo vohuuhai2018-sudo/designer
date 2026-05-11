@@ -5224,6 +5224,11 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                    disabled={!pass2Picked || pass2Starting}
                    onClick={async () => {
                      if (!pass2Picked) return;
+                     if (!isPaid) {
+                       setPaymentOpen(true);
+                       return;
+                     }
+
                      setPass2Starting(true);
                      setPass2Msg('');
                      try {
@@ -5250,31 +5255,61 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
              )}
 
              {/* PASS 2 PROGRESS */}
-             {project?.pass2Results && (
+             {project?.pass2Results && (() => {
+               const p2tasks = project.pass2Results.tasks || [];
+               const p2done = p2tasks.filter(t => t.status === 'done').length;
+               const p2total = p2tasks.length || 7;
+               const p2pct = Math.round((p2done / p2total) * 100);
+               const p2Running = project.pass2Results.status === 'running';
+               const p2Finished = project.pass2Results.status === 'done';
+               const p2HasImages = p2tasks.some(t => t.url);
+               return (
                <div className="pass2-progress">
                  <div className="pass2-progress-head">
                    <Layers size={18} />
-                   <strong>Bản bổ sung — {project.pass2Results.tasks?.filter(t => t.status === 'done').length || 0}/7 xong</strong>
-                   {project.pass2Results.status === 'running' && <span className="pass2-progress-tag">đang xử lý…</span>}
-                   {project.pass2Results.status === 'done' && <span className="pass2-progress-tag is-ok">Hoàn tất</span>}
+                   <strong>Bản bổ sung — {p2done}/{p2total} xong</strong>
+                   {p2Running && <span className="pass2-progress-tag">đang xử lý…</span>}
+                   {p2Finished && <span className="pass2-progress-tag is-ok">Hoàn tất</span>}
                    {project.pass2Results.status === 'failed' && <span className="pass2-progress-tag is-err">Lỗi</span>}
                  </div>
+                 {p2Running && (
+                   <div className="pass2-bird-section">
+                     <div className="processing-video-frame" style={{ maxWidth: 220, margin: '0 auto 16px' }}>
+                       <video className="processing-video" src="/loading-bird.mp4"
+                         autoPlay muted playsInline preload="auto" loop
+                         onLoadedData={(e) => { e.currentTarget.currentTime = 1; }}
+                         onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration && v.currentTime < 0.95) { v.currentTime = 1; } }}
+                       />
+                     </div>
+                     <div className="processing-progress-bar-wrap" style={{ maxWidth: 400, margin: '0 auto' }}>
+                       <div className="processing-progress-bar-track">
+                         <div className="processing-progress-bar-fill" style={{ width: `${p2pct}%` }} />
+                       </div>
+                       <div className="processing-progress-meta">
+                         <span>{p2done}/{p2total} bản — {p2pct}%</span>
+                       </div>
+                     </div>
+                   </div>
+                 )}
                  <div className="pass2-progress-grid">
-                   {project.pass2Results.tasks?.map(task => (
+                   {p2tasks.map(task => (
                      <div key={task.taskId} className="pass2-task">
                        {task.url ? (
                          task.type === 'video'
                            ? <video src={task.url} controls className="pass2-task-media" />
-                           : <img decoding="async" loading="lazy" src={task.url} alt={task.label} className="pass2-task-media" />
+                           : <ProtectedImage src={task.url} alt={task.label} className="pass2-task-media" />
                        ) : (
                          <div className="pass2-task-pending">
-                           {task.status === 'failed' ? 'Thất bại' : task.status === 'running' ? 'Đang tạo…' : 'Chờ…'}
+                           {task.status === 'failed' ? 'Thất bại' : task.status === 'running' ? (
+                             <span style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                               <Loader2 size={16} className="spin" /> Đang tạo…
+                             </span>
+                           ) : 'Chờ…'}
                          </div>
                        )}
                        <div className="pass2-task-label">{task.label}</div>
                        {(task.status === 'failed' || (task.status === 'done' && !task.url)) && (
-                         <button
-                           className="pass2-task-retry"
+                         <button className="pass2-task-retry"
                            onClick={async () => {
                              try {
                                const res = await apiFetch(`/api/projects/${projectId}/pass2/retry`, {
@@ -5284,15 +5319,40 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                                if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Retry failed'); }
                              } catch (e: any) { alert(`Lỗi: ${e.message}`); }
                            }}
-                         >
-                           Thử lại
-                         </button>
+                         >Thử lại</button>
                        )}
                      </div>
                    ))}
                  </div>
+                 {p2Finished && p2HasImages && (
+                   <div style={{ textAlign: 'center', marginTop: 20 }}>
+                     <button className="btn btn-primary btn-lg"
+                       style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 15 }}
+                       onClick={() => {
+                         if (!isPaid) {
+                           setPaymentOpen(true);
+                         } else {
+                           p2tasks.forEach((task, idx) => {
+                             if (task.url) {
+                               setTimeout(() => {
+                                 const link = document.createElement('a');
+                                 link.href = task.url;
+                                 link.download = `thietke5p-bosung-${idx + 1}.${task.type === 'video' ? 'mp4' : 'jpg'}`;
+                                 link.click();
+                               }, idx * 500);
+                             }
+                           });
+                         }
+                       }}
+                     >
+                       <Download size={18} />
+                       {isPaid ? 'Tải toàn bộ bản bổ sung' : 'Tải xuống toàn bộ (Yêu cầu thanh toán)'}
+                     </button>
+                   </div>
+                 )}
                </div>
-             )}
+               );
+             })()}
 
              <button className="btn btn-ghost btn-lg done-new" onClick={onReset}>
                <Plus size={18} /> Tạo dự án mới
