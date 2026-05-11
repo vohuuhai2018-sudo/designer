@@ -60,7 +60,7 @@ import {
   Lock,
   Cpu,
   FileCheck2,
-  UploadCloud,
+  UploadCloud, Download,
   Lightbulb
 } from 'lucide-react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
