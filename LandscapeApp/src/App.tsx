@@ -5010,10 +5010,25 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                  <div key={i} className={`result-card ${isPicked ? 'is-picked' : ''}`} onClick={() => setPass2Picked(url)}>
                    <BeforeAfterSlider before={beforeUrl} after={url} alt={`Phương án ${num}`} aspectRatio="4/3" beforeLabel="Trước" afterLabel="Sau" />
                    <div className="result-meta">
-                     <span className="result-name">Phương án {num}</span>
-                     <button className="result-zoom" onClick={(e) => { e.stopPropagation(); setPreviewImage(url); }} aria-label="Phóng to">
-                       <Search size={14} />
-                     </button>
+                      <span className="result-name">Phương án {num}</span>
+                      <div className="result-actions">
+                        <button className="result-zoom" onClick={(e) => { e.stopPropagation(); setPreviewImage(url); }} title="Phóng to">
+                          <Search size={14} />
+                        </button>
+                        <button className="result-download" onClick={(e) => { 
+                          e.stopPropagation(); 
+                          if (!isPaid) {
+                            setPaymentOpen(true);
+                          } else {
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = `thietke5p-${num}.jpg`;
+                            link.click();
+                          }
+                        }} title="Tải ảnh gốc">
+                          <Download size={14} />
+                        </button>
+                      </div>
                      <span className={`result-pickdot ${isPicked ? 'is-on' : ''}`}>
                        {isPicked && <Check size={14} strokeWidth={3} />}
                      </span>
