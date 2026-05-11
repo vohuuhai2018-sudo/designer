@@ -156,7 +156,7 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
       };
     };
 
-    wmImg.src = '/assets/watermark.png';
+    wmImg.src = '/assets/CHU KY _ HAI VO.png';
     mainImg.src = src;
 
     return () => {
