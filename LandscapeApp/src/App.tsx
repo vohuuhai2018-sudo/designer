@@ -3836,14 +3836,6 @@ function ServiceView({
 }
 
 function BasicSelectionView({
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const audio = new Audio('/assets/Voice tải mẫu.wav');
-      audio.play().catch(e => console.log("Autoplay blocked:", e));
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, []);
-
   systemContent, onSelect, mainBranch, subStep, setSubStep, onBack, onJumpToStep,
   selectedCategory, onCategoryChange
 }: {
@@ -3857,6 +3849,13 @@ function BasicSelectionView({
   selectedCategory: string,
   onCategoryChange: (cat: string) => void
 }) {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const audio = new Audio('/assets/Voice tải mẫu.wav');
+      audio.play().catch(e => console.log("Autoplay blocked:", e));
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
   const t = (key: string, defaultVal: string) => systemContent.uiText?.[key] || defaultVal;
   const [selectedImage, setSelectedImage] = useState<any>(null);
   const [isUploadingCustom, setIsUploadingCustom] = useState(false);
