@@ -2541,6 +2541,14 @@ function AutoSlideGalleryImage({ imgs, cat }: { imgs: string[], cat: string }) {
 }
 
 function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStart: (branch: MainBranch) => void, onAdmin: () => void, onMyProjects: () => void, systemContent?: any }) {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const audio = new Audio('/assets/Voice trang chủ.wav');
+      audio.play().catch(e => console.log("Autoplay blocked:", e));
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const [clickCount, setClickCount] = useState(0);
   const [scrolled, setScrolled] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
@@ -3828,6 +3836,14 @@ function ServiceView({
 }
 
 function BasicSelectionView({
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const audio = new Audio('/assets/Voice tải mẫu.wav');
+      audio.play().catch(e => console.log("Autoplay blocked:", e));
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
   systemContent, onSelect, mainBranch, subStep, setSubStep, onBack, onJumpToStep,
   selectedCategory, onCategoryChange
 }: {
