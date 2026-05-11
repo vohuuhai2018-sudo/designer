@@ -118,7 +118,10 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
 
     const mainImg = new Image();
     const wmImg = new Image();
-    mainImg.crossOrigin = "anonymous";
+    
+    if (src.startsWith('http')) {
+      mainImg.crossOrigin = "anonymous";
+    }
     
     let mainLoaded = false;
     let wmLoaded = false;
