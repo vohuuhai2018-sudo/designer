@@ -1825,7 +1825,7 @@ export default function App() {
           setProjects(data);
           setIsLoadingProjects(false);
         })
-        .catch(() => {
+        .catch(err => {
           console.error('Failed to load projects:', err);
           setIsLoadingProjects(false);
         });
@@ -3889,7 +3889,7 @@ function BasicSelectionView({
     if (subStep !== 'gallery') return;
     const timer = setTimeout(() => {
       const audio = new Audio('/assets/Voice tải mẫu.wav');
-      audio.play().catch(() => console.log("Autoplay blocked:", e));
+      audio.play().catch(e => console.log("Autoplay blocked:", e));
     }, 3000);
     return () => clearTimeout(timer);
   }, [subStep]);
