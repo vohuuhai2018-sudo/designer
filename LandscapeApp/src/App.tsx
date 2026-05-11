@@ -107,11 +107,13 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
         // 1. Draw Original Image
         ctx.drawImage(img, 0, 0);
 
-        // 2. Add single large central watermark (faint)
-        ctx.globalAlpha = 0.35; 
-        const wmWidth = canvas.width * 0.65;
+        // 2. Add single watermark at bottom-right (clear but subtle)
+        ctx.globalAlpha = 0.65; 
+        const wmWidth = canvas.width * 0.38;
         const wmHeight = (watermark.naturalHeight / watermark.naturalWidth) * wmWidth;
-        ctx.drawImage(watermark, (canvas.width - wmWidth)/2, (canvas.height - wmHeight)/2, wmWidth, wmHeight);
+        // Padding from edges: 2%
+        const padding = canvas.width * 0.02;
+        ctx.drawImage(watermark, canvas.width - wmWidth - padding, canvas.height - wmHeight - padding, wmWidth, wmHeight);
 
         setLoaded(true);
       }
