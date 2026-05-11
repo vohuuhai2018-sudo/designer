@@ -10579,11 +10579,13 @@ canvas {
   .welcome-redesign .wd-process-num-pip { display: none; }
   .welcome-redesign .wd-process-step h3 {
     font-family: var(--font-body);
-    font-size: 11px;
+    font-size: 10px; /* Thu nhỏ thêm 1 chút để không bị nhảy dòng */
     font-weight: 600;
     color: var(--ink-900);
     margin: 0;
     line-height: 1.2;
+    white-space: nowrap; /* Tuyệt đối không cho xuống dòng */
+    letter-spacing: -0.01em;
   }
   .welcome-redesign .wd-process-step p { display: none; }
 
