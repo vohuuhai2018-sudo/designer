@@ -1825,7 +1825,7 @@ export default function App() {
           setProjects(data);
           setIsLoadingProjects(false);
         })
-        .catch(err => {
+        .catch(() => {
           console.error('Failed to load projects:', err);
           setIsLoadingProjects(false);
         });
@@ -2545,7 +2545,7 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
       
       audio.play().then(() => {
         console.log("Home voice playing at full volume.");
-      }).catch(e => {
+      }).catch(() => {
         console.log("Autoplay blocked, will play on next interaction.");
         hasPlayed = false;
       });
@@ -2863,7 +2863,7 @@ function UploadView({
   useEffect(() => {
     const timer = setTimeout(() => {
       const audio = new Audio('/assets/Voice hướng dẫn.wav');
-      audio.play().catch(e => console.log("Autoplay blocked:", e));
+      audio.play().catch(() => console.log("Autoplay blocked:", e));
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
@@ -3889,7 +3889,7 @@ function BasicSelectionView({
     if (subStep !== 'gallery') return;
     const timer = setTimeout(() => {
       const audio = new Audio('/assets/Voice tải mẫu.wav');
-      audio.play().catch(e => console.log("Autoplay blocked:", e));
+      audio.play().catch(() => console.log("Autoplay blocked:", e));
     }, 3000);
     return () => clearTimeout(timer);
   }, [subStep]);
