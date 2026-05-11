@@ -94,7 +94,7 @@ img {
 .btn-admin-access {
   position: absolute;
   top: 24px;
-  right: 24px;
+  left: 24px;
   width: 48px;
   height: 48px;
   border-radius: 50%;
@@ -1456,7 +1456,7 @@ canvas {
 .admin-toggle {
   position: fixed;
   bottom: 24px;
-  right: 24px;
+  left: 24px;
   background: var(--glass);
   backdrop-filter: blur(8px);
   padding: 8px 16px;
@@ -9014,7 +9014,7 @@ canvas {
     position: absolute;
     top: 76px;
     left: 16px;
-    right: 16px;
+    left: 16px;
     background: rgba(251, 247, 238, 0.97);
     backdrop-filter: blur(16px);
     border-radius: 16px;
@@ -9559,12 +9559,12 @@ canvas {
 .wd-float {
   position: fixed;
   bottom: 12px;
-  right: 24px;
+  left: 24px;
   z-index: 200;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  align-items: flex-end;
+  align-items: flex-start;
 }
 .wd-float-pill {
   display: inline-flex;
@@ -9584,7 +9584,7 @@ canvas {
 .wd-float-tel { background: var(--bronze-grad); color: #fff; }
 .wd-float-zalo { background: #0068FF; color: #fff; }
 @media (max-width: 720px) {
-  .wd-float { bottom: 16px; right: 16px; }
+  .wd-float { bottom: 16px; left: 16px; }
   .wd-float-pill span { display: none; }
   .wd-float-pill { padding: 14px; border-radius: 50%; }
   .wd-section { padding: 64px 0; }
@@ -10757,7 +10757,7 @@ canvas {
 @media (max-width: 720px) {
   .wd-float {
     bottom: 40px !important; /* Đẩy lên cao hơn để không bị che bởi thanh điều hướng browser */
-    right: 20px !important;
+    left: 20px !important;
   }
   
   .wd-float-support span { display: inline !important; }
@@ -10806,8 +10806,8 @@ canvas {
 @media (max-width: 720px) {
   .wd-float {
     bottom: 30px !important;
-    right: 20px !important;
-    left: auto !important;
+    left: 20px !important;
+    right: auto !important;
   }
   .wd-float-support-icon {
     padding: 10px 20px;
@@ -10820,7 +10820,7 @@ canvas {
 @media (max-width: 720px) {
   .wd-float {
     bottom: max(48px, calc(16px + env(safe-area-inset-bottom))) !important; 
-    right: 20px !important;
+    left: 20px !important;
     z-index: 9999 !important;
   }
   .wd-float-support { 
@@ -10918,7 +10918,7 @@ canvas {
 @media (max-width: 720px) {
   .wd-float {
     bottom: 120px !important; /* Move higher to avoid covering action buttons */
-    right: 20px !important;
+    left: 20px !important;
     z-index: 9999 !important;
   }
 }
