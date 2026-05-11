@@ -5018,7 +5018,19 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                  <p style={{ fontSize: '0.85rem', color: '#888', marginTop: '1.25rem', textAlign: 'center', fontWeight: 600 }}>Kết quả lần 1:</p>
                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '8px', width: '100%' }}>
                    {previousImages.map((url, i) => {
-                     const beforeUrl = project?.rawImage || project?.annotatedImage || url;
+                     let beforeUrl = project?.rawImage || project?.annotatedImage;
+                
+                // Special logic for Interior Combo: Map results to corresponding site images
+                if (project?.interiorPairs) {
+                  const pairIdx = retryCount > 0 
+                    ? (i < previousImages.length ? i : i - previousImages.length)
+                    : i;
+                  if (project.interiorPairs[pairIdx]) {
+                    beforeUrl = project.interiorPairs[pairIdx].siteImage;
+                  }
+                }
+                
+                if (!beforeUrl) beforeUrl = url;
                      return (
                        <div key={`prev-${i}`} style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
                          <BeforeAfterSlider before={beforeUrl} after={url} alt={`Lần 1 - ${i + 1}`} aspectRatio="16/10" />
@@ -5048,7 +5060,19 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                const num = retryCount > 0
                  ? (isOld ? `L1·${i + 1}` : `L2·${i - previousImages.length + 1}`)
                  : `${i + 1}`;
-               const beforeUrl = project?.rawImage || project?.annotatedImage || url;
+               let beforeUrl = project?.rawImage || project?.annotatedImage;
+                
+                // Special logic for Interior Combo: Map results to corresponding site images
+                if (project?.interiorPairs) {
+                  const pairIdx = retryCount > 0 
+                    ? (i < previousImages.length ? i : i - previousImages.length)
+                    : i;
+                  if (project.interiorPairs[pairIdx]) {
+                    beforeUrl = project.interiorPairs[pairIdx].siteImage;
+                  }
+                }
+                
+                if (!beforeUrl) beforeUrl = url;
                const isPicked = pass2Picked === url;
                return (
                  <div key={i} className={`result-card ${isPicked ? 'is-picked' : ''}`} onClick={() => setPass2Picked(url)}>
