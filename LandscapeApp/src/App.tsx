@@ -4785,6 +4785,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
           console.log("Music blocked, waiting for interaction.");
           const playOnAction = () => {
               if (audioRef.current && !project?.status.includes('done')) {
+                audioRef.current.volume = 0.3;
                 audioRef.current.play().catch(() => {});
               }
               window.removeEventListener('mousedown', playOnAction);
