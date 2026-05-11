@@ -410,9 +410,18 @@ function _mimeFromPath(p) {
   return MIME_BY_EXT[path.extname(p).toLowerCase()] || 'application/octet-stream';
 }
 
-// Middleware — CORS cho phép FE Vercel + local dev gọi tới BE
+// Middleware — CORS cho phép FE Vercel + custom domain + local dev gọi tới BE.
+// Custom domain phải luôn được thêm vào để tránh production ngrok/backend
+// còn dùng ALLOWED_ORIGINS cũ chỉ có *.vercel.app.
+const requiredAllowedOrigins = [
+  'https://thietke5p.com',
+  'https://www.thietke5p.com',
+];
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
+  ? Array.from(new Set([
+      ...process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean),
+      ...requiredAllowedOrigins,
+    ]))
   : null; // null = cho tất cả (dev mode)
 
 app.use(cors({
