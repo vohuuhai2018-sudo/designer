@@ -4776,7 +4776,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
 
     if (!isDone) {
       if (!audioRef.current) {
-        audioRef.current = new Audio('/assets/NHAC CHO 3.mp3');
+        audioRef.current = new Audio(''); // Tạm tắt nhạc chờ
         audioRef.current.loop = true;
       }
       if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
@@ -5243,11 +5243,13 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                      finally { setPass2Starting(false); }
                    }}
                  >
-                   <Sparkles size={18} />
+                   {pass2Starting ? <Loader2 size={18} className="spin" /> : (isPaid ? <Sparkles size={18} /> : <CreditCard size={18} />)}
                    {pass2Starting
                      ? 'Đang khởi động...'
                      : pass2Picked
-                       ? `Tiếp tục tạo bổ sung từ Phương án ${allImages.indexOf(pass2Picked) + 1}`
+                       ? (isPaid 
+                           ? `Tiếp tục tạo bổ sung từ Phương án ${allImages.indexOf(pass2Picked) + 1}`
+                           : `Thanh toán để tạo bổ sung từ PA ${allImages.indexOf(pass2Picked) + 1}`)
                        : 'Chọn phương án để tiếp tục'}
                  </button>
                  {pass2Msg && <p className={`pass2-msg ${pass2Msg.startsWith('Lỗi') ? 'err' : 'ok'}`}>{pass2Msg}</p>}
