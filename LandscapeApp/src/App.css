@@ -10755,8 +10755,7 @@ canvas {
   transform: translateY(-4px) scale(1.02);
 }
 @media (max-width: 720px) {
-  .wd-float {
-    bottom: 40px !important; /* Đẩy lên cao hơn để không bị che bởi thanh điều hướng browser */
+  .wd-float { bottom: 12px !important; /* Đẩy lên cao hơn để không bị che bởi thanh điều hướng browser */
     left: 20px !important;
   }
   
@@ -10804,8 +10803,7 @@ canvas {
 }
 
 @media (max-width: 720px) {
-  .wd-float {
-    bottom: 30px !important;
+  .wd-float { bottom: 12px !important;
     left: 20px !important;
     right: auto !important;
   }
@@ -10818,8 +10816,7 @@ canvas {
 
 /* Force iOS Safari Fix */
 @media (max-width: 720px) {
-  .wd-float {
-    bottom: max(48px, calc(16px + env(safe-area-inset-bottom))) !important; 
+  .wd-float { bottom: 12px !important; 
     left: 20px !important;
     z-index: 9999 !important;
   }
@@ -10916,8 +10913,7 @@ canvas {
 }
 
 @media (max-width: 720px) {
-  .wd-float {
-    bottom: 120px !important; /* Move higher to avoid covering action buttons */
+  .wd-float { bottom: 12px !important; /* Move higher to avoid covering action buttons */
     left: 20px !important;
     z-index: 9999 !important;
   }
