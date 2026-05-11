@@ -4735,6 +4735,34 @@ function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewRe
 }
 
 function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isRetrying = false, onBack, isShareView = false }: { projectId: string; service: string; onReset: () => void; retryCount?: number; onRetry?: () => void; isRetrying?: boolean; onBack?: () => void; isShareView?: boolean }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const isAuto = service === 'Gói Cơ Bản' || service === 'Gói Cơ bản' || service === 'Gói Nâng cao';
+    if (!isAuto) return;
+    const isDone = project?.status === 'done';
+
+    if (!isDone) {
+      if (!audioRef.current) {
+        audioRef.current = new Audio('/assets/NHAC CHO 3.mp3');
+        audioRef.current.loop = true;
+      }
+      audioRef.current.play().catch(e => console.log("Music blocked:", e));
+    } else {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+  }, [project?.status, service]);
+
   const [pass2Picked, setPass2Picked] = useState('');
       const [pass2Starting, setPass2Starting] = useState(false);
   const [pass2Msg, setPass2Msg] = useState('');
