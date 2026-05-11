@@ -4774,7 +4774,9 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
     if (!isAuto) return;
     const isDone = project?.status === 'done';
 
-    if (!isDone) {
+    /*
+    if
+    */ (!isDone) {
       if (!audioRef.current) {
         audioRef.current = new Audio(''); // Tạm tắt nhạc chờ
         audioRef.current.loop = true;
@@ -5338,7 +5340,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                              if (task.url) {
                                setTimeout(() => {
                                  const link = document.createElement('a');
-                                 link.href = task.url;
+                                 link.href = task.url as string;
                                  link.download = `thietke5p-bosung-${idx + 1}.${task.type === 'video' ? 'mp4' : 'jpg'}`;
                                  link.click();
                                }, idx * 500);
