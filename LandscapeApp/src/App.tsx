@@ -4787,31 +4787,41 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
       if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
       audioRef.current.volume = 1;
       audioRef.current.play().catch(e => {
-          console.log("Music blocked, waiting for interaction:", e);
-          // Thử lại khi có tương tác bất kỳ vào cửa sổ
+          console.log("Music blocked, waiting for interaction.");
           const playOnAction = () => {
-              audioRef.current?.play().catch(() => {});
-              window.removeEventListener('click', playOnAction);
+              if (audioRef.current && !project?.status.includes('done')) {
+                audioRef.current.play().catch(() => {});
+              }
+              window.removeEventListener('mousedown', playOnAction);
+              window.removeEventListener('touchstart', playOnAction);
           };
-          window.addEventListener('click', playOnAction);
+          window.addEventListener('mousedown', playOnAction);
+          window.addEventListener('touchstart', playOnAction);
       });
     } else {
-      if (audioRef.current && !audioRef.current.paused) {
-        // Fade out
+      // FORCE STOP / FADE OUT
+      const stopMusic = () => {
+        if (!audioRef.current) return;
         if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
+        
         fadeIntervalRef.current = setInterval(() => {
           if (audioRef.current) {
-            if (audioRef.current.volume > 0.05) {
-              audioRef.current.volume -= 0.05;
+            if (audioRef.current.volume > 0.1) {
+              audioRef.current.volume -= 0.1;
             } else {
               audioRef.current.pause();
               audioRef.current.volume = 1;
               audioRef.current.currentTime = 0;
               clearInterval(fadeIntervalRef.current);
+              fadeIntervalRef.current = null;
             }
+          } else {
+            clearInterval(fadeIntervalRef.current);
+            fadeIntervalRef.current = null;
           }
-        }, 150);
-      }
+        }, 100); // Faster fade out (1s total)
+      };
+      stopMusic();
     }
 
     return () => {
@@ -5008,7 +5018,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                  <p style={{ fontSize: '0.85rem', color: '#888', marginTop: '1.25rem', textAlign: 'center', fontWeight: 600 }}>Kết quả lần 1:</p>
                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '8px', width: '100%' }}>
                    {previousImages.map((url, i) => {
-                     const beforeUrl = project?.rawImage || url;
+                     const beforeUrl = project?.rawImage || project?.annotatedImage || url;
                      return (
                        <div key={`prev-${i}`} style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
                          <BeforeAfterSlider before={beforeUrl} after={url} alt={`Lần 1 - ${i + 1}`} aspectRatio="16/10" />
@@ -5038,7 +5048,7 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
                const num = retryCount > 0
                  ? (isOld ? `L1·${i + 1}` : `L2·${i - previousImages.length + 1}`)
                  : `${i + 1}`;
-               const beforeUrl = project?.rawImage || url;
+               const beforeUrl = project?.rawImage || project?.annotatedImage || url;
                const isPicked = pass2Picked === url;
                return (
                  <div key={i} className={`result-card ${isPicked ? 'is-picked' : ''}`} onClick={() => setPass2Picked(url)}>
