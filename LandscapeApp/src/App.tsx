@@ -4736,6 +4736,7 @@ function MyProjectsView({ onBack, onViewResult }: { onBack: () => void; onViewRe
 
 function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isRetrying = false, onBack, isShareView = false }: { projectId: string; service: string; onReset: () => void; retryCount?: number; onRetry?: () => void; isRetrying?: boolean; onBack?: () => void; isShareView?: boolean }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const fadeIntervalRef = useRef<any>(null);
 
   useEffect(() => {
     const isAuto = service === 'Gói Cơ Bản' || service === 'Gói Cơ bản' || service === 'Gói Nâng cao';
@@ -4747,15 +4748,38 @@ function SuccessView({ projectId, service, onReset, retryCount = 0, onRetry, isR
         audioRef.current = new Audio('/assets/NHAC CHO 3.mp3');
         audioRef.current.loop = true;
       }
-      audioRef.current.play().catch(e => console.log("Music blocked:", e));
+      if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
+      audioRef.current.volume = 1;
+      audioRef.current.play().catch(e => {
+          console.log("Music blocked, waiting for interaction:", e);
+          // Thử lại khi có tương tác bất kỳ vào cửa sổ
+          const playOnAction = () => {
+              audioRef.current?.play().catch(() => {});
+              window.removeEventListener('click', playOnAction);
+          };
+          window.addEventListener('click', playOnAction);
+      });
     } else {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+      if (audioRef.current && !audioRef.current.paused) {
+        // Fade out
+        if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
+        fadeIntervalRef.current = setInterval(() => {
+          if (audioRef.current) {
+            if (audioRef.current.volume > 0.05) {
+              audioRef.current.volume -= 0.05;
+            } else {
+              audioRef.current.pause();
+              audioRef.current.volume = 1;
+              audioRef.current.currentTime = 0;
+              clearInterval(fadeIntervalRef.current);
+            }
+          }
+        }, 150);
       }
     }
 
     return () => {
+      if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
