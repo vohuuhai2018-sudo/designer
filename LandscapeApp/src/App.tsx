@@ -2316,6 +2316,14 @@ export default function App() {
         )}
         </AnimatePresence>
       </div>
+      {createPortal(
+        <div className="wd-float">
+          <a className="wd-float-support-icon" href="https://zalo.me/0888220044" target="_blank" rel="noopener noreferrer" title="Chat Hỗ Trợ">
+            <MessageCircle size={30} />
+          </a>
+        </div>,
+        document.body
+      )}
     </>
     </MotionConfig>
     </ErrorBoundary>
@@ -2786,12 +2794,7 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
         </div>
       </footer>
 
-      {/* Floating contact */}
-      <div className="wd-float">
-        <a className="wd-float-support-icon" href="https://zalo.me/0888220044" target="_blank" rel="noopener noreferrer" title="Chat Hỗ Trợ">
-          <MessageCircle size={30} />
-        </a>
-      </div>
+      
     </motion.div>
   );
 }
