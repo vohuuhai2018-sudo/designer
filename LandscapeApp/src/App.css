@@ -10739,6 +10739,15 @@ canvas {
   transform: translateY(-4px) scale(1.02);
 }
 @media (max-width: 720px) {
+  .wd-float {
+    bottom: 40px !important; /* Đẩy lên cao hơn để không bị che bởi thanh điều hướng browser */
+    right: 20px !important;
+  }
+  .wd-float-support { 
+    border-radius: 999px !important; 
+    padding: 10px 18px !important; 
+    font-size: 13px !important;
+    box-shadow: 0 8px 20px rgba(0, 104, 255, 0.4) !important;
+  }
   .wd-float-support span { display: inline !important; }
-  .wd-float-support { border-radius: 999px !important; padding: 12px 20px !important; }
 }
