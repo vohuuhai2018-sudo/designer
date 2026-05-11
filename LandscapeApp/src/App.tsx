@@ -3850,12 +3850,13 @@ function BasicSelectionView({
   onCategoryChange: (cat: string) => void
 }) {
   useEffect(() => {
+    if (subStep !== 'gallery') return;
     const timer = setTimeout(() => {
       const audio = new Audio('/assets/Voice tải mẫu.wav');
       audio.play().catch(e => console.log("Autoplay blocked:", e));
     }, 3000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [subStep]);
   const t = (key: string, defaultVal: string) => systemContent.uiText?.[key] || defaultVal;
   const [selectedImage, setSelectedImage] = useState<any>(null);
   const [isUploadingCustom, setIsUploadingCustom] = useState(false);
