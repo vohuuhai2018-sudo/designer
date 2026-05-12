@@ -77,6 +77,13 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
+
+  const withRetryParam = (value: string, attempt: number) => {
+    if (!value.startsWith('http')) return value;
+    const sep = value.includes('?') ? '&' : '?';
+    return `${value}${sep}tk5p_retry=${Date.now()}_${attempt}`;
+  };
 
   const drawWithWatermark = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, img: HTMLImageElement, wm: HTMLImageElement) => {
     canvas.width = img.naturalWidth;
@@ -113,6 +120,8 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
   useEffect(() => {
     let cancelled = false;
     let retryTimer: any = null;
+    let attempt = 0;
+    const maxAttempts = 3;
     setLoaded(false);
     setFailed(false);
 
@@ -132,20 +141,36 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
         if (canvas && ctx) {
-          drawWithWatermark(ctx, canvas, mainImg, wmImg);
-          setLoaded(true);
+          try {
+            drawWithWatermark(ctx, canvas, mainImg, wmImg);
+            setFailed(false);
+            setLoaded(true);
+          } catch (_) {
+            retryMainImage();
+          }
         }
       }
     };
 
-    mainImg.onload = () => { mainLoaded = true; checkAndDraw(); };
-    wmImg.onload = () => { wmLoaded = true; checkAndDraw(); };
-    
-    mainImg.onerror = () => {
+    const retryMainImage = () => {
       if (cancelled) return;
+      mainLoaded = false;
+      if (attempt < maxAttempts) {
+        attempt++;
+        if (retryTimer) clearTimeout(retryTimer);
+        retryTimer = setTimeout(() => {
+          if (!cancelled) mainImg.src = withRetryParam(src, attempt);
+        }, 450 * attempt);
+        return;
+      }
       setFailed(true);
       setLoaded(true);
     };
+
+    mainImg.onload = () => { mainLoaded = true; checkAndDraw(); };
+    wmImg.onload = () => { wmLoaded = true; checkAndDraw(); };
+
+    mainImg.onerror = retryMainImage;
     wmImg.onerror = () => {
       wmLoaded = true;
       const dummy = new Image();
@@ -166,13 +191,14 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [src]);
+  }, [src, retryNonce]);
 
   const handleManualRetry = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     setFailed(false);
     setLoaded(false);
+    setRetryNonce(n => n + 1);
   };
 
   return (
