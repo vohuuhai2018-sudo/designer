@@ -2624,7 +2624,6 @@ function AutoSlideGalleryImage({ imgs, cat }: { imgs: string[], cat: string }) {
 
 function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStart: (branch: MainBranch) => void, onAdmin: () => void, onMyProjects: () => void, systemContent?: any }) {
   useEffect(() => {
-    let audio: HTMLAudioElement | null = null;
     let fadeTimer: any = null;
     let hasPlayed = false;
 
