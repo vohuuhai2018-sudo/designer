@@ -1311,28 +1311,43 @@ app.post('/api/projects', async (req, res) => {
           await Project.findOneAndUpdate({ id: newProject.id }, { status: 'processing', workflowBranch: 'chatgpt_image' });
 
           let autoCount = 0;
-          const onImageReady = async (outputPath) => {
+          // [FIX] Cung cấp hàm tạo onImageReady có chỉ định vị trí (index) để tránh lệch ảnh khi chạy song song (đặc biệt cho Nội thất Combo).
+          const createOnImageReady = (targetIdx = -1) => async (outputPath) => {
             try {
               const url = await uploadToCloudinary(outputPath);
               if (!url || !url.startsWith('http')) return;
               autoCount++;
-              console.log(`[AUTO] ✅ Ảnh #${autoCount} đã upload cho "${data.customerName}"`);
-              await Project.findOneAndUpdate(
-                { id: newProject.id },
-                {
-                  $set: { status: 'processing', workflowBranch: 'chatgpt_image', ...(autoCount === 1 ? { finalImage: url } : {}) },
-                  $push: { aiResults: url }
-                }
-              );
+              console.log(`[AUTO] ✅ Ảnh #${autoCount}${targetIdx !== -1 ? ` (vị trí ${targetIdx})` : ''} đã upload cho "${data.customerName}"`);
+              
+              const update = { $set: { status: 'processing', workflowBranch: 'chatgpt_image' } };
+              if (targetIdx !== -1) {
+                // Update tại vị trí chính xác trong mảng (dùng cho Nội thất Combo để khớp Trước/Sau)
+                update.$set[`aiResults.${targetIdx}`] = url;
+                if (targetIdx === 0 || autoCount === 1) update.$set.finalImage = url;
+              } else {
+                // Mặc định push vào cuối mảng (dùng cho các luồng đơn)
+                update.$push = { aiResults: url };
+                if (autoCount === 1) update.$set.finalImage = url;
+              }
+
+              await Project.findOneAndUpdate({ id: newProject.id }, update);
               await fs.unlink(outputPath).catch(() => null);
             } catch (e) {
-              console.error(`[AUTO] Lỗi upload ảnh:`, e.message);
+              console.error(`[AUTO] Lỗi upload ảnh${targetIdx !== -1 ? ` vị trí ${targetIdx}` : ''}:`, e.message);
             }
           };
+
+          const onImageReady = createOnImageReady();
 
           console.log(`[AUTO] Đang bắt đầu xử lý ảnh qua Google Labs Flow cho "${data.customerName}" với pipeline giống nút admin...`);
           
           if (projectForAi.interiorPairs && projectForAi.interiorPairs.length > 0) {
+            // [FIX] Khởi tạo mảng aiResults với đúng số lượng ảnh để giữ chỗ, đảm bảo mapping 1-1 chính xác.
+            await Project.findOneAndUpdate(
+              { id: newProject.id }, 
+              { $set: { aiResults: new Array(projectForAi.interiorPairs.length).fill("") } }
+            );
+
             const tab = await resolveTabForProject(newProject);
             // pass1Tasks[i] ↔ interiorPairs[i] (1-to-1): mỗi góc nhìn = 1 task, dùng prompt
             // + flowConfig của task đó (admin chỉnh trong UI "Pass 1 — Task song song").
@@ -1357,7 +1372,7 @@ app.post('/api/projects', async (req, res) => {
                 return await runFlowAutomation({
                   prompt: pairPrompt,
                   assets: pairAssets,
-                  onImageReady,
+                  onImageReady: createOnImageReady(idx),
                   flowConfig: cfg
                 });
               })

@@ -71,6 +71,29 @@ import { PaymentModal } from './PaymentModal';
 // --- API BASE ---
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+// Global audio manager to prevent overlapping voices
+let currentVoiceAudio: HTMLAudioElement | null = null;
+const playVoice = (src: string, volume = 1) => {
+  if (currentVoiceAudio) {
+    currentVoiceAudio.pause();
+    currentVoiceAudio.src = '';
+    currentVoiceAudio = null;
+  }
+  const audio = new Audio(src);
+  audio.volume = volume;
+  currentVoiceAudio = audio;
+  audio.play().catch(e => console.log("Voice playback blocked:", e));
+  return audio;
+};
+const stopVoice = () => {
+  if (currentVoiceAudio) {
+    currentVoiceAudio.pause();
+    currentVoiceAudio.src = '';
+    currentVoiceAudio = null;
+  }
+};
+
+
 // --- API HELPER ---
 // Tự động thêm header ngrok-skip-browser-warning để bỏ qua trang cảnh báo ngrok free tier
 const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: string, style?: any, className?: string }) => {
@@ -95,7 +118,7 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
     // 2. Add VERY subtle diagonal pattern
     ctx.globalAlpha = 0.08; 
     const patternSize = canvas.width * 0.15;
-    const wmAspect = wm.naturalHeight / wm.naturalWidth;
+    const wmAspect = (wm.naturalHeight / wm.naturalWidth) || 1;
     const patternH = wmAspect * patternSize;
     for(let x = -patternSize; x < canvas.width + patternSize; x += patternSize * 2.5) {
       for(let y = -patternH; y < canvas.height + patternH; y += patternH * 3) {
@@ -107,12 +130,11 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
       }
     }
 
-    // 3. Add single clear watermark at bottom-right
+    // 3. Add single clear watermark at center
     ctx.globalAlpha = 0.7; 
     const wmWidth = canvas.width * 0.35;
     const wmHeight = wmAspect * wmWidth;
-    const padding = canvas.width * 0.02;
-    ctx.drawImage(wm, canvas.width - wmWidth - padding, canvas.height - wmHeight - padding, wmWidth, wmHeight);
+    ctx.drawImage(wm, (canvas.width - wmWidth) / 2, (canvas.height - wmHeight) / 2, wmWidth, wmHeight);
     
     ctx.globalAlpha = 1.0;
   };
@@ -128,7 +150,10 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
     const mainImg = new Image();
     const wmImg = new Image();
     
-    if (src.startsWith('http')) {
+    // Initial source with retry nonce if manually triggered
+    const finalSrc = retryNonce > 0 ? withRetryParam(src, retryNonce) : src;
+
+    if (finalSrc.startsWith('http')) {
       mainImg.crossOrigin = "anonymous";
     }
     
@@ -157,35 +182,43 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
       mainLoaded = false;
       if (attempt < maxAttempts) {
         attempt++;
+        console.log(`[ProtectedImage] Retry load #${attempt} for:`, src);
         if (retryTimer) clearTimeout(retryTimer);
         retryTimer = setTimeout(() => {
-          if (!cancelled) mainImg.src = withRetryParam(src, attempt);
+          if (!cancelled) mainImg.src = withRetryParam(src, attempt + retryNonce * 10);
         }, 450 * attempt);
         return;
       }
+      console.error("[ProtectedImage] Failed to load after retries:", src);
       setFailed(true);
       setLoaded(true);
     };
 
     mainImg.onload = () => { mainLoaded = true; checkAndDraw(); };
     wmImg.onload = () => { wmLoaded = true; checkAndDraw(); };
-
+    
     mainImg.onerror = retryMainImage;
+
     wmImg.onerror = () => {
+      if (cancelled) return;
       wmLoaded = true;
+      // Fallback: draw without watermark if logo fails
       const dummy = new Image();
       dummy.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
       dummy.onload = () => { 
         if (!cancelled && mainLoaded) {
-          const ctx = canvasRef.current?.getContext('2d');
-          if (ctx) drawWithWatermark(ctx, canvasRef.current!, mainImg, dummy);
-          setLoaded(true);
+          const canvas = canvasRef.current;
+          const ctx = canvas?.getContext('2d');
+          if (canvas && ctx) {
+            drawWithWatermark(ctx, canvas, mainImg, dummy);
+            setLoaded(true);
+          }
         }
       };
     };
 
     wmImg.src = '/assets/CHU KY _ HAI VO.png';
-    mainImg.src = src;
+    mainImg.src = finalSrc;
 
     return () => {
       cancelled = true;
@@ -203,8 +236,38 @@ const ProtectedImage = ({ src, alt, style, className }: { src: string, alt?: str
 
   return (
     <div className={`image-watermark-wrapper ${className || ''} ${loaded ? 'is-loaded' : ''}`} style={style} onContextMenu={(e) => e.preventDefault()}>
-      <canvas ref={canvasRef} title={alt} />
-      <div className="security-overlay" />
+      {/* 
+        Fallback image: hiển thị ngay lập tức để tránh khung trắng. 
+        Khi canvas đã vẽ xong (watermark), fallback này sẽ mờ đi để nhường chỗ cho canvas bảo mật.
+      */}
+      <img 
+        src={src} 
+        alt={alt} 
+        className="protected-fallback-img"
+        style={{ 
+          position: 'absolute', 
+          inset: 0, 
+          width: '100%', 
+          height: '100%', 
+          objectFit: 'cover', 
+          opacity: (failed || !loaded) ? 1 : 0,
+          transition: 'opacity 0.3s ease',
+          zIndex: 1
+        }} 
+      />
+      
+      <canvas 
+        ref={canvasRef} 
+        title={alt} 
+        style={{ 
+          opacity: (loaded && !failed) ? 1 : 0,
+          zIndex: 2,
+          position: 'relative'
+        }} 
+      />
+
+      <div className="security-overlay" style={{ zIndex: 3 }} />
+      
       {failed && (
         <button onClick={handleManualRetry} className="img-retry-overlay" title="Tải lại ảnh">
           <RefreshCcw size={20} />
@@ -2568,16 +2631,7 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
     const playDirectly = () => {
       if (hasPlayed) return;
       hasPlayed = true;
-
-      audio = new Audio('/assets/Voice trang chủ.wav');
-      audio.volume = 1; // Luôn giữ 100% âm lượng, không to nhỏ
-      
-      audio.play().then(() => {
-        console.log("Home voice playing at full volume.");
-      }).catch(() => {
-        console.log("Autoplay blocked, will play on next interaction.");
-        hasPlayed = false;
-      });
+      playVoice('/assets/Voice trang chủ.wav');
     };
 
     const handleInteraction = () => {
@@ -2597,10 +2651,7 @@ function WelcomeView({ onStart, onAdmin, onMyProjects, systemContent }: { onStar
     return () => {
       clearTimeout(timer);
       if (fadeTimer) clearInterval(fadeTimer);
-      if (audio) {
-        audio.pause();
-        audio.src = '';
-      }
+      stopVoice();
       window.removeEventListener('mousedown', handleInteraction);
       window.removeEventListener('touchstart', handleInteraction);
       window.removeEventListener('keydown', handleInteraction);
@@ -2891,10 +2942,12 @@ function UploadView({
 }) {
   useEffect(() => {
     const timer = setTimeout(() => {
-      const audio = new Audio('/assets/Voice hướng dẫn.wav');
-      audio.play().catch(e => console.log("Autoplay blocked:", e));
+      playVoice('/assets/Voice hướng dẫn.wav');
     }, 2000);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      stopVoice();
+    };
   }, []);
   const t = (key: string, defaultVal: string) => systemContent.uiText?.[key] || defaultVal;
   const fileRef = useRef<HTMLInputElement>(null);
@@ -3917,10 +3970,12 @@ function BasicSelectionView({
   useEffect(() => {
     if (subStep !== 'gallery') return;
     const timer = setTimeout(() => {
-      const audio = new Audio('/assets/Voice tải mẫu.wav');
-      audio.play().catch(e => console.log("Autoplay blocked:", e));
+      playVoice('/assets/Voice tải mẫu.wav');
     }, 3000);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      stopVoice();
+    };
   }, [subStep]);
   const t = (key: string, defaultVal: string) => systemContent.uiText?.[key] || defaultVal;
   const [selectedImage, setSelectedImage] = useState<any>(null);
